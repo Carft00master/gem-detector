@@ -1,0 +1,104 @@
+{
+  "manifest_version": "v1.0.0",
+  "frozen_at": "2026-08-24T17:30:00Z",
+  "versions": {
+    "scanner_version": "v1.0.0",
+    "model_version": "v1.0.0",
+    "feature_schema_version": "v1.0.0",
+    "calibration_version": "v1.0.0",
+    "regime_version": "v1.0.0",
+    "risk_rules_version": "v1.0.0",
+    "execution_model_version": "v1.0.0"
+  },
+  "feature_definitions": [
+    {
+      "name": "effective_volume_mc_ratio_5m",
+      "formula": "(volume_5m_usd * volume_quality_score) / market_cap_usd",
+      "weight": 0.45
+    },
+    {
+      "name": "effective_buy_volume_pressure",
+      "formula": "(txns_5m_buys / total_txns_5m) * wallet_independence",
+      "weight": 1.25
+    },
+    {
+      "name": "buyer_quality",
+      "formula": "min(1.0, unique_buyers_1h / 40.0) * (1.0 - cabal_risk_score)",
+      "weight": 1.10
+    },
+    {
+      "name": "liquidity_quality",
+      "formula": "min(1.0, liquidity_mc_ratio / 0.25)",
+      "weight": 0.85
+    },
+    {
+      "name": "holder_quality",
+      "formula": "max(0.0, 1.0 - (top10_effective_pct / 40.0))",
+      "weight": 0.95
+    },
+    {
+      "name": "breakout_quality",
+      "formula": "BreakoutStructureClassifier score / 100.0",
+      "weight": 0.75
+    },
+    {
+      "name": "wallet_independence",
+      "formula": "1.0 - cabal_risk_score",
+      "weight": 0.80
+    },
+    {
+      "name": "wash_trade_risk",
+      "formula": "WashTradingDetector penalty score",
+      "weight": -1.60
+    },
+    {
+      "name": "cabal_risk_score",
+      "formula": "WalletGraphEngine coordinator clustering score",
+      "weight": -1.40
+    },
+    {
+      "name": "dev_risk_score",
+      "formula": "DevBehaviorEngine dump penalty score",
+      "weight": -1.20
+    },
+    {
+      "name": "contract_risk",
+      "formula": "DecoupledSafetyReport contract score",
+      "weight": -2.50
+    },
+    {
+      "name": "liquidity_risk",
+      "formula": "DecoupledSafetyReport liquidity pool score",
+      "weight": -1.80
+    }
+  ],
+  "model_parameters": {
+    "bias": -3.2,
+    "intercept_50k_offset": 2.2,
+    "transition_t100k_base": 0.50,
+    "transition_t250k_base": 0.45,
+    "transition_t500k_base": 0.40,
+    "transition_t1m_base": 0.35,
+    "transition_t3m_base": 0.30,
+    "transition_t5m_base": 0.25
+  },
+  "risk_thresholds": {
+    "max_cabal_risk": 0.55,
+    "max_wash_risk": 0.55,
+    "min_liquidity_usd": 1500.0,
+    "min_wallet_independence": 0.60
+  },
+  "execution_assumptions": {
+    "dex_fee_pct": 0.30,
+    "pumpfun_fee_pct": 1.00,
+    "pumpfun_virtual_sol_offset": 30.0,
+    "solana_priority_fee_usd": 0.02,
+    "base_priority_fee_usd": 0.05
+  },
+  "regime_multipliers": {
+    "HOT": 1.25,
+    "NORMAL": 1.00,
+    "COLD": 0.85,
+    "PANIC": 0.50
+  }
+}

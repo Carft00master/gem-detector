@@ -1,0 +1,77 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# C extensions
+*.obj
+*.o
+
+# Distribution / packaging
+build/
+dist/
+*.manifest
+*.spec.bak
+
+# PyInstaller output
+*.exe
+
+# Unit test / coverage reports
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Runtime data and gigabyte-scale datasets (kept in local storage)
+data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.jsonl
+
+# Logs and terminal outputs (kept in local storage)
+logs/
+*.log
+out.txt
+err.txt
+
+# Exports (kept in local storage)
+exports/
+
+# Forensic backups and recovery snapshots (kept in local storage)
+recovery/
+
+# Scratchpad / temporary development scripts (kept in local storage)
+scratch/
+implementation_plan.md
+walkthrough.md
+
+# Local configuration & credentials (DO NOT COMMIT SECRETS)
+config/user_settings.json
+.env
+.env.*
+!.env.example
+
+# Environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

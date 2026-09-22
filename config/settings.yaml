@@ -1,0 +1,109 @@
+# ==============================================================================
+# GEM DETECTOR - REAL-TIME CONFIGURATION & THRESHOLDS
+# Identifies sub-$10K tokens with high probability of reaching $3M+ Market Cap
+# ==============================================================================
+
+scanner:
+  # Chains to scan: 'solana', 'bsc' (default: solana, bsc)
+  active_chains:
+    - solana
+    - bsc
+  
+  # Scan poll interval in seconds
+  poll_interval_sec: 10
+  
+  # Maximum age of tokens in minutes to consider as "Early Stage"
+  max_token_age_minutes: 180
+  
+  # Enable real-time websocket feed where available
+  enable_websocket_feed: true
+  
+  # Number of top candidates to display on live terminal dashboard
+  dashboard_display_limit: 15
+
+# ==============================================================================
+# PAPER TRADING & EXECUTION ENGINE
+# ==============================================================================
+paper_trading:
+  default_exit_policy: "STAGED_EXITS"   # "STAGED_EXITS" (Targets $1M-$3M+ runners) | "TRAILING_STOP" | "FIXED_TARGETS"
+
+
+# ==============================================================================
+# BREAKOUT CHARACTERISTICS & HARD FILTERS
+# ==============================================================================
+filters:
+  # Target Market Cap window for earliest reliable detection ($5k-$75k Sub-10k Gem Inflection Zone)
+  min_market_cap_usd: 5000         # Allows sub-$10k early inflection breakouts
+  max_market_cap_usd: 75000        # Validated early breakout runway
+  min_token_age_minutes: 0.5       # Fast entry with 30s confirmation window
+  min_p_reach_3m: 0.09             # Minimum 9.0% P(3M) breakout probability gate
+
+  # Liquidity Health (Deep Pool & Slippage Protection)
+  min_liquidity_usd: 5000          # Min $5,000 USD pool depth (eliminates 79.7% illiquid loss rate)
+  min_liquidity_mc_ratio: 0.15     # Liquidity must be at least 15% of Market Cap
+
+  # Volume & Velocity
+  min_volume_5m_usd: 2000          # Min $2,000 5m volume
+  min_volume_mc_ratio: 0.6         # 5m/1h volume to MC ratio >= 0.6x
+  max_volume_mc_ratio: 5.0         # Volume > 5x MC flags suspicious wash trading
+
+  # Order Flow & Pressure
+  min_buy_sell_ratio: 1.5          # Buys must exceed sells by at least 1.5x (60%+ buys)
+  min_unique_buyers: 40            # At least 40 unique buying wallets (organic distribution)
+  min_buyer_seller_ratio: 1.4      # Unique buyers vs sellers ratio
+
+  # Holder Decentralization & Security (Zero-Tolerance Dev Dump Protection)
+  max_top10_holder_percent: 18.0   # Top 10 wallets hold < 18% of supply (down from 20%)
+  max_dev_holding_percent: 3.0     # Deployer wallet holds < 3.0% (realistic organic launch)
+  require_mint_renounced: true     # Mint authority must be disabled
+  require_freeze_renounced: true   # Freeze authority must be disabled
+  max_allowed_tax_percent: 1.0     # Max buy/sell tax (0% standard on Solana)
+
+
+# ==============================================================================
+# COMPOSITE GEM SCORE WEIGHTS (Total = 100)
+# ==============================================================================
+scoring:
+  # Minimum score (0-100) to trigger alerts and display as high-probability breakout
+  alert_score_threshold: 75
+
+  weights:
+    # 1. Holder Distribution & Decentralization (Max 25 pts)
+    # Rewards low top-10 concentration, high holder velocity, dev exit
+    holder_distribution: 25
+
+    # 2. Volume & Momentum Dynamics (Max 25 pts)
+    # Rewards healthy Vol/MC ratio, accelerating 5m/1h volume, consistent txs
+    volume_momentum: 25
+
+    # 3. Order Flow & Buyer Pressure (Max 20 pts)
+    # Rewards high buy/sell ratio, unique buyer count, organic ticket sizes
+    order_flow: 20
+
+    # 4. Liquidity Depth & Lock Quality (Max 20 pts)
+    # Rewards high LP/MC ratio, 100% burned/locked liquidity
+    liquidity_health: 20
+
+    # 5. Social Presence & Virality Acceleration (Max 10 pts)
+    # Rewards verified X/Twitter, active Telegram, website, DexScreener profile
+    social_virality: 10
+
+# ==============================================================================
+# NOTIFICATION & ALERT HOOKS
+# ==============================================================================
+alerts:
+  telegram:
+    enabled: false
+    bot_token: ""               # e.g., "123456789:ABCdefGhIJKlmNoPQRstuVWXyz"
+    chat_id: ""                 # e.g., "-1001234567890" or "@mychannel"
+    min_score_for_alert: 75
+
+  discord:
+    enabled: false
+    webhook_url: ""             # e.g., "https://discord.com/api/webhooks/..."
+    min_score_for_alert: 75
+
+  terminal:
+    sound_alert: true           # Beep on high score (Score >= 80)
+    log_to_file: true
+    log_file_path: "logs/detected_gems.jsonl"

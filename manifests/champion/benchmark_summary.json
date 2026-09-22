@@ -1,0 +1,17 @@
+{
+  "benchmark_name": "KNOWN_GOOD_1000_TRADES_V1_0_0_CHAMPION",
+  "timestamp": "2026-08-27T07:19:34.256007+00:00",
+  "total_trades": 1000,
+  "closed_trades": 1000,
+  "win_count": 391,
+  "loss_count": 609,
+  "win_rate_pct": 39.1,
+  "cumulative_pnl_usd": 4250.12,
+  "profit_factor": 1.83,
+  "mean_return_pct": 4.25,
+  "median_return_pct": -4.94,
+  "max_drawdown_usd": 176.12,
+  "max_drawdown_pct": 4.13,
+  "median_mfe_ratio": 1.29,
+  "median_mae_ratio": 0.79
+}

@@ -1,0 +1,99 @@
+# ==============================================================================
+# GEM DETECTOR - REAL-TIME CONFIGURATION & THRESHOLDS
+# Identifies sub-$10K tokens with high probability of reaching $3M+ Market Cap
+# ==============================================================================
+
+scanner:
+  # Chains to scan: 'solana', 'base', 'ethereum', 'bsc' (default: solana, base)
+  active_chains:
+    - solana
+    - base
+  
+  # Scan poll interval in seconds
+  poll_interval_sec: 10
+  
+  # Maximum age of tokens in minutes to consider as "Early Stage"
+  max_token_age_minutes: 180
+  
+  # Enable real-time websocket feed where available
+  enable_websocket_feed: true
+  
+  # Number of top candidates to display on live terminal dashboard
+  dashboard_display_limit: 15
+
+# ==============================================================================
+# BREAKOUT CHARACTERISTICS & HARD FILTERS
+# ==============================================================================
+filters:
+  # Target Market Cap window for earliest reliable detection
+  min_market_cap_usd: 8000
+  max_market_cap_usd: 50000
+
+  # Liquidity Health
+  min_liquidity_usd: 2500
+  min_liquidity_mc_ratio: 0.15     # Liquidity must be at least 15% of Market Cap
+
+  # Volume & Velocity
+  min_volume_5m_usd: 1000
+  min_volume_mc_ratio: 0.6         # 5m/1h volume to MC ratio >= 0.6x
+  max_volume_mc_ratio: 6.0         # Volume > 6x MC flags suspicious wash trading
+
+  # Order Flow & Pressure
+  min_buy_sell_ratio: 1.4          # Buys must exceed sells by at least 1.4x (58%+ buys)
+  min_unique_buyers: 30            # At least 30 unique buying wallets
+  min_buyer_seller_ratio: 1.3      # Unique buyers vs sellers ratio
+
+  # Holder Decentralization & Security
+  max_top10_holder_percent: 25.0   # Top 10 wallets hold < 25% of supply (excl. LP)
+  max_dev_holding_percent: 4.0     # Deployer wallet holds < 4% (or 100% sold)
+  require_mint_renounced: true     # Mint authority must be disabled
+  require_freeze_renounced: true   # Freeze authority must be disabled
+  max_allowed_tax_percent: 1.0     # Max buy/sell tax (0% standard on Solana)
+
+# ==============================================================================
+# COMPOSITE GEM SCORE WEIGHTS (Total = 100)
+# ==============================================================================
+scoring:
+  # Minimum score (0-100) to trigger alerts and display as high-probability breakout
+  alert_score_threshold: 75
+
+  weights:
+    # 1. Holder Distribution & Decentralization (Max 25 pts)
+    # Rewards low top-10 concentration, high holder velocity, dev exit
+    holder_distribution: 25
+
+    # 2. Volume & Momentum Dynamics (Max 25 pts)
+    # Rewards healthy Vol/MC ratio, accelerating 5m/1h volume, consistent txs
+    volume_momentum: 25
+
+    # 3. Order Flow & Buyer Pressure (Max 20 pts)
+    # Rewards high buy/sell ratio, unique buyer count, organic ticket sizes
+    order_flow: 20
+
+    # 4. Liquidity Depth & Lock Quality (Max 20 pts)
+    # Rewards high LP/MC ratio, 100% burned/locked liquidity
+    liquidity_health: 20
+
+    # 5. Social Presence & Virality Acceleration (Max 10 pts)
+    # Rewards verified X/Twitter, active Telegram, website, DexScreener profile
+    social_virality: 10
+
+# ==============================================================================
+# NOTIFICATION & ALERT HOOKS
+# ==============================================================================
+alerts:
+  telegram:
+    enabled: false
+    bot_token: ""               # e.g., "123456789:ABCdefGhIJKlmNoPQRstuVWXyz"
+    chat_id: ""                 # e.g., "-1001234567890" or "@mychannel"
+    min_score_for_alert: 75
+
+  discord:
+    enabled: false
+    webhook_url: ""             # e.g., "https://discord.com/api/webhooks/..."
+    min_score_for_alert: 75
+
+  terminal:
+    sound_alert: true           # Beep on high score (Score >= 80)
+    log_to_file: true
+    log_file_path: "logs/detected_gems.jsonl"

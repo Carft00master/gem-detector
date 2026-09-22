@@ -1,0 +1,37 @@
+{
+  "ui": {
+    "theme": "dark_bloomberg",
+    "refresh_interval_ms": 1500,
+    "health_interval_ms": 3000,
+    "enable_sound_alerts": true,
+    "compact_tables": true,
+    "vps_mode": true,
+    "max_display_rows": 100
+  },
+  "scanner": {
+    "active_mode": "PAPER",
+    "active_chains": [
+      "solana",
+      "bsc"
+    ],
+    "default_chain": "solana",
+    "min_market_cap_usd": 8000.0,
+    "max_market_cap_usd": 35000.0,
+    "min_liquidity_usd": 5000.0,
+    "poll_interval_sec": 10.0
+  },
+  "paper_trading": {
+    "default_position_size_usd": 250.0,
+    "active_policy": "TRAILING_STOP"
+  },
+  "exports": {
+    "export_directory": "exports"
+  },
+  "credentials": {
+    "telegram_bot_token": "",
+    "telegram_chat_id": "",
+    "discord_webhook_url": "",
+    "helius_rpc_url": "",
+    "quicknode_rpc_url": ""
+  }
+}

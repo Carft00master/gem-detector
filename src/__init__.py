@@ -1,0 +1,1 @@
+"""Gem Detector package."""
