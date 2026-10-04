@@ -88,10 +88,17 @@ class CommandBar(QFrame):
         self.lbl_regime.setAlignment(Qt.AlignCenter)
         self.lbl_regime.setStyleSheet("color: #38bdf8; font-size: 9px; font-weight: 700; background-color: #0f172a; border: 1px solid #1e293b; padding: 1px 7px; border-radius: 3px;")
         
+        self.badge_vps = QLabel("⚡ VPS GOVERNOR")
+        self.badge_vps.setFixedHeight(20)
+        self.badge_vps.setAlignment(Qt.AlignCenter)
+        self.badge_vps.setToolTip("VPS Resource Governor Active: Auto-budgets CPU, caps queries, and purges RAM to prevent UI freezing.")
+        self.badge_vps.setStyleSheet("color: #38bdf8; font-size: 9px; font-weight: 700; background-color: #082f49; border: 1px solid #0284c7; padding: 1px 6px; border-radius: 3px;")
+
         center_zone.addWidget(self.status_container, 0, Qt.AlignVCenter)
         center_zone.addWidget(self.badge_sol, 0, Qt.AlignVCenter)
         center_zone.addWidget(self.badge_bnb, 0, Qt.AlignVCenter)
         center_zone.addWidget(self.lbl_regime, 0, Qt.AlignVCenter)
+        center_zone.addWidget(self.badge_vps, 0, Qt.AlignVCenter)
         
         # Right zone: Action buttons & utility tools
         right_zone = QHBoxLayout()
@@ -233,6 +240,16 @@ class CommandBar(QFrame):
             color, bg, border = "#94a3b8", "#1e293b", "#334155"
         self.lbl_regime.setText(f"REGIME: {regime}")
         self.lbl_regime.setStyleSheet(f"color: {color}; font-size: 9px; font-weight: bold; background-color: {bg}; border: 1px solid {border}; padding: 1px 6px; border-radius: 3px;")
+
+    def update_vps_badge(self, is_active: bool = True, details: str = ""):
+        if is_active:
+            self.badge_vps.setText("⚡ VPS GOVERNOR")
+            self.badge_vps.setStyleSheet("color: #38bdf8; font-size: 9px; font-weight: 700; background-color: #082f49; border: 1px solid #0284c7; padding: 1px 6px; border-radius: 3px;")
+            if details:
+                self.badge_vps.setToolTip(f"VPS Resource Governor Active: {details}")
+        else:
+            self.badge_vps.setText("⚡ GOVERNOR: STD")
+            self.badge_vps.setStyleSheet("color: #64748b; font-size: 9px; font-weight: 700; background-color: #0f172a; border: 1px solid #1e293b; padding: 1px 6px; border-radius: 3px;")
         
     def set_unread_count(self, count: int):
         if count > 0:

@@ -67,6 +67,8 @@ class ExecutionModel(ABC):
         chain: str,
         priority_fee_usd: float,
         trough_mc: Optional[float] = None,
+        entry_price: Optional[float] = None,
+        exit_price: Optional[float] = None,
     ) -> TradeExecutionResult:
         pass
 
@@ -103,6 +105,8 @@ class PumpFunBondingCurveExecution(ExecutionModel):
         priority_fee_usd: float,
         trough_mc: Optional[float] = None,
         curve_state: Optional[PumpFunPointInTimeCurveState] = None,
+        entry_price: Optional[float] = None,
+        exit_price: Optional[float] = None,
     ) -> TradeExecutionResult:
         res = TradeExecutionResult(
             position_size_usd=position_size_usd,
@@ -131,7 +135,11 @@ class PumpFunBondingCurveExecution(ExecutionModel):
         entry_fee = position_size_usd * (fee_pct / 100.0)
         net_entry_capital = (position_size_usd - entry_fee) * (1.0 - entry_impact)
 
-        price_multiple = exit_mc / entry_mc
+        # Robust Price Multiple: Anchor to true price when available, preventing bonding-curve MC distortion
+        if entry_price is not None and exit_price is not None and entry_price > 0 and exit_price > 0:
+            price_multiple = exit_price / entry_price
+        else:
+            price_multiple = exit_mc / entry_mc if entry_mc > 0 else 1.0
         gross_exit_val = net_entry_capital * price_multiple
 
         exit_impact = gross_exit_val / (eff_exit_x + gross_exit_val)
@@ -173,6 +181,8 @@ class RaydiumConstantProductExecution(ExecutionModel):
         chain: str,
         priority_fee_usd: float,
         trough_mc: Optional[float] = None,
+        entry_price: Optional[float] = None,
+        exit_price: Optional[float] = None,
     ) -> TradeExecutionResult:
         res = TradeExecutionResult(
             position_size_usd=position_size_usd,
@@ -199,7 +209,11 @@ class RaydiumConstantProductExecution(ExecutionModel):
         entry_fee = position_size_usd * (fee_pct / 100.0)
         net_entry_capital = (position_size_usd - entry_fee) * (1.0 - entry_impact)
 
-        price_multiple = exit_mc / entry_mc
+        # Robust Price Multiple: Anchor to true price when available, preventing bonding-curve MC distortion
+        if entry_price is not None and exit_price is not None and entry_price > 0 and exit_price > 0:
+            price_multiple = exit_price / entry_price
+        else:
+            price_multiple = exit_mc / entry_mc if entry_mc > 0 else 1.0
         gross_exit_val = net_entry_capital * price_multiple
 
         exit_impact = gross_exit_val / (quote_reserve_exit + gross_exit_val)
@@ -243,6 +257,8 @@ class UniswapV2BaseExecution(ExecutionModel):
         chain: str,
         priority_fee_usd: float,
         trough_mc: Optional[float] = None,
+        entry_price: Optional[float] = None,
+        exit_price: Optional[float] = None,
     ) -> TradeExecutionResult:
         res = TradeExecutionResult(
             position_size_usd=position_size_usd,
@@ -269,7 +285,11 @@ class UniswapV2BaseExecution(ExecutionModel):
         entry_fee = position_size_usd * (fee_pct / 100.0)
         net_entry_capital = (position_size_usd - entry_fee) * (1.0 - entry_impact)
 
-        price_multiple = exit_mc / entry_mc
+        # Robust Price Multiple: Anchor to true price when available, preventing bonding-curve MC distortion
+        if entry_price is not None and exit_price is not None and entry_price > 0 and exit_price > 0:
+            price_multiple = exit_price / entry_price
+        else:
+            price_multiple = exit_mc / entry_mc if entry_mc > 0 else 1.0
         gross_exit_val = net_entry_capital * price_multiple
 
         exit_impact = gross_exit_val / (quote_reserve_exit + gross_exit_val)
@@ -316,6 +336,8 @@ class UniswapV3ConcentratedExecution(ExecutionModel):
         chain: str,
         priority_fee_usd: float,
         trough_mc: Optional[float] = None,
+        entry_price: Optional[float] = None,
+        exit_price: Optional[float] = None,
     ) -> TradeExecutionResult:
         res = TradeExecutionResult(
             position_size_usd=position_size_usd,
@@ -343,7 +365,11 @@ class UniswapV3ConcentratedExecution(ExecutionModel):
         entry_fee = position_size_usd * (fee_pct / 100.0)
         net_entry_capital = (position_size_usd - entry_fee) * (1.0 - entry_impact)
 
-        price_multiple = exit_mc / entry_mc
+        # Robust Price Multiple: Anchor to true price when available, preventing bonding-curve MC distortion
+        if entry_price is not None and exit_price is not None and entry_price > 0 and exit_price > 0:
+            price_multiple = exit_price / entry_price
+        else:
+            price_multiple = exit_mc / entry_mc if entry_mc > 0 else 1.0
         gross_exit_val = net_entry_capital * price_multiple
 
         exit_impact = gross_exit_val / (eff_quote_exit + gross_exit_val)
@@ -387,6 +413,8 @@ class UnsupportedVenueExecution(ExecutionModel):
         chain: str,
         priority_fee_usd: float,
         trough_mc: Optional[float] = None,
+        entry_price: Optional[float] = None,
+        exit_price: Optional[float] = None,
     ) -> TradeExecutionResult:
         res = TradeExecutionResult(
             position_size_usd=position_size_usd,
@@ -473,9 +501,12 @@ class AMMExecutionSimulator:
         chain: str = "solana",
         venue: str = "raydium",
         trough_mc: Optional[float] = None,
+        entry_price: Optional[float] = None,
+        exit_price: Optional[float] = None,
     ) -> TradeExecutionResult:
         """
         Simulate trade execution using venue-specific adapter and actual position size.
+        Anchors price multiple directly to fill price and exit price when available.
         """
         adapter = self.get_adapter(venue)
         ch_lower = chain.lower()
@@ -496,6 +527,8 @@ class AMMExecutionSimulator:
             chain=chain,
             priority_fee_usd=priority_fee,
             trough_mc=trough_mc,
+            entry_price=entry_price,
+            exit_price=exit_price,
         )
 
     def evaluate_multi_tier_sizes(

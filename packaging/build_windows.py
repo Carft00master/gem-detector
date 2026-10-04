@@ -4,17 +4,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
-
-root_dir = Path(__file__).resolve().parent.parent
-
-
 from datetime import datetime, timezone
-import os
-from pathlib import Path
-import shutil
-import sqlite3
-import subprocess
-import sys
 
 root_dir = Path(__file__).resolve().parent.parent
 
@@ -36,9 +26,22 @@ JSONL_NAMES = [
 
 
 def sync_live_data_before_build():
-    """Preserve all live user databases and JSONL files across PyInstaller rebuilds."""
+    """Preserve all live user databases and JSONL files across PyInstaller rebuilds while preventing disk bloat."""
+    backups_root = root_dir / "data" / "backups"
+    if backups_root.exists():
+        existing_backups = sorted(
+            [p for p in backups_root.iterdir() if p.is_dir()],
+            key=lambda p: p.stat().st_mtime,
+        )
+        # Keep at most 1 previous backup to ensure disk usage remains bounded
+        for old_b in existing_backups[:-1]:
+            try:
+                shutil.rmtree(old_b, ignore_errors=True)
+            except Exception:
+                pass
+
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    backup_dir = root_dir / "data" / "backups" / f"pre_build_{ts}"
+    backup_dir = backups_root / f"pre_build_{ts}"
     backup_dir.mkdir(parents=True, exist_ok=True)
 
     data_dir = root_dir / "data"
@@ -99,9 +102,25 @@ def sync_live_data_before_build():
                 shutil.copy2(dist_j, root_j)
 
 
+def _clean_stale_wal(directory: Path):
+    """Clean empty or dangling WAL/SHM locks."""
+    for p in directory.glob("*.db-wal"):
+        try:
+            if p.stat().st_size == 0:
+                p.unlink()
+        except Exception:
+            pass
+    for p in directory.glob("*.db-shm"):
+        try:
+            p.unlink()
+        except Exception:
+            pass
+
+
 def sync_live_data_after_build():
     """Restore all data files to the built application directory so packaged exe starts with 100% current data."""
     data_dir = root_dir / "data"
+    _clean_stale_wal(data_dir)
     destinations = [
         root_dir / "dist" / "MemecoinScanner" / "data",
         root_dir / "dist" / "MemecoinScanner" / "_internal" / "data",
@@ -109,6 +128,7 @@ def sync_live_data_after_build():
 
     for dest in destinations:
         dest.mkdir(parents=True, exist_ok=True)
+        _clean_stale_wal(dest)
         for db_name in DB_NAMES:
             src_db = data_dir / db_name
             if src_db.exists():
@@ -117,20 +137,25 @@ def sync_live_data_after_build():
             src_j = data_dir / j_name
             if src_j.exists():
                 shutil.copy2(src_j, dest / j_name)
+        for json_file in data_dir.glob("*.json"):
+            shutil.copy2(json_file, dest / json_file.name)
 
     # Verification check
     root_paper = data_dir / "paper_trading.db"
     dist_paper = root_dir / "dist" / "MemecoinScanner" / "data" / "paper_trading.db"
     if root_paper.exists() and dist_paper.exists():
-        conn1 = sqlite3.connect(root_paper)
-        conn2 = sqlite3.connect(dist_paper)
         try:
-            cnt1 = conn1.execute("SELECT COUNT(*) FROM paper_trades").fetchone()[0]
-            cnt2 = conn2.execute("SELECT COUNT(*) FROM paper_trades").fetchone()[0]
-            print(f"[+] Post-build Data Verification: Root trades={cnt1}, Packaged trades={cnt2} (MATCH: {cnt1 == cnt2})")
-        finally:
-            conn1.close()
-            conn2.close()
+            conn1 = sqlite3.connect(root_paper)
+            conn2 = sqlite3.connect(dist_paper)
+            try:
+                cnt1 = conn1.execute("SELECT COUNT(*) FROM paper_trades").fetchone()[0]
+                cnt2 = conn2.execute("SELECT COUNT(*) FROM paper_trades").fetchone()[0]
+                print(f"[+] Post-build Data Verification: Root trades={cnt1}, Packaged trades={cnt2} (MATCH: {cnt1 == cnt2})")
+            finally:
+                conn1.close()
+                conn2.close()
+        except Exception as e:
+            print(f"[!] Post-build Verification notice: {e}")
 
 
 def build_executable():

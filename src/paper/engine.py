@@ -71,11 +71,13 @@ class PaperTradingEngine:
         self.active_positions: Dict[str, PaperTradeRecord] = {}
         self.peak_prices: Dict[str, float] = {}
         self.trough_prices: Dict[str, float] = {}
+        self.traded_tokens: set[str] = set()
         self._load_open_positions()
 
     def _load_open_positions(self) -> None:
-        """Load open positions from database on startup, expiring stale zombie trades (>24h)."""
+        """Load open positions and historical traded tokens from database on startup."""
         records = self.ledger.load_all_trades()
+        self.traded_tokens = {str(r.get("token_address", "")) for r in records if r.get("token_address")}
         now_utc = datetime.now(timezone.utc)
         for r in records:
             if r.get("status") == "OPEN":
@@ -139,22 +141,45 @@ class PaperTradingEngine:
         prediction: BreakoutPredictionOutput,
         regime: str = "NORMAL",
         position_size: Optional[float] = None,
+        entry_reason: str = "BREAKOUT_CONVICTION",
     ) -> Optional[PaperTradeRecord]:
         """
         Called when a token triggers an actionable EARLY_BREAKOUT or HIGH_CONVICTION alert.
         Simulates fill under realistic liquidity constraints and opens a paper trade.
         """
         token_addr = candidate.address
-        if token_addr in self.active_positions:
+        if token_addr in self.active_positions or token_addr in self.traded_tokens:
+            logger.debug(f"Paper trade rejected: {candidate.symbol} ({token_addr}) has already been traded previously or is currently open.")
+            return None
+
+        # 1. Toxic Venue Defense: Reject unmodeled/concentrated dump pools
+        venue_str = str(getattr(candidate, "dex_id", None) or getattr(candidate, "venue", "") or "").lower()
+        toxic_venues = {"meteora-dbc", "meteora-damm-v2", "bags-fm", "moonshot", "pons-v2", "pons-v2-dex", "pancakeswap_v2", "uniswap-v4-base", "four-meme"}
+        if any(tv in venue_str for tv in toxic_venues):
+            logger.info(f"Skipping paper trade for {candidate.symbol}: Venue {venue_str} is in toxic pool blacklist.")
+            return None
+
+        # 2. Liquidity-to-Market-Cap Ratio Gate (Must be >= 0.80 to prevent paper-thin liquidations)
+        mc = float(getattr(candidate, "market_cap_usd", 0.0) or 0.0)
+        liq = float(getattr(candidate, "liquidity_usd", 0.0) or 0.0)
+        liq_mc_ratio = (liq / mc) if mc > 0 else 0.0
+        if liq_mc_ratio < 0.80:
+            logger.info(f"Skipping paper trade for {candidate.symbol}: Low liquidity-to-MC ratio ({liq_mc_ratio:.2f} < 0.80).")
+            return None
+
+        # 3. Anti-Late-Bonding-Curve Gate: Avoid buying the exhausted top of bonding curves before dev dumps
+        p500k = getattr(prediction, "p_reach_500k", 0.0)
+        if mc > 40000.0 and (liq_mc_ratio < 1.0 or p500k < 0.38):
+            logger.info(f"Skipping paper trade for {candidate.symbol}: Over-extended bonding curve with exhausted momentum (MC ${mc:,.0f}, P500k={p500k:.2f}).")
             return None
 
         # Position Sizing: explicit size or liquidity-scaled (max $100 base size or 1.0% pool depth)
         if position_size is not None and position_size > 0:
             pos_size = position_size
         else:
-            liq = float(candidate.liquidity_usd or 10000.0)
+            liq_calc = float(candidate.liquidity_usd or 10000.0)
             # Size at 1.0% of pool liquidity, bounded between $25 min and $100 max
-            pos_size = max(25.0, min(100.0, liq * 0.01))
+            pos_size = max(25.0, min(100.0, liq_calc * 0.01))
 
         # Simulate execution entry
         exec_entry = self.execution_sim.simulate_trade(
@@ -166,7 +191,6 @@ class PaperTradingEngine:
             chain=candidate.chain,
             venue=candidate.dex_id,
         )
-
 
         if not exec_entry.is_executable:
             logger.info(f"Skipping paper trade for {candidate.symbol}: {exec_entry.execution_rejection_reason}")
@@ -202,10 +226,12 @@ class PaperTradingEngine:
             entry_price_usd=candidate.price_usd,
             simulated_fill_price_usd=simulated_fill,
             entry_price_impact_pct=exec_entry.entry_price_impact_pct,
+            entry_reason=entry_reason,
             exit_policy=self.default_exit_policy,
         )
 
         self.active_positions[token_addr] = trade
+        self.traded_tokens.add(token_addr)
         self.peak_prices[token_addr] = simulated_fill
         self.trough_prices[token_addr] = simulated_fill
         self.ledger.record_entry(trade)
@@ -250,6 +276,14 @@ class PaperTradingEngine:
 
         trade = self.active_positions[token_address]
         exit_policy = policy or trade.exit_policy or self.default_exit_policy
+
+        # Robust trade holding duration: calculate from trade.timestamp if available
+        if trade.timestamp:
+            try:
+                t_dt = datetime.fromisoformat(trade.timestamp.replace("Z", "+00:00"))
+                elapsed_minutes = max(0.0, (datetime.now(timezone.utc) - t_dt).total_seconds() / 60.0)
+            except Exception:
+                pass
 
         fill_price = trade.simulated_fill_price_usd
         now_iso = datetime.now(timezone.utc).isoformat()
@@ -333,7 +367,9 @@ class PaperTradingEngine:
         elif exit_policy == "STAGED_EXITS":
             current_multiple = current_price_usd / fill_price if fill_price > 0 else 1.0
             # A. Multi-Million Target ($1M - $3M Market Cap or 20x multiple)
-            if current_market_cap_usd >= 1_000_000.0 or current_multiple >= 20.0:
+            # Require confirmed price appreciation (>= 1.5x) so post-graduation FDV jumps on stale feeds cannot trigger false exits
+            has_real_excursion = current_multiple >= 1.5 or (current_multiple >= 20.0)
+            if (current_market_cap_usd >= 1_000_000.0 and has_real_excursion) or current_multiple >= 20.0:
                 should_exit = True
                 exit_reason = "STAGED_FINAL_TARGET"
             # B. Wide Moonbag Trailing Stop (Tolerates 40% normal memecoin pullbacks once past 3x)
@@ -356,8 +392,8 @@ class PaperTradingEngine:
                 exit_reason = "STAGED_STOP_LOSS"
 
         # 6. Universal Stale Bag Decay Gate:
-        # If a token has not produced a +35% excursion within 120 minutes, exit to free capital
-        if not should_exit and elapsed_minutes >= 120.0 and peak < fill_price * 1.35:
+        # If a token has not produced a +25% excursion within 30 minutes, exit to free capital
+        if not should_exit and elapsed_minutes >= 30.0 and peak < fill_price * 1.25:
             should_exit = True
             exit_reason = "STALE_DECAY_EXIT"
 
@@ -371,6 +407,8 @@ class PaperTradingEngine:
                 chain=trade.chain,
                 venue=trade.venue,
                 trough_mc=trade.market_cap_usd * mae,
+                entry_price=trade.simulated_fill_price_usd or trade.entry_price_usd,
+                exit_price=current_price_usd,
             )
 
             # Calculate hold duration
@@ -385,6 +423,7 @@ class PaperTradingEngine:
 
             trade.exit_price_usd = current_price_usd
             trade.exit_market_cap_usd = current_market_cap_usd if current_market_cap_usd > 0 else (trade.market_cap_usd * (current_price_usd / fill_price) if fill_price > 0 else trade.market_cap_usd)
+            trade.exit_liquidity_usd = current_liquidity_usd if (current_liquidity_usd and current_liquidity_usd > 0) else trade.liquidity_usd
             trade.exit_timestamp = now_iso
             trade.hold_duration_seconds = round(hold_sec, 2)
             trade.exit_reason = exit_reason
@@ -428,6 +467,90 @@ class PaperTradingEngine:
             return trade
 
         return None
+
+    def force_close_position(
+        self,
+        token_address: str,
+        exit_reason: str = "DISPLACED_BY_HIGHER_RANK",
+        current_price_usd: Optional[float] = None,
+        current_market_cap_usd: Optional[float] = None,
+        current_liquidity_usd: Optional[float] = None,
+    ) -> Optional[PaperTradeRecord]:
+        """
+        Immediately closes an active position (e.g. when displaced by a higher-ranked opportunity).
+        """
+        if token_address not in self.active_positions:
+            return None
+        trade = self.active_positions[token_address]
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        curr_price = current_price_usd or self.peak_prices.get(token_address) or trade.simulated_fill_price_usd
+        curr_mc = current_market_cap_usd or trade.market_cap_usd
+        curr_liq = current_liquidity_usd or trade.liquidity_usd
+
+        fill_price = trade.simulated_fill_price_usd
+        peak = self.peak_prices.get(token_address, fill_price)
+        trough = self.trough_prices.get(token_address, fill_price)
+        mae = trough / fill_price if fill_price > 0 else 1.0
+
+        curr_price = current_price_usd or peak or fill_price
+        exec_exit = self.execution_sim.simulate_trade(
+            position_size_usd=trade.position_size_usd,
+            entry_mc=trade.market_cap_usd,
+            exit_mc=curr_mc,
+            entry_liquidity=trade.liquidity_usd,
+            exit_liquidity=curr_liq,
+            chain=trade.chain,
+            venue=trade.venue,
+            trough_mc=trade.market_cap_usd * mae,
+            entry_price=trade.simulated_fill_price_usd or trade.entry_price_usd,
+            exit_price=curr_price,
+        )
+
+        hold_sec = 0.0
+        if trade.timestamp:
+            try:
+                t_in = datetime.fromisoformat(trade.timestamp.replace("Z", "+00:00"))
+                t_out = datetime.now(timezone.utc)
+                hold_sec = max(0.0, (t_out - t_in).total_seconds())
+            except Exception:
+                pass
+
+        trade.exit_price_usd = curr_price
+        trade.exit_market_cap_usd = curr_mc
+        trade.exit_timestamp = now_iso
+        trade.hold_duration_seconds = round(hold_sec, 2)
+        trade.exit_reason = exit_reason
+        trade.exit_price_impact_pct = exec_exit.exit_price_impact_pct
+        trade.total_fees_usd = exec_exit.dex_swap_fees_usd + exec_exit.network_priority_fees_usd
+        trade.net_realized_pnl_usd = exec_exit.net_realized_pnl_usd
+        trade.net_realized_return_pct = exec_exit.net_realized_return_pct
+        trade.outcome_label = "SUCCESS" if trade.target_reached_3m or exec_exit.net_realized_return_pct > 0 else "FAILURE"
+
+        self.ledger.record_exit(trade)
+        self.ledger.record_trade_event(TradeEventRecord(
+            event_id=str(uuid.uuid4())[:12],
+            trade_id=trade.trade_id or trade.signal_id,
+            token_address=token_address,
+            timestamp=now_iso,
+            event_type="EXIT",
+            market_cap_usd=curr_mc,
+            liquidity_usd=curr_liq,
+            price_usd=curr_price,
+            signal_state="EXIT",
+            details={
+                "exit_reason": exit_reason,
+                "net_realized_pnl_usd": trade.net_realized_pnl_usd,
+                "realized_return_pct": trade.net_realized_return_pct,
+                "hold_duration_seconds": trade.hold_duration_seconds,
+                "outcome_label": trade.outcome_label,
+            }
+        ))
+
+        del self.active_positions[token_address]
+        self.peak_prices.pop(token_address, None)
+        self.trough_prices.pop(token_address, None)
+        return trade
 
     @classmethod
     def backtest_all_five_policies(

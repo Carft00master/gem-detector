@@ -346,12 +346,15 @@ class LearningDatasetBuilder:
             return "CORRECT_EXIT"
         return "UNKNOWN"
 
-    def build_selection_dataset(self) -> LearningDataset:
+    def build_selection_dataset(self, limit: Optional[int] = None) -> LearningDataset:
         """
-        Load all shadow tokens, join with outcome maturity labels, and produce SelectionDatasetRows.
+        Load shadow tokens, join with outcome maturity labels, and produce SelectionDatasetRows.
         Sets readiness_status to 'READY' only if mature_rows >= MIN_SELECTION_OBSERVATIONS.
         """
-        raw_tokens = self.shadow_logger.load_all_shadow_tokens()
+        if limit is not None:
+            raw_tokens = self.shadow_logger.load_recent_shadow_tokens(limit=limit)
+        else:
+            raw_tokens = self.shadow_logger.load_all_shadow_tokens()
         rows: List[SelectionDatasetRow] = []
 
         for rec in raw_tokens:

@@ -85,11 +85,30 @@ class AlertConfig:
 
 
 @dataclass
+class SelectorConfig:
+    enabled: bool = True
+    mode: str = "V2_2_RECOVERY"  # "V2_2_RECOVERY" (Option B: Dynamic Slot Queue), "V2_HIGH_CONVICTION", or "V1_LEGACY"
+    min_market_cap_usd: float = 8000.0  # Flexible discovery hard floor, no upper boundary
+    min_confluence_axes: int = 3
+    min_core_score: float = 65.0
+    min_emerging_score: float = 58.0
+    min_tail_score: float = 65.0
+    min_expected_value: float = 1.5
+    max_simultaneous_positions: int = 8  # Dynamic opportunity slots
+    min_displacement_delta: float = 15.0  # Material superiority threshold to replace weakest position
+    max_new_trades_per_hour: int = 10  # Fallback budget
+    regime_hourly_caps: Dict[str, int] = field(
+        default_factory=lambda: {"HOT": 15, "NORMAL": 10, "COLD": 5, "PANIC": 0}
+    )
+
+
+@dataclass
 class AppConfig:
     scanner: ScannerConfig = field(default_factory=ScannerConfig)
     filters: FilterConfig = field(default_factory=FilterConfig)
     scoring: ScoringConfig = field(default_factory=ScoringConfig)
     alerts: AlertConfig = field(default_factory=AlertConfig)
+    selector: SelectorConfig = field(default_factory=SelectorConfig)
 
 
 def _deep_update(source: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[str, Any]:
@@ -141,6 +160,7 @@ def load_config(
     filters_data = base_data.get("filters", {})
     scoring_data = base_data.get("scoring", {})
     alerts_data = base_data.get("alerts", {})
+    selector_data = base_data.get("selector", {})
 
     scoring_weights = ScoringWeights(**scoring_data.get("weights", {}))
     scoring_cfg = ScoringConfig(
@@ -154,9 +174,12 @@ def load_config(
         terminal=TerminalAlertConfig(**alerts_data.get("terminal", {})),
     )
 
+    selector_cfg = SelectorConfig(**selector_data) if selector_data else SelectorConfig()
+
     return AppConfig(
         scanner=ScannerConfig(**scanner_data),
         filters=FilterConfig(**filters_data),
         scoring=scoring_cfg,
         alerts=alert_cfg,
+        selector=selector_cfg,
     )

@@ -29,7 +29,7 @@ def test_paper_trading_trailing_stop_policy(paper_engine):
         dex_id="raydium",
         market_cap_usd=15000.0,
         price_usd=0.00015,
-        liquidity_usd=5000.0,
+        liquidity_usd=14000.0,
     )
     pred = BreakoutPredictionOutput(p_reach_3m=0.25, alert_state="HIGH_CONVICTION")
 
@@ -44,7 +44,7 @@ def test_paper_trading_trailing_stop_policy(paper_engine):
         token_address="TestTrailingToken",
         current_price_usd=0.00045,
         current_market_cap_usd=45000.0,
-        current_liquidity_usd=15000.0,
+        current_liquidity_usd=40000.0,
         elapsed_minutes=30.0,
         policy="TRAILING_STOP",
     )
@@ -55,7 +55,7 @@ def test_paper_trading_trailing_stop_policy(paper_engine):
         token_address="TestTrailingToken",
         current_price_usd=0.00030,
         current_market_cap_usd=30000.0,
-        current_liquidity_usd=10000.0,
+        current_liquidity_usd=25000.0,
         elapsed_minutes=45.0,
         policy="TRAILING_STOP",
     )
@@ -79,7 +79,7 @@ def test_paper_trading_risk_invalidation_policy(paper_engine):
         dex_id="pumpfun",
         market_cap_usd=12000.0,
         price_usd=0.00012,
-        liquidity_usd=4000.0,
+        liquidity_usd=11000.0,
     )
     pred = BreakoutPredictionOutput(p_reach_3m=0.15, alert_state="EARLY_BREAKOUT")
 

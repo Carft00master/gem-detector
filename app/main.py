@@ -22,6 +22,7 @@ from app.services.paper_trading_service import PaperTradingService
 from app.services.research_service import ResearchService
 from app.services.scanner_service import ScannerService
 from app.services.settings_service import SettingsService
+from app.services.vps_engine import VPSService
 from app.ui.main_window import MainWindow
 from src.version import FROZEN_VERSION_MANIFEST
 
@@ -37,12 +38,14 @@ def setup_services(settings_svc: SettingsService | None = None) -> None:
     """Initialize and register singletons into the ServiceLocator."""
     if settings_svc is None:
         settings_svc = SettingsService()
+    vps_svc = VPSService()
     paper_svc = PaperTradingService()
     research_svc = ResearchService()
     export_svc = ExportService()
     scanner_svc = ScannerService()
 
     ServiceLocator.register(SettingsService, settings_svc)
+    ServiceLocator.register(VPSService, vps_svc)
     ServiceLocator.register(PaperTradingService, paper_svc)
     ServiceLocator.register(ResearchService, research_svc)
     ServiceLocator.register(ExportService, export_svc)
@@ -75,6 +78,9 @@ def main():
 
     # Create and Show Main Window
     window = MainWindow()
+    vps_svc = ServiceLocator.try_get(VPSService)
+    if vps_svc:
+        window.sidebar.selected_changed.connect(vps_svc.on_view_changed)
     window.show()
 
     # Clean shutdown hook

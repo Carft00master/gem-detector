@@ -27,8 +27,8 @@ from src.version import FROZEN_VERSION_MANIFEST
 logger = logging.getLogger(__name__)
 
 
-def _candidate_to_dict(cand: Any, pred: Any) -> Dict[str, Any]:
-    """Convert a (TokenCandidate, BreakoutPredictionOutput) pair into a UI-ready dict."""
+def _candidate_to_dict(cand: Any, pred: Any, meta: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Convert a (TokenCandidate, BreakoutPredictionOutput, Optional[meta]) pair into a UI-ready dict."""
     p3m = 0.05
     p_rug = 0.10
     cabal_risk = 0.12
@@ -57,6 +57,18 @@ def _candidate_to_dict(cand: Any, pred: Any) -> Dict[str, Any]:
     except Exception:
         max_pos_2pct = 0.0
 
+    # Selector V2 / V2.2 Recovery Telemetry
+    v2_info = (meta or {}).get("selector_v2", {})
+    setup_tier = str(v2_info.get("tier", "REJECT"))
+    lane = str(v2_info.get("lane", setup_tier))
+    setup_quality_score = float(v2_info.get("setup_quality_score", 0.0) or 0.0)
+    opportunity_rank = float(v2_info.get("opportunity_rank", 0.0) or 0.0)
+    confluence_count = int(v2_info.get("confluence_count", 0) or 0)
+    expected_value = float(v2_info.get("expected_value", 0.0) or 0.0)
+    confirmed_axes = list(v2_info.get("confirmed_axes", []))
+    is_v2_eligible = bool(v2_info.get("is_eligible", False))
+    rejection_reasons = list(v2_info.get("rejection_reasons", []))
+
     return {
         "token_address": getattr(cand, "address", "Unknown"),
         "symbol": getattr(cand, "symbol", "SYM"),
@@ -81,6 +93,15 @@ def _candidate_to_dict(cand: Any, pred: Any) -> Dict[str, Any]:
         "signal_state": alert_state,
         "max_position_2pct_usd": max_pos_2pct,
         "discovery_timestamp": datetime.now(timezone.utc).isoformat(),
+        "setup_tier": setup_tier,
+        "lane": lane,
+        "setup_quality_score": setup_quality_score,
+        "opportunity_rank": opportunity_rank,
+        "confluence_count": confluence_count,
+        "expected_value": expected_value,
+        "confirmed_axes": confirmed_axes,
+        "is_v2_eligible": is_v2_eligible,
+        "rejection_reasons": rejection_reasons,
     }
 
 
@@ -187,15 +208,19 @@ class ScannerWorker(QThread):
                         event_bus.scanner_error.emit(f"Engine session recycle failed: {reinit_err}")
                         break
 
-                # Emit each evaluated candidate to the UI
+                # Emit each evaluated candidate to the UI with VPS-friendly event yielding
+                from src.utils.vps_governor import vps_governor
                 for item in results:
                     try:
                         if isinstance(item, (list, tuple)) and len(item) >= 2:
                             cand, pred = item[0], item[1]
+                            meta = item[2] if len(item) >= 3 else None
                         else:
                             continue
-                        cand_dict = _candidate_to_dict(cand, pred)
+                        cand_dict = _candidate_to_dict(cand, pred, meta)
                         event_bus.candidate_updated.emit(cand_dict)
+                        if vps_governor.is_vps():
+                            await asyncio.sleep(0.003)
                     except Exception as emit_err:
                         logger.debug(f"Candidate emit error: {emit_err}")
 

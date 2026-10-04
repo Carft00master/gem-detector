@@ -87,7 +87,7 @@ def _set_radar_cell(table, row: int, col: int, text: str = "", font=None, alignm
 
 
 BASE_COLUMNS = [
-    "TOKEN", "CHAIN", "MARKET CAP", "LIQUIDITY", "AGE", "P(3M)", "RUG RISK", "SIGNAL STATE", "MAX @2%", "ACTIONS"
+    "TOKEN", "CHAIN", "MARKET CAP", "LIQUIDITY", "AGE", "P(3M)", "TIER / SCORE", "RUG RISK", "SIGNAL STATE", "MAX @2%", "ACTIONS"
 ]
 
 
@@ -103,12 +103,11 @@ class LiveRadarView(QWidget):
         self.sort_col_idx = 5  # Default sort by P(3M)
         self.sort_ascending = False  # Descending
 
-        # VPS Performance Adaptations
-        from app.services.settings_service import SettingsService
-        settings_svc = ServiceLocator.try_get(SettingsService)
-        is_vps = settings_svc.is_vps_mode_active() if settings_svc else False
-        self._max_display_rows = 100 if is_vps else 150
-        self._timer_interval = 4000 if is_vps else 2500
+        # VPS Performance Adaptations via Governor
+        from src.utils.vps_governor import vps_governor
+        self._max_display_rows = vps_governor.max_display_rows
+        self._timer_interval = vps_governor.ui_refresh_interval_ms
+        vps_governor.register_view(0, self)
 
         self._dirty = True
         self.setup_ui()
@@ -155,18 +154,20 @@ class LiveRadarView(QWidget):
         header.setSectionResizeMode(6, QHeaderView.Interactive)
         header.setSectionResizeMode(7, QHeaderView.Interactive)
         header.setSectionResizeMode(8, QHeaderView.Interactive)
-        header.setSectionResizeMode(9, QHeaderView.Fixed)
+        header.setSectionResizeMode(9, QHeaderView.Interactive)
+        header.setSectionResizeMode(10, QHeaderView.Fixed)
         
-        self.table.setColumnWidth(0, 160)
-        self.table.setColumnWidth(1, 68)
-        self.table.setColumnWidth(2, 105)
-        self.table.setColumnWidth(3, 105)
-        self.table.setColumnWidth(4, 75)
-        self.table.setColumnWidth(5, 85)
-        self.table.setColumnWidth(6, 88)
-        self.table.setColumnWidth(7, 130)
-        self.table.setColumnWidth(8, 95)
+        self.table.setColumnWidth(0, 150)
+        self.table.setColumnWidth(1, 65)
+        self.table.setColumnWidth(2, 95)
+        self.table.setColumnWidth(3, 95)
+        self.table.setColumnWidth(4, 70)
+        self.table.setColumnWidth(5, 80)
+        self.table.setColumnWidth(6, 105)
+        self.table.setColumnWidth(7, 85)
+        self.table.setColumnWidth(8, 125)
         self.table.setColumnWidth(9, 90)
+        self.table.setColumnWidth(10, 85)
 
         # Actions Column Delegate (zero native child QWidgets, prevents GDI exhaustion & stack overflow)
         self.actions_delegate = ActionButtonsDelegate(
@@ -177,7 +178,7 @@ class LiveRadarView(QWidget):
             ],
             on_action=self._handle_action
         )
-        self.table.setItemDelegateForColumn(9, self.actions_delegate)
+        self.table.setItemDelegateForColumn(10, self.actions_delegate)
         
         header.setStyleSheet(
             "QHeaderView::section {"
@@ -219,7 +220,7 @@ class LiveRadarView(QWidget):
 
     def _update_header_labels(self):
         labels = list(BASE_COLUMNS)
-        if 0 <= self.sort_col_idx < len(labels) and self.sort_col_idx != 9:
+        if 0 <= self.sort_col_idx < len(labels) and self.sort_col_idx != 10:
             arrow = " ▲" if self.sort_ascending else " ▼"
             labels[self.sort_col_idx] += arrow
         self.table.setHorizontalHeaderLabels(labels)
@@ -265,7 +266,7 @@ class LiveRadarView(QWidget):
             self._updating = False
 
     def _on_header_clicked(self, logical_index):
-        if logical_index == 9:
+        if logical_index == 10:
             return
         if self.sort_col_idx == logical_index:
             self.sort_ascending = not self.sort_ascending
@@ -292,9 +293,10 @@ class LiveRadarView(QWidget):
     def on_candidate_updated(self, candidate):
         if 'token_address' in candidate:
             self.candidates[candidate['token_address']] = candidate
-            # Keep memory capped at 300 candidates to prevent UI bloat/lag over long runs
-            if len(self.candidates) > 300:
-                excess = len(self.candidates) - 300
+            from src.utils.vps_governor import vps_governor
+            max_cands = vps_governor.max_active_candidates
+            if len(self.candidates) > max_cands:
+                excess = len(self.candidates) - max_cands
                 for k in list(self.candidates.keys())[:excess]:
                     del self.candidates[k]
             self._dirty = True
@@ -333,7 +335,8 @@ class LiveRadarView(QWidget):
                 continue
             
             if preset == "HIGH_CONVICTION":
-                if c.get('signal_state') != "HIGH_CONVICTION" and float(c.get('p_reach_3m', 0)) < 0.14:
+                tier = c.get("setup_tier", "")
+                if tier not in ("A+", "A") and (c.get('signal_state') != "HIGH_CONVICTION" and float(c.get('p_reach_3m', 0)) < 0.14):
                     continue
             elif preset == "EARLY_BREAKOUT" and c.get('signal_state') != "EARLY_BREAKOUT":
                 continue
@@ -368,11 +371,15 @@ class LiveRadarView(QWidget):
             elif col == 5:
                 return float(c.get('p_reach_3m', 0) or 0)
             elif col == 6:
-                return float(c.get('p_rug', 0) or 0)
+                tier_order = {"A+": 4, "A": 3, "B": 2, "C": 1, "REJECT": 0}
+                t_score = tier_order.get(c.get("setup_tier", ""), 0) * 100.0 + float(c.get("setup_quality_score", 0.0) or 0.0)
+                return t_score
             elif col == 7:
+                return float(c.get('p_rug', 0) or 0)
+            elif col == 8:
                 priority = {'HIGH_CONVICTION': 0, 'EARLY_BREAKOUT': 1, 'STRENGTHENING': 2, 'TARGET_PROGRESS': 3, 'WATCH': 4, 'WEAKENING': 5, 'INVALIDATED': 6, 'EXIT': 7}
                 return priority.get(c.get('signal_state', 'WATCH'), 99)
-            elif col == 8:
+            elif col == 9:
                 cap2 = float(c.get('max_position_2pct_usd', 0) or 0)
                 if cap2 <= 0:
                     cap2 = float(c.get('liquidity_usd', 0) or 0) * 0.02
@@ -451,6 +458,36 @@ class LiveRadarView(QWidget):
                 p3m = float(c.get('p_reach_3m', 0) or 0)
                 p3m_color = QColor("#10b981" if p3m >= 0.14 else "#38bdf8" if p3m >= 0.08 else "#64748b")
                 _set_radar_cell(self.table, i, 5, f"{p3m:.1%}", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=p3m_color)
+
+                # 6. TIER / SCORE (Selector V2 High-Conviction)
+                tier = c.get("setup_tier", "REJECT")
+                score = float(c.get("setup_quality_score", 0.0) or 0.0)
+                conf = int(c.get("confluence_count", 0) or 0)
+                ev = float(c.get("expected_value", 0.0) or 0.0)
+
+                if tier == "A+":
+                    tier_text = f"★ A+ {score:.0f}"
+                    tier_col = "#f59e0b"
+                elif tier == "A":
+                    tier_text = f"● A  {score:.0f}"
+                    tier_col = "#10b981"
+                elif tier == "B":
+                    tier_text = f"○ B  {score:.0f}"
+                    tier_col = "#38bdf8"
+                elif tier == "C":
+                    tier_text = f"· C  {score:.0f}"
+                    tier_col = "#94a3b8"
+                else:
+                    tier_text = f"—  {score:.0f}" if score > 0 else "—"
+                    tier_col = "#64748b"
+
+                tooltip_v2 = (
+                    f"Selector V2 Tier: {tier} ({score:.1f}/100)\n"
+                    f"Confluence: {conf}/7 Confirmed Axes\n"
+                    f"Net EV: {ev:+.1f}%\n"
+                    f"High Conviction Eligible: {'YES (Tier A+/A)' if c.get('is_v2_eligible') else 'NO'}"
+                )
+                _set_radar_cell(self.table, i, 6, tier_text, font=sm_bold_font, alignment=Qt.AlignCenter, fg_color=QColor(tier_col), tooltip=tooltip_v2)
                 
                 rug = float(c.get('p_rug', 0) or 0)
                 if rug < 0.20:
@@ -462,19 +499,19 @@ class LiveRadarView(QWidget):
                 else:
                     rug_lbl = "● HIGH"
                     rug_col = "#ef4444"
-                _set_radar_cell(self.table, i, 6, rug_lbl, font=sm_bold_font, alignment=Qt.AlignCenter, fg_color=QColor(rug_col), tooltip=f"Rug Risk: {rug:.1%}")
+                _set_radar_cell(self.table, i, 7, rug_lbl, font=sm_bold_font, alignment=Qt.AlignCenter, fg_color=QColor(rug_col), tooltip=f"Rug Risk: {rug:.1%}")
                 
                 sig = c.get('signal_state', 'WATCH')
                 badge_text, sig_color, _ = format_signal_badge(sig)
-                _set_radar_cell(self.table, i, 7, badge_text, font=sm_bold_font, alignment=Qt.AlignCenter, fg_color=QColor(sig_color))
+                _set_radar_cell(self.table, i, 8, badge_text, font=sm_bold_font, alignment=Qt.AlignCenter, fg_color=QColor(sig_color))
                 
                 cap2 = float(c.get('max_position_2pct_usd', 0) or 0)
                 if cap2 <= 0 and liq > 0:
                     cap2 = liq * 0.02
-                _set_radar_cell(self.table, i, 8, format_usd(cap2) if cap2 > 0 else "—", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=QColor("#fbbf24" if cap2 > 500 else "#94a3b8"))
+                _set_radar_cell(self.table, i, 9, format_usd(cap2) if cap2 > 0 else "—", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=QColor("#fbbf24" if cap2 > 500 else "#94a3b8"))
     
-                # 9. ACTIONS: Zero-overhead delegate item
-                _set_radar_cell(self.table, i, 9, "", data=addr, tooltip=f"Actions: [⌕] View Detail · [📋] Copy CA ({addr})")
+                # 10. ACTIONS: Zero-overhead delegate item
+                _set_radar_cell(self.table, i, 10, "", data=addr, tooltip=f"Actions: [⌕] View Detail · [📋] Copy CA ({addr})")
         finally:
             self.table.setUpdatesEnabled(True)
 

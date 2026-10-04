@@ -34,6 +34,21 @@ from src.feeds.solana_stream import SolanaPumpStream
 from src.models.predictor import BreakoutPredictionOutput, CalibratedMLPredictor, RuleBasedBaselineModel
 from src.research.dataset import LongitudinalDatasetPipeline
 from src.research.storage import ResearchStorage
+from src.research.selector_v2_high_conviction import (
+    FeatureExtractorV2,
+    OpportunityDisplacementEngine,
+    SetupEvaluationResult,
+    SetupQualityModel,
+    SetupTier,
+    TokenSetupState,
+    TradeBudgetConfig,
+)
+from src.research.selector_v2_2_recovery import (
+    ThreeLaneSelectorV22,
+    SelectionLaneV22,
+    OpportunityQueueEngineV22,
+    CandidateEvaluationV22,
+)
 from src.ui.dashboard_v2 import QuantitativeDashboard
 
 logger = logging.getLogger("gem_detector")
@@ -63,6 +78,19 @@ class GemDetectorEngine:
         self.paper_engine = PaperTradingEngine()
         self.shadow_logger = ShadowUniverseLogger()
         self.state_machine = SignalStateMachine()
+
+        # Selector V2 / V2.2 Opportunity Queue & Displacement Engines
+        sel_cfg = getattr(config, "selector", None)
+        budget = TradeBudgetConfig(
+            max_new_trades_per_hour=getattr(sel_cfg, "max_new_trades_per_hour", 10) if sel_cfg else 10,
+            max_simultaneous_positions=getattr(sel_cfg, "max_simultaneous_positions", 8) if sel_cfg else 8,
+            regime_hourly_caps=getattr(sel_cfg, "regime_hourly_caps", None) or {"HOT": 15, "NORMAL": 10, "COLD": 5, "PANIC": 0},
+        )
+        self.displacement_engine = OpportunityDisplacementEngine(budget)
+        self.opportunity_queue = OpportunityQueueEngineV22(
+            max_active_positions=getattr(sel_cfg, "max_simultaneous_positions", 8) if sel_cfg else 8,
+            min_displacement_delta=getattr(sel_cfg, "min_displacement_delta", 15.0) if sel_cfg else 15.0,
+        )
 
         self._running = False
         self._alerted_tokens: Dict[str, str] = {}  # token_addr -> last_alert_state
@@ -208,6 +236,29 @@ class GemDetectorEngine:
             if c.age_minutes > max_age and max_age > 0:
                 continue
             if 4000 <= c.market_cap_usd <= 120000:
+                # Anti-Graduation Spoofing Sanity Check:
+                # If a token has already graduated to DEX trading (e.g. Pump.fun token where total supply is 1B,
+                # but discovery feed is broadcasting the initial bonding curve cap of $68K while true price is already $0.02+),
+                # reject it to prevent entering pre-graduated tokens with mismatched valuation units.
+                raw_fdv = 0.0
+                if hasattr(c, "raw_data") and isinstance(c.raw_data, dict):
+                    raw_fdv = float(c.raw_data.get("fdv") or 0.0)
+                if raw_fdv > 250000.0:
+                    continue
+
+                is_pump = (
+                    c.chain.lower() == "solana"
+                    and (
+                        getattr(c, "dex_id", "").lower() in ("pumpfun", "pumpswap")
+                        or getattr(c, "venue", "").lower() in ("pumpfun", "pumpswap")
+                        or c.address.lower().endswith("pump")
+                    )
+                )
+                if is_pump and c.price_usd > 0.00015:
+                    implied_fdv = c.price_usd * 1_000_000_000.0
+                    if implied_fdv > 250000.0:
+                        continue
+
                 eligible_candidates.append(c)
 
         # 3. Security Audits (Concurrent)
@@ -324,6 +375,55 @@ class GemDetectorEngine:
                 "liquidity_risk": safety.liquidity_risk,
             }
 
+            # Evaluate using Selector V2 High-Conviction Model
+            cand_features = {
+                "token_address": c.address,
+                "symbol": c.symbol,
+                "chain": c.chain,
+                "venue": c.dex_id,
+                "entry_market_cap_usd": c.market_cap_usd,
+                "entry_liquidity_usd": c.liquidity_usd,
+                "p_reach_3m_at_entry": getattr(pred, "p_reach_3m", 0.0),
+                "p_reach_100k_at_entry": getattr(pred, "p_reach_100k", 0.0),
+                "p_reach_500k_at_entry": getattr(pred, "p_reach_500k", 0.0),
+                "p_reach_1m_at_entry": getattr(pred, "p_reach_1m", 0.0),
+                "volume_5m_usd": c.volume_5m_usd,
+                "volume_1h_usd": c.volume_1h_usd,
+                "unique_buyers": c.unique_buyers_1h,
+                "unique_sellers": c.unique_sellers_1h,
+                "txns_5m_buys": c.txns_5m_buys,
+                "txns_5m_sells": c.txns_5m_sells,
+                "wash_trade_risk": wash.wash_trade_risk,
+                "cabal_risk_at_entry": cabal.cabal_risk_score,
+                "regime": structure.regime,
+                "entry_slippage_pct": 1.5,
+                "entry_price_impact_pct": 1.5,
+                "data_confidence_at_entry": getattr(pred, "data_confidence", 0.85),
+            }
+            v22_eval = ThreeLaneSelectorV22.evaluate(
+                cand_features,
+                min_core_score=getattr(self.config.selector, "min_core_score", 65.0),
+                min_core_confluence=getattr(self.config.selector, "min_confluence_axes", 3),
+                min_emerging_score=getattr(self.config.selector, "min_emerging_score", 58.0),
+                min_tail_score=getattr(self.config.selector, "min_tail_score", 65.0),
+                min_ev=getattr(self.config.selector, "min_expected_value", 1.5),
+            )
+            meta["selector_v2"] = {
+                "tier": v22_eval.lane.value,
+                "lane": v22_eval.lane.value,
+                "setup_quality_score": v22_eval.primary_score,
+                "opportunity_rank": v22_eval.opportunity_rank,
+                "core_score": v22_eval.core_score,
+                "emerging_score": v22_eval.emerging_score,
+                "tail_score": v22_eval.tail_score,
+                "confluence_count": v22_eval.confluence_count,
+                "expected_value": v22_eval.ev,
+                "confirmed_axes": v22_eval.confirmed_axes,
+                "is_eligible": v22_eval.is_eligible,
+                "rejection_reasons": v22_eval.rejection_reasons,
+                "soft_penalties": v22_eval.soft_penalties,
+            }
+
             # Queue point-in-time observation and shadow universe record for single-transaction batch write
             observation_batch.append((c, meta))
 
@@ -336,64 +436,135 @@ class GemDetectorEngine:
 
             evaluated_results.append((c, pred, meta))
 
-            # Dispatch Alerts for actionable states & trigger path-dependent paper trading
-            if pred.alert_state in ("HIGH_CONVICTION", "EARLY_BREAKOUT"):
-                # Enforce Hard Market Cap, Survival Age, Liquidity, Probability, Dev, and Security Safety Gates on Entry
-                flt = self.config.filters
-                is_mc_eligible = flt.min_market_cap_usd <= c.market_cap_usd <= flt.max_market_cap_usd
-                is_age_survived = c.age_minutes >= getattr(flt, "min_token_age_minutes", 0.5) and c.txns_5m_buys >= 5
-                is_prob_eligible = pred.p_reach_3m >= getattr(flt, "min_p_reach_3m", 0.09)
-                active_ch_list = [ch.lower() for ch in self.config.scanner.active_chains]
-                is_chain_eligible = (c.chain.lower() in active_ch_list) or (c.chain.lower() == "bsc" and "bnb" in active_ch_list)
-                is_liquidity_safe = (
-                    c.liquidity_usd >= flt.min_liquidity_usd
-                    and c.liquidity_mc_ratio >= flt.min_liquidity_mc_ratio
-                    and safety.liquidity_risk < 0.35
-                )
+            # Dispatch Alerts & Trigger Path-Dependent Paper Trading
+            sel_mode = getattr(self.config.selector, "mode", "V2_2_RECOVERY")
+            is_selector_enabled = getattr(self.config.selector, "enabled", True)
+
+            if is_selector_enabled and sel_mode in ("V2_2_RECOVERY", "V2_HIGH_CONVICTION"):
+                # -----------------------------------------------------------------
+                # SELECTOR_v2.2 Dynamic Opportunity Slot Queue & 3-Lane Admission (Option B)
+                # -----------------------------------------------------------------
+                is_contract_safe = safety.contract_risk < 0.25 and len(safety.critical_flags) == 0
                 is_dev_safe = (
-                    c.security.dev_holding_pct <= flt.max_dev_holding_percent
+                    c.security.dev_holding_pct <= self.config.filters.max_dev_holding_percent
                     and dev.classification not in ("CRITICAL", "WARNING")
                     and dev.dev_risk_score < 0.35
                 )
-                is_contract_safe = safety.contract_risk < 0.25 and len(safety.critical_flags) == 0
 
-                if (is_mc_eligible and is_age_survived and is_prob_eligible and 
-                    is_chain_eligible and is_liquidity_safe and is_dev_safe and is_contract_safe):
-                    last_state = self._alerted_tokens.get(c.address)
-                    if not last_state:
-                        # Trigger real-time path-dependent paper trade entry
-                        trade = self.paper_engine.on_breakout_alert(c, pred)
+                # Mandatory Per-Token Cooldown check (2 hours = 7200s), Active Position Guard & Persistent Traded Token Guard
+                is_already_open = c.address in self.paper_engine.active_positions
+                is_already_traded = c.address in getattr(self.paper_engine, "traded_tokens", set())
+                last_alert_time = self._alerted_token_times.get(c.address)
+                in_cooldown = False
+                if last_alert_time:
+                    elapsed_cooldown = (datetime.now(timezone.utc) - last_alert_time).total_seconds()
+                    if elapsed_cooldown < 7200.0:  # 2 hours
+                        in_cooldown = True
+
+                if v22_eval.is_eligible and is_contract_safe and is_dev_safe and not is_already_open and not is_already_traded and not in_cooldown:
+                    now_str = datetime.now(timezone.utc).isoformat()
+                    can_admit, reason, displaced_addr = self.opportunity_queue.can_admit(
+                        token_address=c.address,
+                        rank_score=v22_eval.opportunity_rank,
+                        now_iso=now_str,
+                        open_positions=self.paper_engine.active_positions,
+                    )
+
+                    if can_admit:
+                        # If a material displacement was approved, close the weaker position cleanly
+                        if displaced_addr and displaced_addr in self.paper_engine.active_positions:
+                            displaced_trade = self.paper_engine.force_close_position(
+                                displaced_addr, exit_reason="DISPLACED_BY_HIGHER_RANK"
+                            )
+                            if displaced_trade:
+                                self._newly_closed_trades.append(displaced_trade)
+                                self._alerted_token_times[displaced_trade.token_address] = datetime.now(timezone.utc)
+                                logger.info(
+                                    f"Opportunity Queue: Displaced {displaced_trade.symbol} "
+                                    f"for incoming gem {c.symbol} (Reason: {reason})"
+                                )
+
+                        regime_cur = structure.regime
+                        trade = self.paper_engine.on_breakout_alert(
+                            c, pred, regime=regime_cur, entry_reason=f"SELECTOR_V2_2_{v22_eval.lane.value}"
+                        )
                         if trade:
+                            self.opportunity_queue.mark_admitted(c.address, v22_eval.opportunity_rank, now_str, displaced_addr)
                             self._alerted_tokens[c.address] = pred.alert_state
                             self._alerted_token_times[c.address] = datetime.now(timezone.utc)
                             self._newly_opened_trades.append(trade)
                             if self.alert_dispatcher:
                                 asyncio.create_task(self.alert_dispatcher.dispatch_alert(c, pred))
-                            logger.info(f"Opened paper trade: {trade.symbol} (${trade.position_size_usd:.0f} at MC ${trade.market_cap_usd:,.0f} on {c.chain})")
-
+                            logger.info(
+                                f"Opened V2.2 Paper Trade [{v22_eval.lane.value} | Rank {v22_eval.opportunity_rank:.1f} | "
+                                f"Score {v22_eval.primary_score:.1f} | Conf {v22_eval.confluence_count} | EV {v22_eval.ev:+.1f}%]: "
+                                f"{trade.symbol} (${trade.position_size_usd:.0f} at MC ${trade.market_cap_usd:,.0f} on {c.chain})"
+                            )
+                    else:
+                        logger.debug(f"Selector V2.2 Queue Displaced {c.symbol}: {reason}")
                 else:
                     logger.debug(
-                        f"Skipping entry for {c.symbol}: MCEligible={is_mc_eligible}, "
-                        f"AgeSurvived={is_age_survived}, ProbEligible={is_prob_eligible} (P3M={pred.p_reach_3m:.1%}), "
-                        f"ChainEligible={is_chain_eligible} ({c.chain}), "
-                        f"LiquiditySafe={is_liquidity_safe} (Liq=${c.liquidity_usd:,.0f}), "
-                        f"DevSafe={is_dev_safe}, ContractSafe={is_contract_safe}"
+                        f"Selector V2.2 Ineligible {c.symbol}: Lane={v22_eval.lane.value}, "
+                        f"Rank={v22_eval.opportunity_rank}, Reasons={v22_eval.rejection_reasons}"
                     )
+            else:
+                # Legacy V1 admission logic (preserved for backward compatibility)
+                if pred.alert_state in ("HIGH_CONVICTION", "EARLY_BREAKOUT"):
+                    flt = self.config.filters
+                    is_mc_eligible = flt.min_market_cap_usd <= c.market_cap_usd <= flt.max_market_cap_usd
+                    is_age_survived = c.age_minutes >= getattr(flt, "min_token_age_minutes", 0.5) and c.txns_5m_buys >= 5
+                    is_prob_eligible = pred.p_reach_3m >= getattr(flt, "min_p_reach_3m", 0.09)
+                    active_ch_list = [ch.lower() for ch in self.config.scanner.active_chains]
+                    is_chain_eligible = (c.chain.lower() in active_ch_list) or (c.chain.lower() == "bsc" and "bnb" in active_ch_list)
+                    is_liquidity_safe = (
+                        c.liquidity_usd >= flt.min_liquidity_usd
+                        and c.liquidity_mc_ratio >= flt.min_liquidity_mc_ratio
+                        and safety.liquidity_risk < 0.35
+                    )
+                    is_dev_safe = (
+                        c.security.dev_holding_pct <= flt.max_dev_holding_percent
+                        and dev.classification not in ("CRITICAL", "WARNING")
+                        and dev.dev_risk_score < 0.35
+                    )
+                    is_contract_safe = safety.contract_risk < 0.25 and len(safety.critical_flags) == 0
 
-
+                    if (is_mc_eligible and is_age_survived and is_prob_eligible and 
+                        is_chain_eligible and is_liquidity_safe and is_dev_safe and is_contract_safe):
+                        last_state = self._alerted_tokens.get(c.address)
+                        is_already_traded = c.address in getattr(self.paper_engine, "traded_tokens", set())
+                        if not last_state and not is_already_traded and c.address not in self.paper_engine.active_positions:
+                            trade = self.paper_engine.on_breakout_alert(c, pred)
+                            if trade:
+                                self._alerted_tokens[c.address] = pred.alert_state
+                                self._alerted_token_times[c.address] = datetime.now(timezone.utc)
+                                self._newly_opened_trades.append(trade)
+                                if self.alert_dispatcher:
+                                    asyncio.create_task(self.alert_dispatcher.dispatch_alert(c, pred))
+                                logger.info(f"Opened paper trade (V1): {trade.symbol} (${trade.position_size_usd:.0f} at MC ${trade.market_cap_usd:,.0f} on {c.chain})")
 
             # Evaluate active paper positions against current tick
+            trade_rec = self.paper_engine.active_positions.get(c.address)
+            elapsed_trade_mins = 0.0
+            if trade_rec and trade_rec.timestamp:
+                try:
+                    t_in = datetime.fromisoformat(trade_rec.timestamp.replace("Z", "+00:00"))
+                    elapsed_trade_mins = max(0.0, (datetime.now(timezone.utc) - t_in).total_seconds() / 60.0)
+                except Exception:
+                    elapsed_trade_mins = 0.0
+
             exit_trade = self.paper_engine.on_price_tick(
                 token_address=c.address,
                 current_price_usd=c.price_usd,
                 current_market_cap_usd=c.market_cap_usd,
                 current_liquidity_usd=c.liquidity_usd,
-                elapsed_minutes=c.age_minutes,
+                elapsed_minutes=elapsed_trade_mins,
                 is_dev_dump=(meta.get("dev_classification") == "CRITICAL_DUMP"),
                 is_liquidity_drained=(c.liquidity_usd < 500.0),
             )
             if exit_trade:
                 self._newly_closed_trades.append(exit_trade)
+                self.displacement_engine.active_positions.pop(exit_trade.token_address, None)
+                self._alerted_token_times[exit_trade.token_address] = datetime.now(timezone.utc)
 
         # Batch persist observations and shadow candidates to SQLite in a single transaction
         if observation_batch:
@@ -454,6 +625,8 @@ class GemDetectorEngine:
                                     )
                                     if exit_trade:
                                         self._newly_closed_trades.append(exit_trade)
+                                        self.displacement_engine.active_positions.pop(exit_trade.token_address, None)
+                                        self._alerted_token_times[exit_trade.token_address] = datetime.now(timezone.utc)
 
                     # For positions that returned no pairs (liquidity drained/rugged after 2+ hours)
                     for unres_addr in polled_missing - updated_addrs:
@@ -477,26 +650,29 @@ class GemDetectorEngine:
                                 )
                                 if exit_trade:
                                     self._newly_closed_trades.append(exit_trade)
+                                    self.displacement_engine.active_positions.pop(exit_trade.token_address, None)
+                                    self._alerted_token_times[exit_trade.token_address] = datetime.now(timezone.utc)
                 except Exception as batch_err:
                     logger.debug(f"Error updating active open positions: {batch_err}")
 
-        # Cleanly expire any position open for > 24 hours (1440m)
+        # Cleanly expire any stale dead position open for > 60 minutes (3600s) to recycle capital
         now_utc = datetime.now(timezone.utc)
         for addr, pos in list(self.paper_engine.active_positions.items()):
             if pos.timestamp:
                 try:
                     t_pos = datetime.fromisoformat(pos.timestamp.replace("Z", "+00:00"))
-                    if (now_utc - t_pos).total_seconds() >= 86400.0:
+                    if (now_utc - t_pos).total_seconds() >= 3600.0:
                         exit_t = self.paper_engine.on_price_tick(
                             token_address=addr,
                             current_price_usd=pos.entry_price_usd,
                             current_market_cap_usd=pos.market_cap_usd,
                             current_liquidity_usd=pos.liquidity_usd,
-                            elapsed_minutes=1440.0,
+                            elapsed_minutes=60.0,
                             policy="TIME_BASED",
                         )
                         if exit_t:
                             self._newly_closed_trades.append(exit_t)
+                            self._alerted_token_times[exit_t.token_address] = datetime.now(timezone.utc)
                 except Exception:
                     pass
 

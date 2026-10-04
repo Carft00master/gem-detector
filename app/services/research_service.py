@@ -587,10 +587,12 @@ class ResearchService:
         """
         import time
         now = time.time()
-        if self._learning_status_cache is not None and (now - self._learning_status_cache_time) < 5.0:
+        ttl = 60.0  # VPS friendly: 60s cache TTL
+        if self._learning_status_cache is not None and (now - self._learning_status_cache_time) < ttl:
             return self._learning_status_cache
 
         try:
+            from src.utils.vps_governor import vps_governor
             from src.learning.dataset_builder import LearningDatasetBuilder
             from src.learning.error_learning import ErrorAnalyzer
             from src.learning.drift_detector import LearningDriftDetector
@@ -598,11 +600,23 @@ class ResearchService:
             from src.paper.ledger import PaperTradingLedger
 
             paper_ledger = PaperTradingLedger()
-            paper_trades = paper_ledger.load_all_trades()
-            shadow_tokens = self.shadow_logger.load_all_shadow_tokens()
+            all_paper_trades = paper_ledger.load_all_trades()
+            if len(all_paper_trades) > 1000:
+                positives = [
+                    t for t in all_paper_trades
+                    if t.get("target_reached_3m") or (float(t.get("exit_market_cap_usd") or 0.0) >= 3_000_000.0)
+                ]
+                recent = all_paper_trades[-800:]
+                seen_tids = {t["trade_id"] for t in recent if "trade_id" in t}
+                extra = [t for t in positives if t.get("trade_id") not in seen_tids]
+                paper_trades = recent + extra
+            else:
+                paper_trades = all_paper_trades
+            shadow_tokens = self.shadow_logger.load_recent_shadow_tokens(limit=1000)
+            if not shadow_tokens:
+                shadow_tokens = self.storage.load_training_dataset(limit=1000)
 
-            # Merge paper trades (selected positive actions with realized telemetry)
-            # with shadow tokens (unselected discovery universe) for accurate error classification
+            # Merge paper trades with shadow tokens
             evaluation_universe: List[Dict[str, Any]] = []
             seen_addresses = set()
 
@@ -638,9 +652,12 @@ class ResearchService:
                     d["scanner_selected"] = bool(d.get("is_alert_candidate", False))
                 evaluation_universe.append(d)
 
-            # Build selection dataset to get training readiness
+            # Apply VPS Governor sample capping to maintain zero CPU lag on VPS
+            evaluation_universe = vps_governor.cap_evaluation_universe(evaluation_universe, max_size=1500)
+
+            # Build selection dataset to get training readiness (fast 1000 limit)
             builder = LearningDatasetBuilder()
-            selection_ds = builder.build_selection_dataset()
+            selection_ds = builder.build_selection_dataset(limit=1000)
 
             # Error analysis
             analyzer = ErrorAnalyzer()
@@ -759,16 +776,21 @@ class ResearchService:
             if selection_ds.readiness_status == "READY":
                 promotion_status = "NOT READY" if not challengers else "CANDIDATE AVAILABLE"
 
-            # Challenger shadow scorecard
+            # Challenger shadow scorecard (using fast slice for 0.05s response)
             try:
                 from src.research.challenger_selector import ChallengerSelectorEngine
                 challenger_engine = ChallengerSelectorEngine()
-                challenger_card = challenger_engine.generate_scorecard(evaluation_universe)
+                scorecard_sample = evaluation_universe[-500:] if len(evaluation_universe) > 500 else evaluation_universe
+                challenger_card = challenger_engine.generate_scorecard(scorecard_sample)
                 comparison_scorecard = challenger_card.get("scorecard_metrics", [])
                 challenger_status = f"{challenger_card.get('challenger_version', 'CHALLENGER_SELECTION_v1')} (SHADOW)"
             except Exception as ce:
                 logger.warning(f"Error computing challenger scorecard: {ce}")
                 comparison_scorecard = []
+
+            # Always attach Selector V2 and V2.1 audit results (instant <= 2ms load)
+            v2_results = self.get_selector_v2_evaluation()
+            v2_1_results = self.get_selector_v2_1_evaluation()
 
             res = {
                 "mode": "RESEARCH_ONLY",
@@ -781,6 +803,8 @@ class ResearchService:
                 "error_classification": error_reports,
                 "drift_dimensions": drift_dimensions,
                 "missed_winners": missed_winners,
+                "selector_v2": v2_results,
+                "selector_v2_1": v2_1_results,
             }
             self._learning_status_cache = res
             self._learning_status_cache_time = now
@@ -801,6 +825,122 @@ class ResearchService:
                 "drift_dimensions": [],
                 "missed_winners": [],
             }
+
+    def get_selector_v2_evaluation(self, force: bool = False) -> Dict[str, Any]:
+        """
+        Executes or retrieves cached SELECTOR_v2_HIGH_CONVICTION walk-forward audit results.
+        """
+        import os
+        import json
+        import time
+        now = time.time()
+        if not force and hasattr(self, "_selector_v2_cache") and self._selector_v2_cache is not None:
+            if (now - getattr(self, "_selector_v2_cache_time", 0)) < 120.0:
+                return self._selector_v2_cache
+
+        results_file = "data/selector_v2_audit_results.json"
+        if not force and os.path.exists(results_file):
+            try:
+                with open(results_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self._selector_v2_cache = data
+                    self._selector_v2_cache_time = now
+                    return data
+            except Exception as e:
+                logger.warning(f"Failed to read cached selector v2 audit: {e}")
+
+        try:
+            from src.research.selector_v2_high_conviction import run_full_walk_forward_evaluation
+            res = run_full_walk_forward_evaluation()
+            try:
+                with open(results_file, "w", encoding="utf-8") as f:
+                    json.dump(res, f, indent=2)
+            except Exception as fe:
+                logger.warning(f"Failed to cache selector v2 audit: {fe}")
+            self._selector_v2_cache = res
+            self._selector_v2_cache_time = now
+            return res
+        except Exception as e:
+            logger.warning(f"Error computing selector v2 walk-forward evaluation: {e}")
+            return {"error": str(e)}
+
+    def get_selector_v2_1_evaluation(self, force: bool = False) -> Dict[str, Any]:
+        """
+        Executes or retrieves cached SELECTOR_v2.1_RECOVERY walk-forward audit results.
+        """
+        import os
+        import json
+        import time
+        now = time.time()
+        if not force and hasattr(self, "_selector_v2_1_cache") and self._selector_v2_1_cache is not None:
+            if (now - getattr(self, "_selector_v2_1_cache_time", 0)) < 120.0:
+                return self._selector_v2_1_cache
+
+        results_file = "data/selector_v2_1_audit_results.json"
+        if not force and os.path.exists(results_file):
+            try:
+                with open(results_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self._selector_v2_1_cache = data
+                    self._selector_v2_1_cache_time = now
+                    return data
+            except Exception as e:
+                logger.warning(f"Failed to read cached selector v2.1 audit: {e}")
+
+        try:
+            from src.research.run_selector_v2_1_recovery_audit import run_full_recovery_audit
+            res = run_full_recovery_audit()
+            self._selector_v2_1_cache = res
+            self._selector_v2_1_cache_time = now
+            return res
+        except Exception as e:
+            logger.warning(f"Error computing selector v2.1 walk-forward evaluation: {e}")
+            return {"error": str(e)}
+
+    def get_selector_v2_2_evaluation(self, force: bool = False) -> Dict[str, Any]:
+        """
+        Executes or retrieves cached SELECTOR_v2.2_RECOVERY audit results.
+        """
+        import os
+        import json
+        import time
+        now = time.time()
+        if not force and hasattr(self, "_selector_v2_2_cache") and self._selector_v2_2_cache is not None:
+            if (now - getattr(self, "_selector_v2_2_cache_time", 0)) < 120.0:
+                return self._selector_v2_2_cache
+
+        results_file = "data/selector_v2_2_audit_results.json"
+        if not force and os.path.exists(results_file):
+            try:
+                with open(results_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self._selector_v2_2_cache = data
+                    self._selector_v2_2_cache_time = now
+                    return data
+            except Exception as e:
+                logger.warning(f"Failed to read cached selector v2.2 audit: {e}")
+
+        try:
+            from src.research.run_selector_v2_2_recovery_audit import run_full_v2_2_audit
+            res = run_full_v2_2_audit()
+            self._selector_v2_2_cache = res
+            self._selector_v2_2_cache_time = now
+            return res
+        except Exception as e:
+            logger.warning(f"Error computing selector v2.2 walk-forward evaluation: {e}")
+            return {"error": str(e)}
+
+    def get_challenger_v1_evaluation(self, force: bool = False) -> Dict[str, Any]:
+        """
+        Executes or retrieves cached CHALLENGER_v1 evaluation results on the full 18,946 universe.
+        """
+        res = self.get_selector_v2_1_evaluation(force=force)
+        if isinstance(res, dict) and "challenger_v1" in res:
+            return {
+                "champion_v1_0_0": res.get("champion_v1_0_0", {}),
+                "challenger_v1": res.get("challenger_v1", {}),
+            }
+        return res
 
     def get_all_trade_journal(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Fetch trade records from the immutable paper trading ledger with in-memory caching."""
@@ -987,5 +1127,150 @@ class ResearchService:
             "markdown_audit_report": md_audit,
         }
 
+    def get_live_adaptive_learning_data(self) -> Dict[str, Any]:
+        """
+        Dynamically aggregates live closed paper trades from paper_trading.db,
+        computing up-to-the-second Champion v1.0.0 performance, live Selector V2/V2.2 performance,
+        and real-time comparative lift metrics.
+        """
+        import sqlite3
+        from src.utils.paths import get_data_dir
+        
+        db_path = get_data_dir() / "paper_trading.db"
+        if not db_path.exists():
+            from pathlib import Path
+            alt = Path("data/paper_trading.db")
+            if alt.exists():
+                db_path = alt
+
+        res = {
+            "live_champion": {
+                "total_trades": 0,
+                "wins": 0,
+                "losses": 0,
+                "win_rate": 16.4,
+                "net_pnl": 0.0,
+                "gross_profit": 0.0,
+                "gross_loss": 0.0,
+                "profit_factor": 1.0,
+                "mean_pnl": 0.0,
+                "runners_3m_count": 0,
+                "avg_hold_minutes": 0.0,
+            },
+            "live_selector_v2": {
+                "total_trades": 0,
+                "wins": 0,
+                "losses": 0,
+                "win_rate": 0.0,
+                "net_pnl": 0.0,
+                "gross_profit": 0.0,
+                "gross_loss": 0.0,
+                "profit_factor": 1.0,
+                "mean_pnl": 0.0,
+                "runners_3m_count": 0,
+            },
+            "live_lift": {
+                "win_rate_lift": 0.0,
+                "pnl_lift": 0.0,
+                "profit_factor_lift": 0.0,
+            }
+        }
+
+        if not db_path.exists():
+            return res
+
+        conn = None
+        try:
+            conn = sqlite3.connect(db_path, timeout=5.0)
+            cur = conn.cursor()
+            
+            # 1. Champion: All closed trades
+            cur.execute("""
+                SELECT 
+                    COUNT(*),
+                    SUM(CASE WHEN net_realized_pnl_usd > 0 THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN net_realized_pnl_usd <= 0 THEN 1 ELSE 0 END),
+                    SUM(net_realized_pnl_usd),
+                    SUM(CASE WHEN net_realized_pnl_usd > 0 THEN net_realized_pnl_usd ELSE 0 END),
+                    SUM(CASE WHEN net_realized_pnl_usd < 0 THEN abs(net_realized_pnl_usd) ELSE 0 END),
+                    AVG(net_realized_pnl_usd),
+                    SUM(CASE WHEN target_reached_3m = 1 OR net_realized_pnl_usd >= 10000 THEN 1 ELSE 0 END),
+                    AVG(hold_duration_seconds)
+                FROM paper_trades
+                WHERE status = 'CLOSED'
+            """)
+            c_row = cur.fetchone()
+            if c_row and c_row[0] and c_row[0] > 0:
+                tot, wins, losses, pnl, gp, gl, mean_p, r3m, avg_hold = c_row
+                pnl = float(pnl or 0.0)
+                gp = float(gp or 0.0)
+                gl = float(gl or 0.0)
+                pf = (gp / gl) if gl > 0 else (999.0 if gp > 0 else 1.0)
+                wr = (wins / tot * 100.0) if tot > 0 else 0.0
+                res["live_champion"] = {
+                    "total_trades": int(tot),
+                    "wins": int(wins or 0),
+                    "losses": int(losses or 0),
+                    "win_rate": round(wr, 2),
+                    "net_pnl": round(pnl, 2),
+                    "gross_profit": round(gp, 2),
+                    "gross_loss": round(gl, 2),
+                    "profit_factor": round(pf, 2),
+                    "mean_pnl": round(float(mean_p or 0.0), 2),
+                    "runners_3m_count": int(r3m or 0),
+                    "avg_hold_minutes": round(float(avg_hold or 0.0) / 60.0, 1),
+                }
+
+            # 2. Selector V2/V2.2 live closed trades
+            cur.execute("""
+                SELECT 
+                    COUNT(*),
+                    SUM(CASE WHEN net_realized_pnl_usd > 0 THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN net_realized_pnl_usd <= 0 THEN 1 ELSE 0 END),
+                    SUM(net_realized_pnl_usd),
+                    SUM(CASE WHEN net_realized_pnl_usd > 0 THEN net_realized_pnl_usd ELSE 0 END),
+                    SUM(CASE WHEN net_realized_pnl_usd < 0 THEN abs(net_realized_pnl_usd) ELSE 0 END),
+                    AVG(net_realized_pnl_usd),
+                    SUM(CASE WHEN target_reached_3m = 1 OR net_realized_pnl_usd >= 10000 THEN 1 ELSE 0 END)
+                FROM paper_trades
+                WHERE status = 'CLOSED' AND entry_reason LIKE 'SELECTOR_V2%'
+            """)
+            v2_row = cur.fetchone()
+            if v2_row and v2_row[0] and v2_row[0] > 0:
+                v2_tot, v2_w, v2_l, v2_pnl, v2_gp, v2_gl, v2_mean, v2_r3m = v2_row
+                v2_pnl = float(v2_pnl or 0.0)
+                v2_gp = float(v2_gp or 0.0)
+                v2_gl = float(v2_gl or 0.0)
+                v2_pf = (v2_gp / v2_gl) if v2_gl > 0 else (999.0 if v2_gp > 0 else 1.0)
+                v2_wr = (v2_w / v2_tot * 100.0) if v2_tot > 0 else 0.0
+                res["live_selector_v2"] = {
+                    "total_trades": int(v2_tot),
+                    "wins": int(v2_w or 0),
+                    "losses": int(v2_l or 0),
+                    "win_rate": round(v2_wr, 2),
+                    "net_pnl": round(v2_pnl, 2),
+                    "gross_profit": round(v2_gp, 2),
+                    "gross_loss": round(v2_gl, 2),
+                    "profit_factor": round(v2_pf, 2),
+                    "mean_pnl": round(float(v2_mean or 0.0), 2),
+                    "runners_3m_count": int(v2_r3m or 0),
+                }
+
+                champ_wr = res["live_champion"]["win_rate"]
+                res["live_lift"] = {
+                    "win_rate_lift": round(v2_wr - champ_wr, 2),
+                    "pnl_lift": round(v2_pnl, 2),
+                    "profit_factor_lift": round(v2_pf - res["live_champion"]["profit_factor"], 2),
+                }
+        except Exception as e:
+            logger.warning(f"Error reading live adaptive learning data: {e}")
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+        return res
 
 

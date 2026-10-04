@@ -43,7 +43,7 @@ def _set_cell(table, row: int, col: int, text: str, font=None, alignment=None, f
 
 
 BLOTTER_COLUMNS = [
-    "TIME", "TOKEN", "ENTRY MC", "EXIT MC", "HOLD", "P(3M)", "POLICY", "NET P&L", "RETURN%", "STATUS"
+    "TIME", "TOKEN", "TIER", "ENTRY MC", "EXIT MC", "HOLD", "P(3M)", "POLICY", "NET P&L", "RETURN%", "STATUS"
 ]
 
 PRESET_DEFINITIONS = [
@@ -697,7 +697,7 @@ class PaperTradingView(QWidget):
         table.setAlternatingRowColors(True)
         table.verticalHeader().setDefaultSectionSize(36)
         
-        col_widths = [75, 180, 90, 90, 65, 70, 105, 90, 85, 85]
+        col_widths = [75, 160, 65, 85, 85, 60, 65, 95, 85, 80, 80]
         for c_idx, w in enumerate(col_widths):
             table.setColumnWidth(c_idx, w)
         
@@ -861,7 +861,7 @@ class PaperTradingView(QWidget):
             self.sort_ascending = not self.sort_ascending
         else:
             self.sort_col_idx = col_idx
-            self.sort_ascending = col_idx in (0, 1, 4)
+            self.sort_ascending = col_idx in (0, 1, 5)
         self._update_all_tables()
 
     def refresh_data(self, force: bool = False):
@@ -1041,20 +1041,24 @@ class PaperTradingView(QWidget):
             elif col == 1:
                 return str(t.get('symbol', '')).lower()
             elif col == 2:
-                return _get_trade_entry_mc(t)
+                tier = str(t.get('setup_tier') or ('A+' if 'A+' in str(t.get('entry_reason', '')) else 'A' if 'A' in str(t.get('entry_reason', '')) else ''))
+                tier_order = {"A+": 4, "A": 3, "B": 2, "C": 1}
+                return tier_order.get(tier, 0)
             elif col == 3:
-                return _get_trade_exit_mc(t)
+                return _get_trade_entry_mc(t)
             elif col == 4:
-                return _get_trade_hold_minutes(t)
+                return _get_trade_exit_mc(t)
             elif col == 5:
-                return float(t.get('p_reach_3m') or t.get('p3m') or 0.0)
+                return _get_trade_hold_minutes(t)
             elif col == 6:
-                return str(t.get('exit_policy') or t.get('policy') or '')
+                return float(t.get('p_reach_3m') or t.get('p3m') or 0.0)
             elif col == 7:
-                return _get_trade_pnl(t)
+                return str(t.get('exit_policy') or t.get('policy') or '')
             elif col == 8:
-                return _get_trade_return_pct(t)
+                return _get_trade_pnl(t)
             elif col == 9:
+                return _get_trade_return_pct(t)
+            elif col == 10:
                 return str(t.get('status') or '')
             return 0
 
@@ -1243,15 +1247,26 @@ class PaperTradingView(QWidget):
                 short_addr = f"· {addr[:4]}..{addr[-4:]}" if len(addr) > 8 else ""
                 _set_cell(table, i, 1, f"{sym}  {short_addr}".strip(), font=bold_font, fg_color=QColor("#f8fafc"), data=addr, tooltip=f"{sym} ({addr})" if addr else sym)
                 
-                # 2. ENTRY MC
+                # 2. TIER
+                entry_r = str(t.get('entry_reason') or '')
+                tier = t.get('setup_tier') or ('A+' if 'A+' in entry_r else 'A' if 'A' in entry_r else None)
+                if not tier:
+                    score = float(t.get('setup_quality_score') or 0)
+                    tier = 'A+' if score >= 80 else ('A' if score >= 70 else '—')
+                
+                tier_color = QColor("#fbbf24") if tier == "A+" else (QColor("#34d399") if tier == "A" else QColor("#64748b"))
+                tier_str = f"★ {tier}" if tier == "A+" else (f"● {tier}" if tier == "A" else tier)
+                _set_cell(table, i, 2, tier_str, font=bold_font, alignment=Qt.AlignCenter, fg_color=tier_color, tooltip=f"Setup Tier: {tier} | Reason: {entry_r}")
+
+                # 3. ENTRY MC
                 emc = _get_trade_entry_mc(t)
-                _set_cell(table, i, 2, f"${emc:,.0f}" if emc > 0 else "—", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=QColor("#cbd5e1"))
+                _set_cell(table, i, 3, f"${emc:,.0f}" if emc > 0 else "—", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=QColor("#cbd5e1"))
                 
-                # 3. EXIT MC
+                # 4. EXIT MC
                 xmc = _get_trade_exit_mc(t)
-                _set_cell(table, i, 3, f"${xmc:,.0f}" if xmc > 0 else "—", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=QColor("#cbd5e1"))
+                _set_cell(table, i, 4, f"${xmc:,.0f}" if xmc > 0 else "—", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=QColor("#cbd5e1"))
                 
-                # 4. HOLD DURATION
+                # 5. HOLD DURATION
                 h_min = _get_trade_hold_minutes(t)
                 status_raw = str(t.get('status') or 'OPEN').upper()
                 if h_min <= 0 and status_raw == 'OPEN':
@@ -1264,29 +1279,29 @@ class PaperTradingView(QWidget):
                     h_str = f"{int(h_min // 60)}h {int(h_min % 60)}m"
                 else:
                     h_str = f"{h_min / 1440.0:.1f}d"
-                _set_cell(table, i, 4, h_str, font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=QColor("#94a3b8"), tooltip=f"{h_min:.1f} minutes ({h_min*60:.0f} seconds)")
+                _set_cell(table, i, 5, h_str, font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=QColor("#94a3b8"), tooltip=f"{h_min:.1f} minutes ({h_min*60:.0f} seconds)")
                 
-                # 5. P(3M)
+                # 6. P(3M)
                 p3 = float(t.get('p_reach_3m') or t.get('p3m') or 0.0)
                 p3_color = QColor("#10b981" if p3 >= 0.14 else "#38bdf8" if p3 >= 0.08 else "#64748b")
-                _set_cell(table, i, 5, f"{p3:.1%}", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=p3_color)
+                _set_cell(table, i, 6, f"{p3:.1%}", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=p3_color)
                 
-                # 6. POLICY
+                # 7. POLICY
                 pol = str(t.get('exit_policy') or t.get('policy') or 'TRAIL_STOP')
-                _set_cell(table, i, 6, pol, font=policy_font, alignment=Qt.AlignCenter, fg_color=QColor("#c084fc"))
+                _set_cell(table, i, 7, pol, font=policy_font, alignment=Qt.AlignCenter, fg_color=QColor("#c084fc"))
                 
-                # 7. NET P&L
+                # 8. NET P&L
                 pnl = _get_trade_pnl(t)
                 pnl_str = f"+${pnl:,.2f}" if pnl >= 0 else f"-${abs(pnl):,.2f}"
                 pnl_color = QColor("#10b981" if pnl >= 0 else "#ef4444")
-                _set_cell(table, i, 7, pnl_str, font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=pnl_color)
+                _set_cell(table, i, 8, pnl_str, font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=pnl_color)
                 
-                # 8. RETURN%
+                # 9. RETURN%
                 ret = _get_trade_return_pct(t)
                 ret_color = QColor("#10b981" if ret >= 0 else "#ef4444")
-                _set_cell(table, i, 8, f"{ret:+.2f}%", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=ret_color)
+                _set_cell(table, i, 9, f"{ret:+.2f}%", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=ret_color)
                 
-                # 9. STATUS
+                # 10. STATUS
                 status = str(t.get('status') or 'OPEN').upper()
                 if status == 'OPEN':
                     st_badge = "● OPEN"
@@ -1297,7 +1312,7 @@ class PaperTradingView(QWidget):
                 else:
                     st_badge = "✕ LOSS"
                     st_color = "#ef4444"
-                _set_cell(table, i, 9, st_badge, font=policy_font, alignment=Qt.AlignCenter, fg_color=QColor(st_color))
+                _set_cell(table, i, 10, st_badge, font=policy_font, alignment=Qt.AlignCenter, fg_color=QColor(st_color))
         finally:
             table.setUpdatesEnabled(True)
 
@@ -1346,6 +1361,8 @@ class PaperTradingView(QWidget):
                 for t in self.trades:
                     time_val = _get_trade_timestamp(t)
                     sym = str(t.get('symbol') or '')
+                    entry_r = str(t.get('entry_reason') or '')
+                    tier = t.get('setup_tier') or ('A+' if 'A+' in entry_r else 'A' if 'A' in entry_r else '—')
                     emc = _get_trade_entry_mc(t)
                     xmc = _get_trade_exit_mc(t)
                     hold_min = round(_get_trade_hold_minutes(t), 2)
@@ -1354,7 +1371,7 @@ class PaperTradingView(QWidget):
                     pnl = _get_trade_pnl(t)
                     ret = _get_trade_return_pct(t)
                     status = str(t.get('status') or '')
-                    writer.writerow([time_val, sym, emc, xmc, hold_min, p3, pol, pnl, ret, status])
+                    writer.writerow([time_val, sym, tier, emc, xmc, hold_min, p3, pol, pnl, ret, status])
                     
             QMessageBox.information(
                 self, "Export Successful",

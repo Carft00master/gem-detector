@@ -6,12 +6,21 @@ block_cipher = None
 
 root_path = Path.cwd()
 
+# Collect only active operational data, strictly excluding backup folders and temp caches
+data_items = []
+data_dir = root_path / 'data'
+if data_dir.exists():
+    for item in data_dir.iterdir():
+        if item.is_file():
+            data_items.append((str(item), 'data'))
+        elif item.is_dir() and item.name not in ('backups', '__pycache__', 'checkpoints'):
+            data_items.append((str(item), f'data/{item.name}'))
+
 datas = [
     (str(root_path / 'config'), 'config'),
-    (str(root_path / 'data'), 'data'),
     (str(root_path / 'app'), 'app'),
     (str(root_path / 'src'), 'src'),
-]
+] + data_items
 
 binaries = []
 
@@ -79,6 +88,15 @@ hidden_imports = [
     'app.ui.components.timeline_event',
     'app.ui.components.actions_delegate',
     'app.ui.components.async_helper',
+    'app.services.vps_engine',
+    'src.utils.vps_governor',
+    'src.research.selector_v2_high_conviction',
+    'src.research.selector_v2_1_recovery',
+    'src.research.run_selector_v2_1_recovery_audit',
+    'src.research.selector_v2_2_recovery',
+    'src.research.run_selector_v2_2_recovery_audit',
+    'src.research.challenger_selector',
+    'src.research.storage',
 ]
 
 a = Analysis(
