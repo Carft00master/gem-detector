@@ -22,6 +22,7 @@ class AppEventBus(QObject):
     paper_trade_opened = Signal(dict)             # PaperTradeRecord dict
     paper_trade_closed = Signal(dict)             # PaperTradeRecord dict
     paper_ledger_updated = Signal()
+    wallet_updated = Signal()                     # Emitted whenever virtual wallet changes
 
     # Research & Invariant Signals
     population_registry_updated = Signal()

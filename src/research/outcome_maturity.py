@@ -149,21 +149,24 @@ class CanonicalOutcomeMaturityEngine:
     def determine_lifecycle_state(cls, token_record: Dict[str, Any]) -> str:
         """
         Determine formal token lifecycle state.
+        Prioritizes liquidity drain, contract freeze, and risk invalidation over target milestones.
         """
-        if token_record.get("target_3m") or token_record.get("target_reached_3m") or token_record.get("is_valid_3m_runner") or token_record.get("target_survivable_3m"):
-            return TokenLifecycleState.TARGET_REACHED.value
-
-        liq = float(token_record.get("liquidity_usd", 3500.0))
+        liq = float(token_record.get("exit_liquidity_usd") if token_record.get("exit_liquidity_usd") is not None else token_record.get("liquidity_usd", 3500.0))
         p_rug = float(token_record.get("p_rug", 0.10))
         is_disabled = bool(token_record.get("contract_disabled", False))
         is_honeypot = bool(token_record.get("is_honeypot", False))
+        exit_reason = str(token_record.get("exit_reason", ""))
 
         if is_disabled:
             return TokenLifecycleState.CONTRACT_DISABLED.value
         if is_honeypot:
             return TokenLifecycleState.UNTRADEABLE.value
-        if liq <= 100.0 or p_rug >= 0.95 or token_record.get("dev_dump_critical"):
+        if exit_reason == "RISK_INVALIDATION" or liq < 500.0 or p_rug >= 0.95 or token_record.get("dev_dump_critical"):
             return TokenLifecycleState.LIQUIDITY_DRAINED.value
+
+        if (token_record.get("target_3m") or token_record.get("target_reached_3m") or token_record.get("is_valid_3m_runner") or token_record.get("target_survivable_3m")) and liq >= 1000.0:
+            return TokenLifecycleState.TARGET_REACHED.value
+
         if float(token_record.get("volume_1h_usd", 1000.0)) <= 10.0 and float(token_record.get("token_age_minutes", 10.0)) >= 120.0:
             return TokenLifecycleState.ABANDONED.value
         if token_record.get("is_migrated_dex"):
@@ -215,7 +218,11 @@ class CanonicalOutcomeMaturityEngine:
         # Time to target touch in minutes
         t_touch = token_record.get(f"time_to_{target_name.lower().replace('target_', '')}_min")
         tgt_key = target_name.lower().replace("target_", "")
-        if t_touch is None and (peak_mc >= target_mc or token_record.get(target_name.lower()) or token_record.get(f"target_reached_{tgt_key}") or (target_mc <= 3_000_000.0 and token_record.get("target_reached_3m"))):
+
+        # Guard against fake spikes when pool is drained or invalidated
+        if lifecycle == TokenLifecycleState.LIQUIDITY_DRAINED.value or str(token_record.get("exit_reason", "")) == "RISK_INVALIDATION":
+            t_touch = None
+        elif t_touch is None and (peak_mc >= target_mc or token_record.get(target_name.lower()) or token_record.get(f"target_reached_{tgt_key}") or (target_mc <= 3_000_000.0 and token_record.get("target_reached_3m"))):
             t_touch = min(elapsed_min, 10.0)
 
         # 1. Target Reached within horizon

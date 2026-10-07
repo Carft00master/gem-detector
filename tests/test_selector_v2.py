@@ -332,3 +332,61 @@ def test_chronological_entity_disjoint_split():
     # Chronological ordering check
     assert max(t["entry_signal_timestamp"] for t in train) <= min(t["entry_signal_timestamp"] for t in val)
     assert max(t["entry_signal_timestamp"] for t in val) <= min(t["entry_signal_timestamp"] for t in locked)
+
+
+# ------------------------------------------------------------------------------
+# 7. ANTI-FAKE-VOLUME HARD SAFETY GATE V2.2 TESTS
+# ------------------------------------------------------------------------------
+
+def test_hard_safety_gate_v22_bump_bot_micro_churn_rejected():
+    from src.research.selector_v2_2_recovery import HardSafetyGateV22
+    token = {
+        "token_address": "BumpToken",
+        "symbol": "BUMP",
+        "market_cap_usd": 25000.0,
+        "liquidity_usd": 12000.0,
+        "volume_5m_usd": 150.0,
+        "txns_5m_buys": 50,
+        "txns_5m_sells": 25,
+        "unique_buyers": 15,
+    }
+    fb = FeatureExtractorV2.extract(token)
+    is_safe, rejections = HardSafetyGateV22.evaluate(token, fb)
+    assert not is_safe
+    assert any("BUMP_BOT_MICRO_CHURN" in r for r in rejections)
+
+
+def test_hard_safety_gate_v22_hyper_turnover_wash_volume_rejected():
+    from src.research.selector_v2_2_recovery import HardSafetyGateV22
+    token = {
+        "token_address": "HyperTurnoverToken",
+        "symbol": "HYPER",
+        "market_cap_usd": 25000.0,
+        "liquidity_usd": 8000.0,
+        "volume_5m_usd": 32000.0,  # 4.0x pool liquidity
+        "txns_5m_buys": 30,
+        "txns_5m_sells": 30,
+        "unique_buyers": 20,
+    }
+    fb = FeatureExtractorV2.extract(token)
+    is_safe, rejections = HardSafetyGateV22.evaluate(token, fb)
+    assert not is_safe
+    assert any("HYPER_TURNOVER_WASH_VOLUME" in r for r in rejections)
+
+
+def test_hard_safety_gate_v22_nascent_token_accepted():
+    from src.research.selector_v2_2_recovery import HardSafetyGateV22
+    token = {
+        "token_address": "NascentWinner",
+        "symbol": "WINNER",
+        "market_cap_usd": 15000.0,
+        "liquidity_usd": 9000.0,
+        "volume_5m_usd": 6.0,   # Micro volume in first seconds
+        "txns_5m_buys": 6,
+        "txns_5m_sells": 2,     # 8 txns total (< 40 threshold)
+        "unique_buyers": 5,
+    }
+    fb = FeatureExtractorV2.extract(token)
+    is_safe, rejections = HardSafetyGateV22.evaluate(token, fb)
+    assert is_safe
+    assert len(rejections) == 0

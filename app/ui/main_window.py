@@ -40,6 +40,7 @@ from app.ui.views.system_health_view import SystemHealthView
 from app.ui.views.logs_view import LogsView
 from app.ui.views.settings_view import SettingsView
 from app.ui.views.faq_view import FAQView
+from app.ui.views.virtual_wallet_view import VirtualWalletView
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,7 @@ class MainWindow(QMainWindow):
         "📜  Logs",
         "⚙️  Settings",
         "❓  FAQ",
+        "💰  Virtual Wallet",
     ]
 
     def __init__(self):
@@ -159,6 +161,7 @@ class MainWindow(QMainWindow):
             lambda: LogsView(),
             lambda: SettingsView(),
             lambda: FAQView(),
+            lambda: VirtualWalletView(),
         ]
         self._views = [None] * len(self.view_factories)
         
@@ -185,6 +188,7 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+1"), self).activated.connect(lambda: self.navigate_to(0))
         QShortcut(QKeySequence("Ctrl+2"), self).activated.connect(lambda: self.navigate_to(7))
         QShortcut(QKeySequence("Ctrl+3"), self).activated.connect(lambda: self.navigate_to(4))
+        QShortcut(QKeySequence("Ctrl+4"), self).activated.connect(lambda: self.navigate_to(20))
         QShortcut(QKeySequence("Ctrl+K"), self).activated.connect(self._show_search)
         QShortcut(QKeySequence("Esc"), self).activated.connect(self._on_esc)
         QShortcut(QKeySequence("R"), self).activated.connect(self._on_refresh_view)

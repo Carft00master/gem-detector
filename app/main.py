@@ -23,7 +23,9 @@ from app.services.research_service import ResearchService
 from app.services.scanner_service import ScannerService
 from app.services.settings_service import SettingsService
 from app.services.vps_engine import VPSService
+from app.services.wallet_service import WalletService
 from app.ui.main_window import MainWindow
+from src.utils.paths import ensure_data_persistence, heal_sqlite_wal_files
 from src.version import FROZEN_VERSION_MANIFEST
 
 # Configure logging
@@ -43,6 +45,7 @@ def setup_services(settings_svc: SettingsService | None = None) -> None:
     research_svc = ResearchService()
     export_svc = ExportService()
     scanner_svc = ScannerService()
+    wallet_svc = WalletService()
 
     ServiceLocator.register(SettingsService, settings_svc)
     ServiceLocator.register(VPSService, vps_svc)
@@ -50,6 +53,7 @@ def setup_services(settings_svc: SettingsService | None = None) -> None:
     ServiceLocator.register(ResearchService, research_svc)
     ServiceLocator.register(ExportService, export_svc)
     ServiceLocator.register(ScannerService, scanner_svc)
+    ServiceLocator.register(WalletService, wallet_svc)
     logger.info("Application services successfully initialized and registered.")
 
 
@@ -72,6 +76,10 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("MemecoinScannerTerminal")
     app.setApplicationDisplayName(f"Memecoin Scanner Terminal ({FROZEN_VERSION_MANIFEST.scanner_version})")
+
+    # Ensure data persistence and auto-heal any stale WAL lock files
+    ensure_data_persistence()
+    heal_sqlite_wal_files()
 
     # Initialize Services
     setup_services(settings_svc)

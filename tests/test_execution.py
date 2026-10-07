@@ -53,3 +53,35 @@ def test_insufficient_liquidity_rejection():
 
     assert res.is_executable is False
     assert res.execution_rejection_reason == "INSUFFICIENT_LIQUIDITY_DEPTH"
+
+
+def test_graduation_price_anchoring_prevents_phantom_pnl():
+    """
+    Verify that post-graduation FDV jumps (e.g. $68k bonding curve MC -> $24M DEX FDV)
+    are anchored strictly to actual fill/exit price rather than MC ratio,
+    preventing multi-thousand dollar phantom profits.
+    """
+    sim = AMMExecutionSimulator()
+
+    # Case: Token graduates from PumpFun bonding curve to Raydium
+    # Recorded entry MC: $68,643 (bonding curve metric)
+    # Recorded exit MC: $24,707,276 (DEX FDV, ~360x jump in reported MC)
+    # Actual entry price: $0.02288
+    # Actual exit price: $0.02470 (actual price gain: +7.95%)
+    res = sim.simulate_trade(
+        position_size_usd=100.0,
+        entry_mc=68643.0,
+        exit_mc=24707276.0,
+        entry_liquidity=25000.0,
+        exit_liquidity=500000.0,
+        venue="raydium",
+        entry_price=0.02288,
+        exit_price=0.02470,
+    )
+
+    assert res.is_executable is True
+    # Return should be ~+7.9% minus fees/impact, NOT +36,000%!
+    assert res.net_realized_return_pct < 15.0
+    assert res.net_realized_return_pct > 0.0
+    assert res.net_realized_pnl_usd < 15.0 # ~$5-$8 profit, not $23,000+!
+

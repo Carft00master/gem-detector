@@ -140,6 +140,34 @@ class PumpFunBondingCurveExecution(ExecutionModel):
             price_multiple = exit_price / entry_price
         else:
             price_multiple = exit_mc / entry_mc if entry_mc > 0 else 1.0
+
+        # Zero-Liquidity / Drained Pool Protection:
+        is_drained_spike = (price_multiple > 5.0 and entry_liquidity > 2000.0 and 0.0 < exit_liquidity < entry_liquidity * 0.15)
+
+        # On Pump.fun bonding curves, quote reserves are virtual + real SOL locked in program.
+        # If exit_liquidity was omitted or 0 from DexScreener feed, derive from market cap:
+        if not is_drained_spike and exit_liquidity <= 0.0 and exit_mc > 0:
+            exit_liquidity = max(1500.0, exit_mc * 0.60)
+            eff_exit_x = max(500.0, (exit_liquidity / 2.0) + v_offset)
+
+        # A bonding curve is an invalid rug if pool was drained on a fake spike, or exit_mc collapsed >95%
+        if is_drained_spike or exit_mc < 1000.0 or (entry_mc > 5000.0 and exit_mc < entry_mc * 0.05):
+            res.is_executable = False
+            res.execution_rejection_reason = "INSUFFICIENT_EXIT_LIQUIDITY_RUG"
+            res.exit_price_impact_pct = 100.0
+            res.dex_swap_fees_usd = round(entry_fee, 2)
+            total_net_fees = priority_fee_usd * 2.0
+            res.network_priority_fees_usd = round(total_net_fees, 2)
+            res.net_realized_pnl_usd = round(-position_size_usd - total_net_fees, 2)
+            res.net_realized_return_pct = -100.0
+            res.theoretical_mfe_ratio = round(price_multiple, 2)
+            res.executable_mfe_ratio = 0.0
+            res.total_slippage_and_friction_usd = round(position_size_usd, 2)
+            trough = trough_mc or entry_mc
+            if trough < entry_mc:
+                res.max_adverse_excursion_pct = round(((entry_mc - trough) / entry_mc) * 100.0, 2)
+            return res
+
         gross_exit_val = net_entry_capital * price_multiple
 
         exit_impact = gross_exit_val / (eff_exit_x + gross_exit_val)
@@ -214,6 +242,25 @@ class RaydiumConstantProductExecution(ExecutionModel):
             price_multiple = exit_price / entry_price
         else:
             price_multiple = exit_mc / entry_mc if entry_mc > 0 else 1.0
+
+        # Zero-Liquidity / Drained Pool Protection:
+        if exit_liquidity < 500.0 or (price_multiple > 5.0 and entry_liquidity > 2000.0 and exit_liquidity < entry_liquidity * 0.15):
+            res.is_executable = False
+            res.execution_rejection_reason = "INSUFFICIENT_EXIT_LIQUIDITY_RUG"
+            res.exit_price_impact_pct = 100.0
+            res.dex_swap_fees_usd = round(entry_fee, 2)
+            total_net_fees = priority_fee_usd * 2.0
+            res.network_priority_fees_usd = round(total_net_fees, 2)
+            res.net_realized_pnl_usd = round(-position_size_usd - total_net_fees, 2)
+            res.net_realized_return_pct = -100.0
+            res.theoretical_mfe_ratio = round(price_multiple, 2)
+            res.executable_mfe_ratio = 0.0
+            res.total_slippage_and_friction_usd = round(position_size_usd, 2)
+            trough = trough_mc or entry_mc
+            if trough < entry_mc:
+                res.max_adverse_excursion_pct = round(((entry_mc - trough) / entry_mc) * 100.0, 2)
+            return res
+
         gross_exit_val = net_entry_capital * price_multiple
 
         exit_impact = gross_exit_val / (quote_reserve_exit + gross_exit_val)
@@ -290,6 +337,25 @@ class UniswapV2BaseExecution(ExecutionModel):
             price_multiple = exit_price / entry_price
         else:
             price_multiple = exit_mc / entry_mc if entry_mc > 0 else 1.0
+
+        # Zero-Liquidity / Drained Pool Protection:
+        if exit_liquidity < 500.0 or (price_multiple > 5.0 and entry_liquidity > 2000.0 and exit_liquidity < entry_liquidity * 0.15):
+            res.is_executable = False
+            res.execution_rejection_reason = "INSUFFICIENT_EXIT_LIQUIDITY_RUG"
+            res.exit_price_impact_pct = 100.0
+            res.dex_swap_fees_usd = round(entry_fee, 2)
+            total_net_fees = priority_fee_usd * 2.0
+            res.network_priority_fees_usd = round(total_net_fees, 2)
+            res.net_realized_pnl_usd = round(-position_size_usd - total_net_fees, 2)
+            res.net_realized_return_pct = -100.0
+            res.theoretical_mfe_ratio = round(price_multiple, 2)
+            res.executable_mfe_ratio = 0.0
+            res.total_slippage_and_friction_usd = round(position_size_usd, 2)
+            trough = trough_mc or entry_mc
+            if trough < entry_mc:
+                res.max_adverse_excursion_pct = round(((entry_mc - trough) / entry_mc) * 100.0, 2)
+            return res
+
         gross_exit_val = net_entry_capital * price_multiple
 
         exit_impact = gross_exit_val / (quote_reserve_exit + gross_exit_val)
@@ -370,6 +436,25 @@ class UniswapV3ConcentratedExecution(ExecutionModel):
             price_multiple = exit_price / entry_price
         else:
             price_multiple = exit_mc / entry_mc if entry_mc > 0 else 1.0
+
+        # Zero-Liquidity / Drained Pool Protection:
+        if exit_liquidity < 500.0 or (price_multiple > 5.0 and entry_liquidity > 2000.0 and exit_liquidity < entry_liquidity * 0.15):
+            res.is_executable = False
+            res.execution_rejection_reason = "INSUFFICIENT_EXIT_LIQUIDITY_RUG"
+            res.exit_price_impact_pct = 100.0
+            res.dex_swap_fees_usd = round(entry_fee, 2)
+            total_net_fees = priority_fee_usd * 2.0
+            res.network_priority_fees_usd = round(total_net_fees, 2)
+            res.net_realized_pnl_usd = round(-position_size_usd - total_net_fees, 2)
+            res.net_realized_return_pct = -100.0
+            res.theoretical_mfe_ratio = round(price_multiple, 2)
+            res.executable_mfe_ratio = 0.0
+            res.total_slippage_and_friction_usd = round(position_size_usd, 2)
+            trough = trough_mc or entry_mc
+            if trough < entry_mc:
+                res.max_adverse_excursion_pct = round(((entry_mc - trough) / entry_mc) * 100.0, 2)
+            return res
+
         gross_exit_val = net_entry_capital * price_multiple
 
         exit_impact = gross_exit_val / (eff_quote_exit + gross_exit_val)
@@ -453,11 +538,13 @@ class AMMExecutionSimulator:
         self.robinhood_priority_fee_usd = robinhood_priority_fee_usd
 
         self.adapters: Dict[str, ExecutionModel] = {
+            "pumpswap": RaydiumConstantProductExecution(),
             "pumpfun": PumpFunBondingCurveExecution(),
             "pump-fun": PumpFunBondingCurveExecution(),
-            "pumpswap": PumpFunBondingCurveExecution(),
-            "raydium": RaydiumConstantProductExecution(),
+            "meteora-dbc": RaydiumConstantProductExecution(),
+            "meteora-damm-v2": RaydiumConstantProductExecution(),
             "meteora": RaydiumConstantProductExecution(),
+            "raydium": RaydiumConstantProductExecution(),
             "pancakeswap": UniswapV2BaseExecution(),
             "pancake": UniswapV2BaseExecution(),
             "uniswap": UniswapV2BaseExecution(),
@@ -470,9 +557,13 @@ class AMMExecutionSimulator:
         self.default_adapter = RaydiumConstantProductExecution()
 
     def get_adapter(self, venue: str) -> ExecutionModel:
-        v_lower = venue.lower()
+        if not venue:
+            return self.default_adapter
+        v_lower = str(venue).lower()
         if "unsupported" in v_lower or "custom_exotic" in v_lower:
             return self.adapters["unsupported"]
+        if "pumpswap" in v_lower:
+            return self.adapters["pumpswap"]
         for k, adapter in self.adapters.items():
             if k in v_lower:
                 return adapter

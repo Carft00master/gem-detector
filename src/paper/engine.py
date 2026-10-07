@@ -72,12 +72,30 @@ class PaperTradingEngine:
         self.peak_prices: Dict[str, float] = {}
         self.trough_prices: Dict[str, float] = {}
         self.traded_tokens: set[str] = set()
+        self.rugged_symbols: set[str] = set()
         self._load_open_positions()
 
     def _load_open_positions(self) -> None:
-        """Load open positions and historical traded tokens from database on startup."""
+        """Load open positions, traded tokens, and rugged symbols from database on startup."""
         records = self.ledger.load_all_trades()
         self.traded_tokens = {str(r.get("token_address", "")) for r in records if r.get("token_address")}
+        self.rugged_symbols = {
+            str(r.get("symbol", "")).upper()
+            for r in records
+            if r.get("symbol") and not (
+                # On pump.fun bonding curves, quote SOL cannot be drained by dev.
+                # Do not blacklist symbols from bonding curves unless explicitly flagged as DEV_DUMP.
+                (
+                    (str(r.get("venue", "")).lower() in ("pumpfun", "pump-fun") or str(r.get("token_address", "")).lower().endswith("pump"))
+                    and str(r.get("venue", "")).lower() not in ("pumpswap", "raydium", "meteora")
+                )
+                and r.get("exit_reason") != "DEV_DUMP"
+            ) and (
+                r.get("exit_reason") == "RISK_INVALIDATION"
+                or float(r.get("net_realized_return_pct", 0.0) or 0.0) <= -50.0
+                or float(r.get("exit_liquidity_usd", 1000.0) or 1000.0) < 500.0
+            )
+        }
         now_utc = datetime.now(timezone.utc)
         for r in records:
             if r.get("status") == "OPEN":
@@ -152,19 +170,61 @@ class PaperTradingEngine:
             logger.debug(f"Paper trade rejected: {candidate.symbol} ({token_addr}) has already been traded previously or is currently open.")
             return None
 
+        # 0. Serial Rug Defense: Reject relaunch of symbols previously invalidated/rugged
+        cand_symbol = str(getattr(candidate, "symbol", "") or "").upper()
+        if cand_symbol and cand_symbol in self.rugged_symbols:
+            logger.info(f"Skipping paper trade for {candidate.symbol}: Symbol matches a previously rugged/invalidated token ({cand_symbol}).")
+            return None
+
         # 1. Toxic Venue Defense: Reject unmodeled/concentrated dump pools
         venue_str = str(getattr(candidate, "dex_id", None) or getattr(candidate, "venue", "") or "").lower()
-        toxic_venues = {"meteora-dbc", "meteora-damm-v2", "bags-fm", "moonshot", "pons-v2", "pons-v2-dex", "pancakeswap_v2", "uniswap-v4-base", "four-meme"}
+        toxic_venues = {"meteora", "meteora-dbc", "meteora-damm-v2", "bags-fm", "moonshot", "pons-v2", "pons-v2-dex", "pancakeswap_v2", "uniswap-v4-base", "four-meme", "stonkfun"}
         if any(tv in venue_str for tv in toxic_venues):
             logger.info(f"Skipping paper trade for {candidate.symbol}: Venue {venue_str} is in toxic pool blacklist.")
             return None
 
-        # 2. Liquidity-to-Market-Cap Ratio Gate (Must be >= 0.80 to prevent paper-thin liquidations)
+        # 1b. Liquidity Safety Gate: Minimum $6,000 pool depth (eliminates 86.8% illiquid loss rate)
+        cand_liq = float(getattr(candidate, "liquidity_usd", 0.0) or 0.0)
+        if 0 < cand_liq < 6000.0:
+            logger.info(f"Skipping paper trade for {candidate.symbol}: Liquidity below $6,000 safety floor (${cand_liq:,.0f} < $6,000).")
+            return None
+
+        # 1c. Anti-Fake-Volume Defense: Reject Bump Bot micro-churn and Hyper-Turnover circular wash volume
+        cand_vol_5m = float(getattr(candidate, "volume_5m_usd", 0.0) or 0.0)
+        cand_buys_5m = int(getattr(candidate, "txns_5m_buys", 0) or 0)
+        cand_sells_5m = int(getattr(candidate, "txns_5m_sells", 0) or 0)
+        cand_tot_txns = cand_buys_5m + cand_sells_5m
+
+        # Rule A: Bump Bot micro-churn (spamming micro trades < $10 across >= 40 txns)
+        if cand_tot_txns >= 40:
+            avg_trade = cand_vol_5m / max(1, cand_tot_txns)
+            if avg_trade < 10.0:
+                logger.info(
+                    f"Skipping paper trade for {candidate.symbol}: Bump bot micro-churn detected "
+                    f"(${avg_trade:.2f} < $10.00 across {cand_tot_txns} txns)."
+                )
+                return None
+
+        # Rule B: Hyper-turnover circular volume (> 300% pool liquidity churned in 5m)
+        if cand_liq >= 6000.0 and cand_vol_5m > 0:
+            turnover_ratio = cand_vol_5m / cand_liq
+            if turnover_ratio > 3.0:
+                logger.info(
+                    f"Skipping paper trade for {candidate.symbol}: Hyper-turnover wash volume detected "
+                    f"({turnover_ratio:.2f}x > 3.0x pool liquidity in 5m)."
+                )
+                return None
+
+        # 2. Liquidity-to-Market-Cap Ratio Gate: 0.20 <= ratio <= 1.35
+        # Rejects paper-thin pools (< 0.20) and unburned developer LP traps (> 1.35)
         mc = float(getattr(candidate, "market_cap_usd", 0.0) or 0.0)
         liq = float(getattr(candidate, "liquidity_usd", 0.0) or 0.0)
         liq_mc_ratio = (liq / mc) if mc > 0 else 0.0
-        if liq_mc_ratio < 0.80:
-            logger.info(f"Skipping paper trade for {candidate.symbol}: Low liquidity-to-MC ratio ({liq_mc_ratio:.2f} < 0.80).")
+        if liq_mc_ratio < 0.20:
+            logger.info(f"Skipping paper trade for {candidate.symbol}: Paper-thin liquidity-to-MC ratio ({liq_mc_ratio:.2f} < 0.20).")
+            return None
+        if liq_mc_ratio > 1.35:
+            logger.info(f"Skipping paper trade for {candidate.symbol}: Suspicious creator-seeded LP trap ({liq_mc_ratio:.2f} > 1.35).")
             return None
 
         # 3. Anti-Late-Bonding-Curve Gate: Avoid buying the exhausted top of bonding curves before dev dumps
@@ -301,7 +361,37 @@ class PaperTradingEngine:
         trade.mfe_ratio = round(mfe, 2)
         trade.mae_ratio = round(mae, 2)
 
-        if current_market_cap_usd >= 3_000_000.0 and not trade.target_reached_3m:
+        # Zero-Liquidity / Drained Pool Detection:
+        venue_str = str(getattr(trade, "venue", "") or "").lower()
+        token_addr_str = str(getattr(trade, "token_address", "") or "").lower()
+        # Pumpswap, Raydium, Meteora, Uniswap are AMM pools where LP can be drained.
+        is_bonding_curve = (
+            (venue_str in ("pumpfun", "pump-fun") or token_addr_str.endswith("pump"))
+            and venue_str not in ("pumpswap", "raydium", "meteora", "uniswap")
+        )
+
+        # Detect artificial price spike caused by division-by-zero on drained AMMs:
+        # If price jumped >= 3.0x from fill while liquidity is below $5,000 or collapsed by >50%:
+        price_mult = current_price_usd / fill_price if fill_price > 0 else 1.0
+        is_dust_spike_on_drained_pool = (
+            not is_bonding_curve
+            and price_mult >= 3.0
+            and (current_liquidity_usd < 5000.0 or (trade.liquidity_usd > 2000.0 and current_liquidity_usd < trade.liquidity_usd * 0.50))
+        )
+
+        if is_bonding_curve:
+            # Pump.fun bonding curves have protocol-locked quote reserves and cannot suffer LP-drain rugs.
+            # Only trigger if liquidity drain is explicitly confirmed AND the token price/MC has completely collapsed.
+            is_lp_drain = is_liquidity_drained and (current_price_usd <= 0.0 or current_market_cap_usd < 1000.0)
+        else:
+            is_lp_drain = (
+                is_liquidity_drained
+                or current_liquidity_usd < 500.0
+                or (trade.liquidity_usd > 2000.0 and current_liquidity_usd < trade.liquidity_usd * 0.10)
+                or is_dust_spike_on_drained_pool
+            )
+
+        if current_market_cap_usd >= 3_000_000.0 and not trade.target_reached_3m and not is_lp_drain:
             trade.target_reached_3m = True
             self.ledger.record_trade_event(TradeEventRecord(
                 event_id=str(uuid.uuid4())[:12],
@@ -324,7 +414,7 @@ class PaperTradingEngine:
         # Non-Anticipative Exit Policy Evaluation
         # -------------------------------------------------------------
         # 1. RISK_INVALIDATION: Immediate emergency exit on dev dump or liquidity drain
-        if is_dev_dump or is_liquidity_drained or current_liquidity_usd < 500.0:
+        if is_dev_dump or is_lp_drain:
             should_exit = True
             exit_reason = "RISK_INVALIDATION"
 
@@ -386,6 +476,23 @@ class PaperTradingEngine:
                 elif (peak - current_price_usd) / peak >= 0.35:
                     should_exit = True
                     exit_reason = "STAGED_TRAILING_PROFIT"
+            # C1. Intermediate Momentum Trailing Stop (After +40% gain, lock profits on 25% drop from peak)
+            elif peak >= fill_price * 1.40:
+                drawdown_from_peak = (peak - current_price_usd) / peak
+                if drawdown_from_peak >= 0.25:
+                    should_exit = True
+                    exit_reason = "STAGED_TRAILING_PROFIT"
+                elif current_price_usd <= fill_price * 1.05:
+                    should_exit = True
+                    exit_reason = "STAGED_BREAKEVEN_PROTECTION"
+            # C2. Early Excursion Breakeven Lock (After +25% breakout, protect principal + friction)
+            elif peak >= fill_price * 1.25:
+                if current_price_usd <= fill_price * 1.05:
+                    should_exit = True
+                    exit_reason = "STAGED_BREAKEVEN_PROTECTION"
+                elif current_price_usd <= fill_price * 0.75:
+                    should_exit = True
+                    exit_reason = "STAGED_STOP_LOSS"
             # D. Initial Stop Loss (-25% tight initial stop before breakout)
             elif current_price_usd <= fill_price * 0.75:
                 should_exit = True
@@ -398,6 +505,57 @@ class PaperTradingEngine:
             exit_reason = "STALE_DECAY_EXIT"
 
         if should_exit:
+            # Calculate hold duration
+            hold_sec = elapsed_minutes * 60.0
+            if trade.timestamp:
+                try:
+                    t_in = datetime.fromisoformat(trade.timestamp.replace("Z", "+00:00"))
+                    t_out = datetime.now(timezone.utc)
+                    hold_sec = max(0.0, (t_out - t_in).total_seconds())
+                except Exception:
+                    pass
+
+            if is_lp_drain:
+                trade.exit_price_usd = 0.0
+                trade.exit_market_cap_usd = 0.0
+                trade.exit_liquidity_usd = current_liquidity_usd
+                trade.exit_timestamp = now_iso
+                trade.hold_duration_seconds = round(hold_sec, 2)
+                trade.exit_reason = "RISK_INVALIDATION"
+                trade.exit_price_impact_pct = 100.0
+                priority_fee = 0.02 if trade.chain == "solana" else 0.05
+                trade.total_fees_usd = round(priority_fee * 2.0, 2)
+                trade.net_realized_pnl_usd = round(-trade.position_size_usd - trade.total_fees_usd, 2)
+                trade.net_realized_return_pct = -100.0
+                trade.outcome_label = "FAILURE"
+                if trade.symbol and not is_bonding_curve:
+                    self.rugged_symbols.add(trade.symbol.upper())
+
+                self.ledger.record_exit(trade)
+                self.ledger.record_trade_event(TradeEventRecord(
+                    event_id=str(uuid.uuid4())[:12],
+                    trade_id=trade.trade_id or trade.signal_id,
+                    token_address=token_address,
+                    timestamp=now_iso,
+                    event_type="EXIT",
+                    market_cap_usd=0.0,
+                    liquidity_usd=current_liquidity_usd,
+                    price_usd=0.0,
+                    signal_state="EXIT",
+                    details={
+                        "exit_reason": "RISK_INVALIDATION",
+                        "net_realized_pnl_usd": trade.net_realized_pnl_usd,
+                        "realized_return_pct": -100.0,
+                        "hold_duration_seconds": trade.hold_duration_seconds,
+                        "outcome_label": "FAILURE",
+                    }
+                ))
+
+                del self.active_positions[token_address]
+                del self.peak_prices[token_address]
+                del self.trough_prices[token_address]
+                return trade
+
             exec_exit = self.execution_sim.simulate_trade(
                 position_size_usd=trade.position_size_usd,
                 entry_mc=trade.market_cap_usd,
@@ -411,19 +569,9 @@ class PaperTradingEngine:
                 exit_price=current_price_usd,
             )
 
-            # Calculate hold duration
-            hold_sec = elapsed_minutes * 60.0
-            if trade.timestamp:
-                try:
-                    t_in = datetime.fromisoformat(trade.timestamp.replace("Z", "+00:00"))
-                    t_out = datetime.now(timezone.utc)
-                    hold_sec = max(0.0, (t_out - t_in).total_seconds())
-                except Exception:
-                    pass
-
             trade.exit_price_usd = current_price_usd
             trade.exit_market_cap_usd = current_market_cap_usd if current_market_cap_usd > 0 else (trade.market_cap_usd * (current_price_usd / fill_price) if fill_price > 0 else trade.market_cap_usd)
-            trade.exit_liquidity_usd = current_liquidity_usd if (current_liquidity_usd and current_liquidity_usd > 0) else trade.liquidity_usd
+            trade.exit_liquidity_usd = current_liquidity_usd
             trade.exit_timestamp = now_iso
             trade.hold_duration_seconds = round(hold_sec, 2)
             trade.exit_reason = exit_reason
@@ -432,10 +580,12 @@ class PaperTradingEngine:
             trade.net_realized_pnl_usd = exec_exit.net_realized_pnl_usd
             trade.net_realized_return_pct = exec_exit.net_realized_return_pct
 
-            if trade.target_reached_3m:
+            if trade.target_reached_3m and exit_reason != "RISK_INVALIDATION" and exec_exit.net_realized_return_pct > 0:
                 trade.outcome_label = "SUCCESS"
-            elif is_dev_dump or is_liquidity_drained or exit_reason in ("RISK_INVALIDATION", "STOP_LOSS", "INITIAL_STOP_LOSS") or exec_exit.net_realized_return_pct <= -40.0:
+            elif is_dev_dump or exit_reason in ("RISK_INVALIDATION", "STOP_LOSS", "INITIAL_STOP_LOSS") or exec_exit.net_realized_return_pct <= -40.0:
                 trade.outcome_label = "FAILURE"
+                if trade.symbol and not is_bonding_curve and (exit_reason == "RISK_INVALIDATION" or exec_exit.net_realized_return_pct <= -50.0):
+                    self.rugged_symbols.add(trade.symbol.upper())
             else:
                 trade.outcome_label = "FAILURE" if elapsed_minutes >= 1440.0 else "RIGHT_CENSORED"
 
@@ -486,7 +636,7 @@ class PaperTradingEngine:
 
         curr_price = current_price_usd or self.peak_prices.get(token_address) or trade.simulated_fill_price_usd
         curr_mc = current_market_cap_usd or trade.market_cap_usd
-        curr_liq = current_liquidity_usd or trade.liquidity_usd
+        curr_liq = current_liquidity_usd if (current_liquidity_usd and current_liquidity_usd > 0) else (trade.liquidity_usd or 5000.0)
 
         fill_price = trade.simulated_fill_price_usd
         peak = self.peak_prices.get(token_address, fill_price)
@@ -518,6 +668,7 @@ class PaperTradingEngine:
 
         trade.exit_price_usd = curr_price
         trade.exit_market_cap_usd = curr_mc
+        trade.exit_liquidity_usd = curr_liq
         trade.exit_timestamp = now_iso
         trade.hold_duration_seconds = round(hold_sec, 2)
         trade.exit_reason = exit_reason

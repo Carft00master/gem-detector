@@ -179,6 +179,7 @@ class Sidebar(QFrame):
         
         self._add_section("TRADING")
         self._add_item(7, "▶", "Paper Trading")
+        self._add_item(20, "💰", "Virtual Wallet")
         self._add_item(5, "◷", "Trade Timeline")
         self._add_item(6, "▲", "Performance")
         

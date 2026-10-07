@@ -10,6 +10,7 @@ root_dir = Path(__file__).resolve().parent.parent
 
 DB_NAMES = [
     "paper_trading.db",
+    "virtual_wallet.db",
     "shadow_universe.db",
     "discovery_audit.db",
     "population_registry.db",
@@ -104,6 +105,9 @@ def sync_live_data_before_build():
 
 def _clean_stale_wal(directory: Path):
     """Clean empty or dangling WAL/SHM locks."""
+    import gc, time
+    gc.collect()
+    time.sleep(0.1)
     for p in directory.glob("*.db-wal"):
         try:
             if p.stat().st_size == 0:
@@ -112,14 +116,32 @@ def _clean_stale_wal(directory: Path):
             pass
     for p in directory.glob("*.db-shm"):
         try:
-            p.unlink()
+            wal = p.with_name(p.name[:-4] + "-wal")
+            if not wal.exists() or (wal.exists() and wal.stat().st_size == 0):
+                p.unlink()
         except Exception:
             pass
+
+
+def _checkpoint_all_dbs(directory: Path):
+    """Flush and safely checkpoint all SQLite WAL files into their main database files."""
+    for p in directory.glob("*.db"):
+        try:
+            conn = sqlite3.connect(p)
+            conn.execute("PRAGMA wal_checkpoint(FULL)")
+            conn.execute("PRAGMA journal_mode=DELETE")
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.close()
+        except Exception:
+            pass
+    import gc
+    gc.collect()
 
 
 def sync_live_data_after_build():
     """Restore all data files to the built application directory so packaged exe starts with 100% current data."""
     data_dir = root_dir / "data"
+    _checkpoint_all_dbs(data_dir)
     _clean_stale_wal(data_dir)
     destinations = [
         root_dir / "dist" / "MemecoinScanner" / "data",
@@ -160,11 +182,10 @@ def sync_live_data_after_build():
 
 def build_executable():
     print(f"[+] Starting PyInstaller Build for MemecoinScanner...")
-    sync_live_data_before_build()
-
     # Terminate any running MemecoinScanner instance to release file locks on Windows
     if sys.platform == "win32":
         os.system("taskkill /F /IM MemecoinScanner.exe >nul 2>&1")
+    sync_live_data_before_build()
 
     dist_dir = root_dir / "dist"
     build_dir = root_dir / "build"

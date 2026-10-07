@@ -196,6 +196,18 @@ class PaperTradingLedger:
         if db_key in _INITIALIZED_LEDGER_DBS:
             return
 
+        # Defensive self-healing: purge any 0-byte WAL or orphaned SHM file left behind on Windows
+        try:
+            wal_path = Path(str(self.db_path) + "-wal")
+            shm_path = Path(str(self.db_path) + "-shm")
+            if wal_path.exists() and wal_path.stat().st_size == 0:
+                wal_path.unlink()
+                if shm_path.exists():
+                    shm_path.unlink()
+                logger.info(f"Purged 0-byte WAL file for {self.db_path}")
+        except Exception as e:
+            logger.debug(f"Notice during WAL check for {self.db_path}: {e}")
+
         with sqlite3.connect(self.db_path, timeout=30.0) as conn:
             cursor = conn.cursor()
             try:

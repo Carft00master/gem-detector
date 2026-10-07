@@ -207,8 +207,10 @@ class TradeTimelineView(QtWidgets.QWidget):
 
         e_price = float(trade.get("simulated_fill_price_usd") or trade.get("entry_price_usd") or 0.0)
         x_price = float(trade.get("exit_price_usd") or 0.0)
-        self.lbl_entry_price.setText(f"${e_price:.6f}" if e_price > 0 else "-")
-        self.lbl_exit_price.setText(f"${x_price:.6f}" if x_price > 0 else "-")
+        e_fmt = f"${e_price:.8f}" if (0 < e_price < 0.0001) else f"${e_price:.6f}"
+        x_fmt = f"${x_price:.8f}" if (0 < x_price < 0.0001) else f"${x_price:.6f}"
+        self.lbl_entry_price.setText(e_fmt if e_price > 0 else "-")
+        self.lbl_exit_price.setText(x_fmt if x_price > 0 else "-")
 
         dur = float(trade.get("hold_duration_seconds", 0.0) or 0.0)
         dur_str = f"{dur/60.0:.1f} min" if dur >= 60 else f"{dur:.0f} sec"
@@ -248,7 +250,7 @@ class TradeTimelineView(QtWidgets.QWidget):
             t_in = trade.get("discovery_timestamp") or trade.get("timestamp") or "N/A"
             stepper_lines.append(f"<span style='color:#9ca3af;'>{t_in[11:19]}</span> <b style='color:#38bdf8;'>DISCOVERED</b> (MC: ${entry_mc:,.0f})")
             stepper_lines.append("<span style='color:#6b7280;'>&nbsp;&nbsp;↓</span>")
-            stepper_lines.append(f"<span style='color:#9ca3af;'>{t_in[11:19]}</span> <b style='color:#4ade80;'>PAPER_ENTRY</b> (Fill: ${e_price:.6f} | Size: ${float(trade.get('position_size_usd', 250.0)):.0f})")
+            stepper_lines.append(f"<span style='color:#9ca3af;'>{t_in[11:19]}</span> <b style='color:#4ade80;'>PAPER_ENTRY</b> (Fill: {e_fmt} | Size: ${float(trade.get('position_size_usd', 250.0)):.0f})")
 
             if trade.get("status") == "CLOSED":
                 t_out = trade.get("exit_timestamp") or "N/A"

@@ -97,6 +97,12 @@ hidden_imports = [
     'src.research.run_selector_v2_2_recovery_audit',
     'src.research.challenger_selector',
     'src.research.storage',
+    'app.services.wallet_service',
+    'app.ui.views.virtual_wallet_view',
+    'src.wallet.models',
+    'src.wallet.store',
+    'src.wallet.engine',
+    'src.wallet.stats',
 ]
 
 a = Analysis(

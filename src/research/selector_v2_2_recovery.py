@@ -66,12 +66,15 @@ class HardSafetyGateV22:
     Non-safety conditions must NOT trigger hard rejection here.
     """
     MIN_MARKET_CAP: float = 8000.0
-    MIN_LIQUIDITY_USD: float = 2000.0
+    MIN_LIQUIDITY_USD: float = 6000.0
     MAX_PRICE_IMPACT_PCT: float = 5.0
     MAX_SLIPPAGE_PCT: float = 5.0
     MAX_WASH_RISK: float = 0.50
     MAX_CABAL_RISK: float = 0.60
-    RESTRICTED_VENUES: Tuple[str, ...] = ("pons-v2", "raydium-cp")
+    MAX_TURNOVER_RATIO: float = 3.0
+    MIN_AVG_TRADE_SIZE_USD: float = 10.0
+    MIN_TXNS_FOR_BUMP_CHECK: int = 40
+    RESTRICTED_VENUES: Tuple[str, ...] = ("pons-v2", "raydium-cp", "meteora", "stonkfun")
 
     @classmethod
     def evaluate(cls, token: Dict[str, Any], fb: HighConvictionFeatureBundle) -> Tuple[bool, List[str]]:
@@ -99,6 +102,21 @@ class HardSafetyGateV22:
 
         if fb.cabal_risk >= cls.MAX_CABAL_RISK:
             rejections.append(f"EXTREME_CABAL_CONCENTRATION ({fb.cabal_risk:.2f} >= {cls.MAX_CABAL_RISK})")
+
+        # 3b. Anti-Fake-Volume Defense (Bump Bot Micro-Churn & Hyper-Turnover Wash Volume)
+        vol_5m = float(token.get("volume_5m_usd") or 0.0)
+        buys_5m = int(token.get("txns_5m_buys") or 0)
+        sells_5m = int(token.get("txns_5m_sells") or 0)
+        tot_txns = buys_5m + sells_5m
+        if tot_txns >= cls.MIN_TXNS_FOR_BUMP_CHECK:
+            avg_trade = vol_5m / max(1, tot_txns)
+            if avg_trade < cls.MIN_AVG_TRADE_SIZE_USD:
+                rejections.append(f"BUMP_BOT_MICRO_CHURN (${avg_trade:.2f} < ${cls.MIN_AVG_TRADE_SIZE_USD:.2f} across {tot_txns} txns)")
+
+        if liq >= cls.MIN_LIQUIDITY_USD and vol_5m > 0:
+            to_ratio = vol_5m / liq
+            if to_ratio > cls.MAX_TURNOVER_RATIO:
+                rejections.append(f"HYPER_TURNOVER_WASH_VOLUME ({to_ratio:.2f}x > {cls.MAX_TURNOVER_RATIO:.1f}x pool liq)")
 
         # 4. Restricted Venues
         venue = str(token.get("venue") or "").lower()

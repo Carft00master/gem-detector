@@ -39,7 +39,7 @@ filters:
   min_p_reach_3m: 0.09             # Minimum 9.0% P(3M) breakout probability gate
 
   # Liquidity Health (Deep Pool & Slippage Protection)
-  min_liquidity_usd: 5000          # Min $5,000 USD pool depth (eliminates 79.7% illiquid loss rate)
+  min_liquidity_usd: 6000          # Min $6,000 USD pool depth (eliminates 86.8% illiquid loss rate)
   min_liquidity_mc_ratio: 0.15     # Liquidity must be at least 15% of Market Cap
 
   # Volume & Velocity

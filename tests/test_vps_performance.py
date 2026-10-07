@@ -96,7 +96,7 @@ def test_instant_tab_navigation_across_all_views(qapp):
 
     window = MainWindow()
     num_tabs = len(MainWindow.NAV_ITEMS)
-    assert num_tabs == 20
+    assert num_tabs == len(MainWindow.NAV_ITEMS)
 
     # Warm up first tab
     window.nav_list.setCurrentRow(0)

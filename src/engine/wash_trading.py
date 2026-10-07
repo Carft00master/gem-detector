@@ -38,6 +38,7 @@ class WashTradingAnalysis:
     trade_size_repetition_count: int = 0  # Identical dollar amount trades
     avg_roundtrip_duration_sec: float = 0.0
     circular_volume_usd: float = 0.0
+    avg_trade_size_usd: float = 0.0       # Average trade size in 5m window
     signals: List[str] = field(default_factory=list)
 
 
@@ -121,6 +122,7 @@ class WashTradingDetector:
         res.rapid_roundtrips_count = rapid_roundtrips
         res.circular_loops_detected = circular_loops
         res.circular_volume_usd = round(circular_vol, 2)
+        res.avg_trade_size_usd = round(total_volume_usd / max(1, len(trades)), 2)
 
         if roundtrip_durations:
             res.avg_roundtrip_duration_sec = round(sum(roundtrip_durations) / len(roundtrip_durations), 1)
@@ -153,6 +155,65 @@ class WashTradingDetector:
 
         vol_per_buyer = total_volume_usd / max(1, unique_buyers_count)
         if vol_per_buyer > 2500.0 and unique_buyers_count < 15:
+            wash_risk += 0.30
+            signals.append("CONCENTRATED_VOLUME_FEW_WALLETS")
+
+        res.wash_trade_risk = round(min(1.0, max(0.0, wash_risk)), 3)
+        res.artificial_volume_risk = round(min(1.0, wash_risk * 1.1), 3)
+        res.volume_quality_score = round(max(0.05, 1.0 - res.wash_trade_risk), 3)
+        res.signals = signals
+
+        return res
+
+    @classmethod
+    def analyze_aggregate_metrics(
+        cls,
+        volume_5m_usd: float,
+        txns_5m_buys: int,
+        txns_5m_sells: int,
+        liquidity_usd: float,
+        unique_buyers_count: int,
+        market_cap_usd: float = 0.0,
+    ) -> WashTradingAnalysis:
+        """
+        Analyze aggregate 5m window metrics for fake volume, bump bot micro-churn,
+        and circular hyper-turnover without requiring raw transaction logs.
+        """
+        res = WashTradingAnalysis()
+        buys = max(0, int(txns_5m_buys or 0))
+        sells = max(0, int(txns_5m_sells or 0))
+        total_txns = buys + sells
+        vol_5m = max(0.0, float(volume_5m_usd or 0.0))
+        liq = max(0.0, float(liquidity_usd or 0.0))
+        buyers = max(0, int(unique_buyers_count or 0))
+
+        avg_trade_size = (vol_5m / total_txns) if total_txns > 0 else 0.0
+        res.avg_trade_size_usd = round(avg_trade_size, 2)
+
+        turnover_5m = (vol_5m / liq) if liq > 0 else 1.0
+        res.capital_turnover_ratio = round(turnover_5m, 2)
+        res.turnover_5m_ratio = round(turnover_5m, 2)
+
+        wash_risk = 0.0
+        signals: List[str] = []
+
+        # 1. Bump Bot Micro-Churn: spamming micro trades with high transaction velocity
+        if total_txns >= 40 and avg_trade_size < 10.0:
+            wash_risk += 0.65
+            signals.append("BUMP_BOT_MICRO_CHURN")
+
+        # 2. Hyper-Turnover Circular Wash Volume: churning > 300% pool liquidity in 5m
+        if liq >= 6000.0 and turnover_5m > 3.0:
+            if turnover_5m > 5.0:
+                wash_risk += 0.70
+                signals.append("EXTREME_TURNOVER_CIRCULAR_WASH")
+            else:
+                wash_risk += 0.50
+                signals.append("HYPER_TURNOVER_WASH_VOLUME")
+
+        # 3. Concentrated Volume from Few Wallets
+        vol_per_buyer = vol_5m / max(1, buyers)
+        if vol_per_buyer > 2500.0 and buyers < 15 and vol_5m > 0:
             wash_risk += 0.30
             signals.append("CONCENTRATED_VOLUME_FEW_WALLETS")
 

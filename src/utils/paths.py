@@ -76,6 +76,34 @@ def get_backups_dir() -> Path:
     return b_dir
 
 
+def heal_sqlite_wal_files(directory: Optional[Path] = None) -> None:
+    """
+    Auto-heal SQLite databases on Windows where an empty (0-byte) WAL or orphaned SHM file
+    was left behind by an abnormal process termination or checkpoint.
+    A 0-byte WAL file causes SQLite on Windows to fail with SQLITE_IOERR ('disk I/O error').
+    Removing 0-byte WAL/SHM files is completely safe because a 0-byte WAL file contains
+    no transactions.
+    """
+    target = directory or get_data_dir()
+    if not target.exists():
+        return
+    for wal in target.glob("*.db-wal"):
+        try:
+            if wal.stat().st_size == 0:
+                wal.unlink()
+                logger.info(f"Auto-healed stale 0-byte WAL file: {wal.name}")
+        except Exception as e:
+            logger.debug(f"Could not unlink 0-byte WAL file {wal}: {e}")
+    for shm in target.glob("*.db-shm"):
+        try:
+            wal_counterpart = shm.with_name(shm.name[:-4] + "-wal")
+            if not wal_counterpart.exists():
+                shm.unlink()
+                logger.info(f"Auto-healed orphaned SHM file: {shm.name}")
+        except Exception as e:
+            logger.debug(f"Could not unlink orphaned SHM file {shm}: {e}")
+
+
 def ensure_data_persistence() -> None:
     """
     Safety synchronization hook. Checks if higher-count trade data exists in any legacy
@@ -83,6 +111,7 @@ def ensure_data_persistence() -> None:
     active data directory.
     """
     target_data = get_data_dir()
+    heal_sqlite_wal_files(target_data)
     target_paper_db = target_data / "paper_trading.db"
 
     # Search known alternative paths
@@ -93,6 +122,8 @@ def ensure_data_persistence() -> None:
     ]
 
     for cand in candidate_paths:
+        if cand.exists():
+            heal_sqlite_wal_files(cand)
         cand_paper_db = cand / "paper_trading.db"
         if cand_paper_db.exists() and cand_paper_db.resolve() != target_paper_db.resolve():
             try:

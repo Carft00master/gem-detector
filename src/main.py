@@ -308,12 +308,14 @@ class GemDetectorEngine:
             cabal = WalletGraphEngine.analyze_wallets(wallets)
 
             # D. Wash-Trading & Artificial Volume Detection
-            trades = [
-                TradeEvent(f"{c.address}_b1", "buy", max(10.0, c.volume_5m_usd * 0.3), datetime.now(timezone.utc)),
-                TradeEvent(f"{c.address}_b2", "buy", max(10.0, c.volume_5m_usd * 0.2), datetime.now(timezone.utc)),
-                TradeEvent(f"{c.address}_s1", "sell", max(10.0, c.volume_5m_usd * 0.2), datetime.now(timezone.utc)),
-            ]
-            wash = WashTradingDetector.analyze_trades(trades, c.volume_5m_usd, c.unique_buyers_1h, c.market_cap_usd)
+            wash = WashTradingDetector.analyze_aggregate_metrics(
+                volume_5m_usd=c.volume_5m_usd,
+                txns_5m_buys=c.txns_5m_buys,
+                txns_5m_sells=c.txns_5m_sells,
+                liquidity_usd=c.liquidity_usd,
+                unique_buyers_count=c.unique_buyers_1h,
+                market_cap_usd=c.market_cap_usd,
+            )
 
             # E. Developer Lifecycle Behavior
             dev = DevBehaviorEngine.evaluate_dev(
@@ -552,14 +554,34 @@ class GemDetectorEngine:
                 except Exception:
                     elapsed_trade_mins = 0.0
 
+            venue_cand = str(getattr(c, "dex_id", "") or getattr(c, "venue", "") or "").lower()
+            rec_venue = str(getattr(trade_rec, "venue", "") or "").lower() if trade_rec else ""
+            is_bc = (
+                (venue_cand in ("pumpfun", "pump-fun") or rec_venue in ("pumpfun", "pump-fun"))
+                and venue_cand not in ("pumpswap", "raydium", "meteora", "uniswap")
+                and rec_venue not in ("pumpswap", "raydium", "meteora", "uniswap")
+            ) or (
+                c.address.lower().endswith("pump")
+                and venue_cand not in ("pumpswap", "raydium", "meteora", "uniswap")
+                and rec_venue not in ("pumpswap", "raydium", "meteora", "uniswap")
+            )
+
+            cand_liq = c.liquidity_usd
+            if is_bc:
+                ratio = (trade_rec.liquidity_usd / trade_rec.market_cap_usd) if trade_rec and trade_rec.market_cap_usd > 0 else 0.60
+                cand_liq = max(1500.0, c.market_cap_usd * ratio)
+                is_drained = False
+            else:
+                is_drained = (cand_liq < 500.0)
+
             exit_trade = self.paper_engine.on_price_tick(
                 token_address=c.address,
                 current_price_usd=c.price_usd,
                 current_market_cap_usd=c.market_cap_usd,
-                current_liquidity_usd=c.liquidity_usd,
+                current_liquidity_usd=cand_liq,
                 elapsed_minutes=elapsed_trade_mins,
                 is_dev_dump=(meta.get("dev_classification") == "CRITICAL_DUMP"),
-                is_liquidity_drained=(c.liquidity_usd < 500.0),
+                is_liquidity_drained=is_drained,
             )
             if exit_trade:
                 self._newly_closed_trades.append(exit_trade)
@@ -604,8 +626,38 @@ class GemDetectorEngine:
                                     updated_addrs.add(t_addr)
                                     price_usd = float(pair.get("priceUsd") or 0.0)
                                     mc_usd = float(pair.get("marketCap") or pair.get("fdv") or 0.0)
-                                    liq_usd = float(pair.get("liquidity", {}).get("usd") or 0.0)
                                     trade_rec = self.paper_engine.active_positions[t_addr]
+                                    dex_id = str(pair.get("dexId") or "").lower()
+                                    rec_venue = str(getattr(trade_rec, "venue", "") or "").lower()
+
+                                    # ONLY ungraduated Pump.fun bonding curves have locked quote reserves.
+                                    # Pumpswap, Raydium, Meteora, and other AMMs have real LP pools that CAN be drained.
+                                    is_pump_bonding_curve = (
+                                        (dex_id in ("pumpfun", "pump-fun") or rec_venue in ("pumpfun", "pump-fun"))
+                                        and dex_id not in ("pumpswap", "raydium", "meteora", "uniswap")
+                                        and rec_venue not in ("pumpswap", "raydium", "meteora", "uniswap")
+                                    ) or (
+                                        t_addr.lower().endswith("pump")
+                                        and dex_id not in ("pumpswap", "raydium", "meteora", "uniswap")
+                                        and rec_venue not in ("pumpswap", "raydium", "meteora", "uniswap")
+                                    )
+
+                                    if is_pump_bonding_curve:
+                                        # On pump.fun bonding curves, quote SOL is locked in the curve program until graduation.
+                                        # DexScreener does not track a standard AMM LP pair, returning liquidity: null.
+                                        ratio = (trade_rec.liquidity_usd / trade_rec.market_cap_usd) if trade_rec.market_cap_usd > 0 else 0.60
+                                        liq_usd = max(1500.0, mc_usd * ratio)
+                                        is_drained = False
+                                    else:
+                                        liq_raw = pair.get("liquidity")
+                                        if liq_raw and isinstance(liq_raw, dict) and "usd" in liq_raw and liq_raw.get("usd") is not None:
+                                            liq_usd = float(liq_raw.get("usd") or 0.0)
+                                            # Strict drained pool check on AMMs: pool below $500 or collapsed by >90%
+                                            is_drained = (liq_usd < 500.0) or (trade_rec.liquidity_usd > 2000.0 and liq_usd < trade_rec.liquidity_usd * 0.10)
+                                        else:
+                                            # Omitted liquidity on an AMM DEX indicates pulled pool
+                                            liq_usd = 0.0
+                                            is_drained = True
 
                                     elapsed = 0.0
                                     if trade_rec.timestamp:
@@ -621,7 +673,7 @@ class GemDetectorEngine:
                                         current_market_cap_usd=mc_usd,
                                         current_liquidity_usd=liq_usd,
                                         elapsed_minutes=elapsed,
-                                        is_liquidity_drained=(liq_usd < 500.0),
+                                        is_liquidity_drained=is_drained,
                                     )
                                     if exit_trade:
                                         self._newly_closed_trades.append(exit_trade)
