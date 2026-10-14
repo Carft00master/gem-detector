@@ -27,7 +27,11 @@ class ShadowLedgerManager:
     def __init__(self, ledger: Optional[PaperTradingLedger] = None, db_path: Optional[Path] = None):
         self.ledger = ledger or PaperTradingLedger()
         self.data_dir = get_data_dir()
-        self.db_path = db_path or (self.data_dir / "paper_trading.db")
+        ledger_db = getattr(self.ledger, "db_path", None)
+        if isinstance(ledger_db, (str, Path)):
+            self.db_path = db_path or Path(ledger_db)
+        else:
+            self.db_path = db_path or (self.data_dir / "paper_trading.db")
         self._init_path_table()
 
     def _init_path_table(self) -> None:

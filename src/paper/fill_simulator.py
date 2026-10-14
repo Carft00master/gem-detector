@@ -39,6 +39,46 @@ PUMPSWAP_FEE_PCT = 0.0100
 RAYDIUM_AMM_FEE_BPS = 25
 POOL_FEE_PCT = 0.0025
 
+# PumpSwap Verified Fee Schedule (Decoded from pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ return data)
+# 1. Block 0 Launch Tier (Slot 456718840 sniper swap):
+#    Protocol Fee 1: 2.5 bps (0.025%) -> FGptqdxjahaf...
+#    Protocol Fee 2: 2.5 bps (0.025%) -> qkYdTGRPHbWT...
+#    Creator Fee:   95.0 bps (0.950%) -> AjBoWx2xmP3m... (paid outside pool)
+#    Total:        100.0 bps (1.000%)
+# 2. Seasoned Trading Tier (Slots 456718841+ across all MCs):
+#    Protocol Fee 1: 2.5 bps (0.025%)
+#    Protocol Fee 2: 2.5 bps (0.025%)
+#    Creator Fee:   25.0 bps (0.250%) -> AjBoWx2xmP3m... (paid outside pool)
+#    Total:         30.0 bps (0.300%)
+# In ALL tiers, 100% of fees are paid OUTSIDE pool reserves. Only net SOL enters pool reserves.
+
+@dataclass
+class PumpSwapFeeBreakdown:
+    protocol_fee_bps: float
+    creator_fee_bps: float
+    total_fee_bps: float
+    total_fee_pct: float
+    retained_in_reserves: bool = False
+
+
+def get_pumpswap_fee_schedule(is_launch_block: bool = False) -> PumpSwapFeeBreakdown:
+    """Return verified fee breakdown for PumpSwap AMM based on block tier."""
+    if is_launch_block:
+        return PumpSwapFeeBreakdown(
+            protocol_fee_bps=5.0,
+            creator_fee_bps=95.0,
+            total_fee_bps=100.0,
+            total_fee_pct=0.0100,
+            retained_in_reserves=False,
+        )
+    return PumpSwapFeeBreakdown(
+        protocol_fee_bps=5.0,
+        creator_fee_bps=25.0,
+        total_fee_bps=30.0,
+        total_fee_pct=0.0030,
+        retained_in_reserves=False,
+    )
+
 # PumpSwap Opening Reserves Fixture (Calibration Case NODF)
 # 85.005 SOL total curve withdrawal:
 # 67.40585 SOL base WSOL vault + 17.58451 SOL InitBoost vault = 84.99036 SOL (~85 SOL effective AMM liquidity)

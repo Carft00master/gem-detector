@@ -876,10 +876,9 @@ class TokenDetailView(QWidget):
 
         # 3. Dynamic DexScreener Fallback Lookup (if not present in local SQLite)
         try:
-            import urllib.request, json, ssl
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
+            import urllib.request, json
+            from src.utils.ssl_context import get_verified_ssl_context
+            ctx = get_verified_ssl_context()
             url = f"https://api.dexscreener.com/latest/dex/tokens/{token_address}"
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
             with urllib.request.urlopen(req, context=ctx, timeout=2.5) as resp:

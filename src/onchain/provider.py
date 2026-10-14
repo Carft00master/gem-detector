@@ -33,7 +33,8 @@ PROGRAM_IDS = {
     "PUMP_FUN_PROGRAM": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",                # Executable (BPFLoaderUpgradeab1e)
     "PUMPSWAP_AMM_PROGRAM": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",            # Executable (BPFLoaderUpgradeab1e)
     "PUMP_FEE_PROGRAM": "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ",                # Executable (BPFLoaderUpgradeab1e)
-    "PUMP_FUN_MIGRATION_PROGRAM": "39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg",      # Migration Authority / Program
+    "PUMP_FUN_MIGRATION_AUTHORITY": "39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg",    # System Account (Migration Authority, not executable BPF program)
+    "PUMP_FUN_MIGRATION_PROGRAM": "39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg",      # Deprecated alias for PUMP_FUN_MIGRATION_AUTHORITY
     "PUMP_FUN_FEE_RECIPIENT": "CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM",          # Fee Recipient
     "PUMP_FUN_GLOBAL_CONFIG": "4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf",          # Curve Global Config (95 bps fee)
     # External DEXs

@@ -41,7 +41,8 @@ class MultiStateAlertDispatcher:
 
     async def _get_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
-            connector = aiohttp.TCPConnector(ssl=False)
+            from src.utils.ssl_context import get_verified_ssl_context
+            connector = aiohttp.TCPConnector(ssl=get_verified_ssl_context())
             self._session = aiohttp.ClientSession(connector=connector)
         return self._session
 

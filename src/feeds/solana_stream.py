@@ -38,8 +38,8 @@ class SolanaPumpStream:
                 pass
 
     async def _listen_loop(self) -> None:
-        import ssl
-        ssl_ctx = ssl._create_unverified_context()
+        from src.utils.ssl_context import get_verified_ssl_context
+        ssl_ctx = get_verified_ssl_context()
         while self._running:
             try:
                 async with websockets.connect(

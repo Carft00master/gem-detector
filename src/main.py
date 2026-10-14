@@ -115,8 +115,9 @@ class GemDetectorEngine:
 
     async def initialize(self) -> None:
         """Initialize sessions and research sub-components."""
+        from src.utils.ssl_context import get_verified_ssl_context
         timeout = aiohttp.ClientTimeout(total=8)
-        connector = aiohttp.TCPConnector(ssl=False)
+        connector = aiohttp.TCPConnector(ssl=get_verified_ssl_context())
         self.session = aiohttp.ClientSession(
             timeout=timeout,
             connector=connector,
@@ -163,8 +164,9 @@ class GemDetectorEngine:
         except Exception as e:
             logger.debug(f"Error closing stale session: {e}")
 
+        from src.utils.ssl_context import get_verified_ssl_context
         timeout = aiohttp.ClientTimeout(total=6)
-        connector = aiohttp.TCPConnector(ssl=False, force_close=True)
+        connector = aiohttp.TCPConnector(ssl=get_verified_ssl_context(), force_close=True)
         self.session = aiohttp.ClientSession(
             timeout=timeout,
             connector=connector,

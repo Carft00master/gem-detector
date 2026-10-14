@@ -23,8 +23,9 @@ class DexScreenerFeed(BaseFeed):
 
     async def _get_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
+            from src.utils.ssl_context import get_verified_ssl_context
             timeout = aiohttp.ClientTimeout(total=4)
-            connector = aiohttp.TCPConnector(ssl=False)
+            connector = aiohttp.TCPConnector(ssl=get_verified_ssl_context())
             self._session = aiohttp.ClientSession(
                 timeout=timeout,
                 connector=connector,

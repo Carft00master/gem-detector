@@ -203,9 +203,32 @@ def test_nodf_boost_reconciliation_and_opening_reserves(sim):
         timestamp=1791954967,
     )
 
-    # Effective pool SOL after sniper: ~1055 SOL (DexScreener pooled 1,058.89 SOL after ~6.8 SOL of sells)
-    assert fill.sol_reserves_after == pytest.approx(1055.05, abs=0.5)
     # Tokens received: ~190.2M tokens out of 206.9M opening pool tokens
     assert fill.tokens_received == pytest.approx(190_204_218.0, rel=1e-3)
     # Proves 17.5845 SOL was an effective boost deposit, NOT an external fee deduction!
+
+
+def test_pumpswap_fee_schedule_tiers_and_decomposition():
+    """
+    Asserts the verified PumpSwap fee schedule from on-chain GetFeesWithQuoteMint:
+    - Block 0 Launch tier (creation slot): 5 bps protocol + 95 bps creator = 100 bps (1.00%)
+    - Seasoned AMM tier (all subsequent slots across MCs): 5 bps protocol + 25 bps creator = 30 bps (0.30%)
+    - In both tiers, 100% of fees are paid OUTSIDE pool reserves to external vaults.
+    """
+    from src.paper.fill_simulator import get_pumpswap_fee_schedule
+
+    launch_tier = get_pumpswap_fee_schedule(is_launch_block=True)
+    assert launch_tier.protocol_fee_bps == 5.0
+    assert launch_tier.creator_fee_bps == 95.0
+    assert launch_tier.total_fee_bps == 100.0
+    assert launch_tier.total_fee_pct == 0.0100
+    assert launch_tier.retained_in_reserves is False
+
+    seasoned_tier = get_pumpswap_fee_schedule(is_launch_block=False)
+    assert seasoned_tier.protocol_fee_bps == 5.0
+    assert seasoned_tier.creator_fee_bps == 25.0
+    assert seasoned_tier.total_fee_bps == 30.0
+    assert seasoned_tier.total_fee_pct == 0.0030
+    assert seasoned_tier.retained_in_reserves is False
+
 

@@ -37,9 +37,6 @@ def mock_engine(tmp_path):
 
     with patch("src.paper.engine.PaperTradingLedger"):
         engine = GemDetectorEngine(config=cfg)
-        engine.paper_engine.max_entry_market_cap_usd = 50000.0
-        if hasattr(engine, "final_gate_layer") and hasattr(engine.final_gate_layer, "data_validator"):
-            engine.final_gate_layer.data_validator.max_market_cap_usd = 50000.0
         engine.paper_engine.ledger = MagicMock()
         engine.paper_engine.ledger.db_path = str(tmp_path / "paper_test.db")
         engine.paper_engine.ledger.record_entry = MagicMock()
@@ -102,8 +99,8 @@ def _make_prediction(p3m: float):
 @pytest.mark.asyncio
 async def test_scan_cycle_selector_v2_admission_and_rejection(mock_engine):
     """Verify eligible candidate opens a trade and ineligible candidate is rejected."""
-    # 1. High conviction candidate (MC $25k, Liq $22k, P(3M) 0.16) -> A or A+ Tier (liq/mc >= 0.80)
-    cand_high = _make_candidate("ADDR_CONV_01", "ALPHA", mc=25000.0, liq=22000.0, p3m=0.16, buyers=80)
+    # 1. High conviction candidate (MC $14k <= $16k ceiling, Liq $12k, P(3M) 0.16) -> A or A+ Tier (liq/mc >= 0.80)
+    cand_high = _make_candidate("ADDR_CONV_01", "ALPHA", mc=14000.0, liq=12000.0, p3m=0.16, buyers=80)
     
     # 2. Ineligible candidate (MC $5,000 < $8,000 floor)
     cand_low = _make_candidate("ADDR_LOW_01", "MICRO", mc=5000.0, liq=3000.0, p3m=0.18, buyers=60)
@@ -152,7 +149,7 @@ async def test_scan_cycle_selector_v2_admission_and_rejection(mock_engine):
 async def test_slot_queue_capacity_cap(mock_engine):
     """Verify that no more than max_simultaneous_positions (8) are admitted simultaneously."""
     cands = [
-        _make_candidate(f"ADDR_BATCH_{i}", f"TOK{i}", mc=30000.0, liq=26000.0, p3m=0.17, buyers=80)
+        _make_candidate(f"ADDR_BATCH_{i}", f"TOK{i}", mc=14000.0, liq=12000.0, p3m=0.17, buyers=80)
         for i in range(12)
     ]
 

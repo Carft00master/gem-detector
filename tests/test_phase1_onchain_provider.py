@@ -79,6 +79,7 @@ def test_official_program_ids_verified():
     assert provider.get_program_id("PUMP_FUN_PROGRAM") == "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
     assert provider.get_program_id("PUMPSWAP_AMM_PROGRAM") == "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"
     assert provider.get_program_id("PUMP_FEE_PROGRAM") == "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ"
+    assert provider.get_program_id("PUMP_FUN_MIGRATION_AUTHORITY") == "39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg"
     assert provider.get_program_id("PUMP_FUN_MIGRATION_PROGRAM") == "39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg"
     assert provider.get_program_id("PUMP_FUN_FEE_RECIPIENT") == "CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM"
     assert provider.get_program_id("PUMP_FUN_GLOBAL_CONFIG") == "4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf"

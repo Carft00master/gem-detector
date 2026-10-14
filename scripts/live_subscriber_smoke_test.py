@@ -109,8 +109,9 @@ class LiveSubscriberSmokeTest:
         self.start_time = time.time()
         end_time = self.start_time + self.duration_seconds
         
-        ssl_ctx = ssl._create_unverified_context()
-        connector = aiohttp.TCPConnector(ssl=False)
+        from src.utils.ssl_context import get_verified_ssl_context
+        ssl_ctx = get_verified_ssl_context()
+        connector = aiohttp.TCPConnector(ssl=ssl_ctx)
         
         async with aiohttp.ClientSession(connector=connector) as http_session:
             while time.time() < end_time:
