@@ -14,6 +14,11 @@ from src.paper.fill_simulator import (
     PUMP_CURVE_K,
     PUMP_FEE_PCT,
     POOL_FEE_PCT,
+    PUMPSWAP_OPEN_SOL_BASE,
+    PUMPSWAP_OPEN_SOL_BOOST,
+    PUMPSWAP_OPEN_SOL_EFFECTIVE,
+    PUMPSWAP_OPEN_TOKENS,
+    PUMPSWAP_FEE_PCT,
 )
 
 
@@ -168,3 +173,39 @@ def test_nodf_calibration_realistic_fill_refutes_phantom_win(sim):
     assert exit_fill.net_realized_return_pct < 5.0
     assert exit_fill.net_realized_return_pct == pytest.approx(-0.83, abs=2.0)
     assert exit_fill.net_realized_pnl_usd < 5.0
+
+
+def test_nodf_boost_reconciliation_and_opening_reserves(sim):
+    """
+    Reconciles the 67.40585 SOL vs ~85 SOL opening reserves discrepancy from on-chain evidence:
+    1. 85.00536 SOL total curve withdrawal.
+    2. 67.40585 SOL deposited to Base WSOL vault (4abtYdBG...).
+    3. 17.58451 SOL deposited to InitBoost vault (49TqRqq...).
+    4. Effective AMM liquidity = 67.40585 + 17.58451 = 84.99036 SOL (~85 SOL).
+    5. A 979.86 SOL gross (970.18 SOL net) sniper swap against the 84.99036 SOL pool
+       yields 190.2M tokens (matching on-chain tx 4MtxeAMrak... within 0.01%).
+    """
+    assert PUMPSWAP_OPEN_SOL_BASE == pytest.approx(67.40585, abs=1e-4)
+    assert PUMPSWAP_OPEN_SOL_BOOST == pytest.approx(17.58451, abs=1e-4)
+    assert PUMPSWAP_OPEN_SOL_EFFECTIVE == pytest.approx(84.99036, abs=1e-4)
+    assert PUMPSWAP_OPEN_TOKENS == 206_900_000.0
+
+    # Simulate opening sniper swap on the effective 84.99036 SOL pool with 100 bps PumpSwap fee
+    sim.oracle.record_price(timestamp=1791954967, price_usd=107.34)
+    sniper_gross_sol = 979.86
+    fill = sim.simulate_pool_buy(
+        sol_amount=sniper_gross_sol,
+        pool_sol_reserve=PUMPSWAP_OPEN_SOL_EFFECTIVE,
+        pool_token_reserve=PUMPSWAP_OPEN_TOKENS,
+        fee_pct=PUMPSWAP_FEE_PCT, # 1.0% PumpSwap AMM verified fee
+        priority_fee_sol=0.005,
+        slot=456718840,
+        timestamp=1791954967,
+    )
+
+    # Effective pool SOL after sniper: ~1055 SOL (DexScreener pooled 1,058.89 SOL after ~6.8 SOL of sells)
+    assert fill.sol_reserves_after == pytest.approx(1055.05, abs=0.5)
+    # Tokens received: ~190.2M tokens out of 206.9M opening pool tokens
+    assert fill.tokens_received == pytest.approx(190_204_218.0, rel=1e-3)
+    # Proves 17.5845 SOL was an effective boost deposit, NOT an external fee deduction!
+

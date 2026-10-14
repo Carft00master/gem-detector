@@ -129,6 +129,22 @@ class OnChainEventStore:
                 events.append(OnChainEvent(**d, details=details))
             return events
 
+    def get_latest_event(self, mint: str) -> Optional[OnChainEvent]:
+        """Fetch the most recent on-chain event for a given token mint."""
+        with sqlite3.connect(self.db_path, timeout=30.0) as conn:
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT * FROM onchain_events WHERE mint = ? ORDER BY slot DESC, received_at DESC LIMIT 1",
+                (mint,)
+            )
+            row = cur.fetchone()
+            if not row:
+                return None
+            d = dict(row)
+            details = json.loads(d.pop("details_json", "{}") or "{}")
+            return OnChainEvent(**d, details=details)
+
     def get_distinct_buyer_wallets(self, mint: str) -> List[str]:
         """
         Compute actual unique buyer WALLETS strictly from on-chain buy events,

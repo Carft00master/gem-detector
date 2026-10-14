@@ -402,32 +402,45 @@ class PaperTradingEngine:
         cand_price = float(getattr(candidate, "price_usd", 0.0) or 0.0)
         sol_amount_to_spend = pos_size / current_sol_usd
 
+        # Prefer real point-in-time on-chain reserves from event store over DexScreener price fields
+        latest_ocev = None
+        if hasattr(self, "event_store") and self.event_store:
+            latest_ocev = self.event_store.get_latest_event(token_addr)
+
         if is_curve:
-            p_sol = cand_price / current_sol_usd if current_sol_usd > 0 else (mc / 1e9 / current_sol_usd)
-            if p_sol > 0:
-                est_sol_res = max(30.0, math.sqrt(p_sol * 32_190_000_000.0))
-                est_token_res = 32_190_000_000.0 / est_sol_res
+            if latest_ocev and latest_ocev.sol_reserves_after > 0 and latest_ocev.token_reserves_after > 0:
+                est_sol_res = latest_ocev.sol_reserves_after
+                est_token_res = latest_ocev.token_reserves_after
             else:
-                est_sol_res = 30.0
-                est_token_res = 1_073_000_000.0
+                p_sol = cand_price / current_sol_usd if current_sol_usd > 0 else (mc / 1e9 / current_sol_usd)
+                if p_sol > 0:
+                    est_sol_res = max(30.0, math.sqrt(p_sol * 32_190_000_000.0))
+                    est_token_res = 32_190_000_000.0 / est_sol_res
+                else:
+                    est_sol_res = 30.0
+                    est_token_res = 1_073_000_000.0
 
             fill_res = self.fill_sim.simulate_curve_buy(
                 sol_amount=sol_amount_to_spend,
                 current_sol_reserve=est_sol_res,
                 current_token_reserve=est_token_res,
-                slot=slot or 0,
-                timestamp=now_ts,
+                slot=latest_ocev.slot if latest_ocev else (slot or 0),
+                timestamp=latest_ocev.block_time if latest_ocev else now_ts,
             )
         else:
-            pool_sol_res = max(1.0, cand_liq / (2.0 * current_sol_usd))
-            pool_tok_res = max(1.0, cand_liq / (2.0 * max(1e-12, cand_price)))
+            if latest_ocev and latest_ocev.sol_reserves_after > 0 and latest_ocev.token_reserves_after > 0:
+                pool_sol_res = latest_ocev.sol_reserves_after
+                pool_tok_res = latest_ocev.token_reserves_after
+            else:
+                pool_sol_res = max(1.0, cand_liq / (2.0 * current_sol_usd))
+                pool_tok_res = max(1.0, cand_liq / (2.0 * max(1e-12, cand_price)))
 
             fill_res = self.fill_sim.simulate_pool_buy(
                 sol_amount=sol_amount_to_spend,
                 pool_sol_reserve=pool_sol_res,
                 pool_token_reserve=pool_tok_res,
-                slot=slot or 0,
-                timestamp=now_ts,
+                slot=latest_ocev.slot if latest_ocev else (slot or 0),
+                timestamp=latest_ocev.block_time if latest_ocev else now_ts,
             )
 
         simulated_fill = fill_res.effective_fill_price_usd
@@ -471,8 +484,8 @@ class PaperTradingEngine:
             entry_reason=entry_reason,
             exit_policy=self.default_exit_policy,
             entry_venue="CURVE" if is_curve else "POOL",
-            entry_slot=slot,
-            entry_block_time=datetime.fromtimestamp(now_ts, tz=timezone.utc).isoformat(),
+            entry_slot=latest_ocev.slot if latest_ocev else slot,
+            entry_block_time=datetime.fromtimestamp(latest_ocev.block_time if latest_ocev else now_ts, tz=timezone.utc).isoformat(),
             entry_tokens_received=fill_res.tokens_received,
             entry_effective_sol_usd=fill_res.oracle_sol_usd,
             entry_priority_fee_sol=fill_res.priority_fee_sol,

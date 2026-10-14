@@ -75,16 +75,22 @@ def test_secret_redaction():
 def test_official_program_ids_verified():
     provider = SolanaProvider()
     
-    # Official Pump.fun program ID
+    # Pump.fun Core
     assert provider.get_program_id("PUMP_FUN_PROGRAM") == "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
-    # Migration program ID
-    assert provider.get_program_id("PUMP_FUN_MIGRATION_PROGRAM") == "39AZHJWrsjhALdgAc2vhVUdhnh8YBgKflAZv29H2jsgk"
-    # Migration fee vault
-    assert provider.get_program_id("PUMP_FUN_MIGRATION_FEE_VAULT") == "49TqRqqk3cS8bBnA91kjcnUBy8bTHdP2wc79TQwciBeb"
-    # Raydium AMM V4
+    assert provider.get_program_id("PUMPSWAP_AMM_PROGRAM") == "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"
+    assert provider.get_program_id("PUMP_FEE_PROGRAM") == "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ"
+    assert provider.get_program_id("PUMP_FUN_MIGRATION_PROGRAM") == "39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg"
+    assert provider.get_program_id("PUMP_FUN_FEE_RECIPIENT") == "CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM"
+    assert provider.get_program_id("PUMP_FUN_GLOBAL_CONFIG") == "4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf"
+
+    # External DEXs
     assert provider.get_program_id("RAYDIUM_AMM_V4") == "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
-    # Pyth SOL/USD on-chain account
-    assert provider.get_program_id("PYTH_SOL_USD_ORACLE") == "H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG"
+    assert provider.get_program_id("RAYDIUM_CPMM") == "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"
+
+    # Pyth Oracle (Receiver Program & Price Accounts)
+    assert provider.get_program_id("PYTH_SOLANA_RECEIVER_PROGRAM") == "rec5EKMGg6MxZYaMdyBfgwp4d5rB9T1VQH5pJv5LtFJ"
+    assert provider.get_program_id("PYTH_SOL_USD_PRICE_UPDATE") == "7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE"
+    assert provider.get_program_id("PYTH_LEGACY_SOL_USD_ORACLE") == "H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG"
 
     with pytest.raises(KeyError):
         provider.get_program_id("NON_EXISTENT_PROGRAM")

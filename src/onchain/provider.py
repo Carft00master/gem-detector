@@ -27,16 +27,23 @@ class CommitmentLevel(str, Enum):
     FINALIZED = "finalized"
 
 
-# Official Program IDs verified against mainnet IDLs and deployments
+# Official Program IDs verified on Solana Mainnet via getAccountInfo (executable = True where applicable)
 PROGRAM_IDS = {
-    "PUMP_FUN_PROGRAM": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
-    "PUMP_FUN_FEE_RECIPIENT": "CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM",
-    "PUMP_FUN_MIGRATION_PROGRAM": "39AZHJWrsjhALdgAc2vhVUdhnh8YBgKflAZv29H2jsgk",
-    "PUMP_FUN_MIGRATION_FEE_VAULT": "49TqRqqk3cS8bBnA91kjcnUBy8bTHdP2wc79TQwciBeb",
-    "RAYDIUM_AMM_V4": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
-    "RAYDIUM_CPMM": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
-    "PYTH_SOL_USD_ORACLE": "H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG",
-    "RAYDIUM_SOL_USDC_POOL": "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2",
+    # Pump.fun Core
+    "PUMP_FUN_PROGRAM": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",                # Executable (BPFLoaderUpgradeab1e)
+    "PUMPSWAP_AMM_PROGRAM": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",            # Executable (BPFLoaderUpgradeab1e)
+    "PUMP_FEE_PROGRAM": "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ",                # Executable (BPFLoaderUpgradeab1e)
+    "PUMP_FUN_MIGRATION_PROGRAM": "39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg",      # Migration Authority / Program
+    "PUMP_FUN_FEE_RECIPIENT": "CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM",          # Fee Recipient
+    "PUMP_FUN_GLOBAL_CONFIG": "4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf",          # Curve Global Config (95 bps fee)
+    # External DEXs
+    "RAYDIUM_AMM_V4": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",                # Executable (BPFLoaderUpgradeab1e)
+    "RAYDIUM_CPMM": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",                  # Executable (BPFLoaderUpgradeab1e)
+    "RAYDIUM_SOL_USDC_POOL": "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2",         # SOL/USDC Pool
+    # Pyth Oracle
+    "PYTH_SOLANA_RECEIVER_PROGRAM": "rec5EKMGg6MxZYaMdyBfgwp4d5rB9T1VQH5pJv5LtFJ",    # Executable (BPFLoaderUpgradeab1e)
+    "PYTH_SOL_USD_PRICE_UPDATE": "7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE",       # Live PriceUpdateV2 Account
+    "PYTH_LEGACY_SOL_USD_ORACLE": "H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG",     # Deprecated (frozen slot 299058484)
 }
 
 

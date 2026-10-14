@@ -85,6 +85,14 @@ class ShadowLedgerManager:
         logger.info(f"Shadow Ledger: Recorded rejected candidate {symbol} ({token_address}) - {rejection_reason}")
         return rec
 
+    def get_rejected_candidates(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Retrieve recent rejected candidates from the shadow ledger."""
+        with sqlite3.connect(self.db_path, timeout=30.0) as conn:
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM shadow_trade_ledger ORDER BY rejection_timestamp DESC LIMIT ?", (limit,))
+            return [dict(r) for r in cur.fetchall()]
+
     def record_position_tick(
         self,
         trade_id: str,

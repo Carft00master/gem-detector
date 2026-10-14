@@ -107,3 +107,39 @@ alerts:
     sound_alert: true           # Beep on high score (Score >= 80)
     log_to_file: true
     log_file_path: "logs/detected_gems.jsonl"
+
+
+# ==============================================================================
+# PHASE 2 ROUTE ARCHITECTURE & EXECUTION POLICIES
+# ==============================================================================
+routes:
+  route_a:
+    name: "Organic Breakout"
+    max_concurrent_positions: 5
+    position_size_usd: 100.0
+    exit_policy: "STAGED_EXITS"
+    priority_fee_sol: 0.005
+    allow_same_mint_cross_route: true
+
+  route_b:
+    name: "First-Block Migration Sniper"
+    max_concurrent_positions: 2
+    position_size_usd: 50.0
+    priority_fee_sol_env: "ROUTE_B_PRIORITY_FEE_SOL"
+    default_priority_fee_sol: 0.015
+    tip_sol_env: "ROUTE_B_TIP_SOL"
+    default_tip_sol: 0.050
+    tip_distribution_scenarios: ["low", "median", "high"] # derived from observed Jito tip-account transfers
+    allow_same_mint_cross_route: true
+    landing_probability:
+      model: "empirical_histogram" # No exponential decay
+      p_land_slot_s: 0.0            # Reactive bot cannot land in slot S of observed event
+      derive_from_latency_and_tips: true
+      label_single_slot_tokens_as: "UNREACHABLE"
+    
+  concurrency_and_exposure:
+    global_exposure_cap_binding: false # Non-binding in paper mode (log breaches only)
+    route_a_max_concurrent: 5
+    route_b_max_concurrent: 2
+    same_mint_across_routes: true       # Route A allowed to enter same mint (e.g. after Route B exits)
+

@@ -23,10 +23,29 @@ logger = logging.getLogger(__name__)
 PUMP_VIRTUAL_SOL = 30.0
 PUMP_VIRTUAL_TOKENS = 1_073_000_000.0
 PUMP_CURVE_K = PUMP_VIRTUAL_SOL * PUMP_VIRTUAL_TOKENS  # 32,190,000,000.0
-PUMP_FEE_PCT = 0.01                                    # 1.0%
+PUMP_FEE_PCT = 0.01                                    # 1.0% standard pump fee
 
-# Raydium / PumpSwap standard AMM parameters
-POOL_FEE_PCT = 0.0025                                  # 0.25% (0.22% LP + 0.03% protocol)
+# On-Chain Verified Fee Parameters (Read from on-chain config at slot 456718840)
+# 1. Pump.fun Curve: On-chain Global state 4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf: 95 bps (0.95%)
+PUMP_CURVE_FEE_BPS = 95
+PUMP_FEE_PCT_ONCHAIN_VERIFIED = 0.0095
+
+# 2. PumpSwap AMM: On-chain instruction 4MtxeAMrak...:
+# 2.5 bps protocol fee 1 + 2.5 bps protocol fee 2 + 95 bps creator/referral fee = 100 bps (1.00%)
+PUMPSWAP_AMM_FEE_BPS = 100
+PUMPSWAP_FEE_PCT = 0.0100
+
+# 3. Raydium AMM V4: 25 bps (0.25% - 22 bps LP + 3 bps protocol)
+RAYDIUM_AMM_FEE_BPS = 25
+POOL_FEE_PCT = 0.0025
+
+# PumpSwap Opening Reserves Fixture (Calibration Case NODF)
+# 85.005 SOL total curve withdrawal:
+# 67.40585 SOL base WSOL vault + 17.58451 SOL InitBoost vault = 84.99036 SOL (~85 SOL effective AMM liquidity)
+PUMPSWAP_OPEN_SOL_BASE = 67.405853768
+PUMPSWAP_OPEN_SOL_BOOST = 17.584505288
+PUMPSWAP_OPEN_SOL_EFFECTIVE = PUMPSWAP_OPEN_SOL_BASE + PUMPSWAP_OPEN_SOL_BOOST  # 84.990359056
+PUMPSWAP_OPEN_TOKENS = 206_900_000.0
 
 
 @dataclass
@@ -98,14 +117,16 @@ class ExecutableFillSimulator:
         slot: int = 0,
         timestamp: float = 0.0,
         latency_seconds: float = 0.0,
+        fee_pct: Optional[float] = None,
     ) -> SimulatedFillResult:
         """
         Simulate an executable buy on a pump.fun bonding curve.
         """
         sol_usd = self.oracle.get_price_for_fill(timestamp)
+        eff_fee = fee_pct if fee_pct is not None else PUMP_FEE_PCT
         
-        # Deduct 1% Pump.fun fee
-        dex_fee = sol_amount * PUMP_FEE_PCT
+        # Deduct Pump.fun fee (default 0.95% verified from on-chain global config)
+        dex_fee = sol_amount * eff_fee
         net_sol_in = max(0.0, sol_amount - dex_fee)
 
         k = current_sol_reserve * current_token_reserve
@@ -151,18 +172,20 @@ class ExecutableFillSimulator:
         priority_fee_sol: float = 0.005,
         slot: int = 0,
         timestamp: float = 0.0,
+        fee_pct: Optional[float] = None,
     ) -> SimulatedExitResult:
         """
         Simulate an executable sell on a pump.fun bonding curve.
         """
         sol_usd = self.oracle.get_price_for_fill(timestamp)
+        eff_fee = fee_pct if fee_pct is not None else PUMP_FEE_PCT
 
         k = current_sol_reserve * current_token_reserve
         new_token_reserve = current_token_reserve + tokens_to_sell
         new_sol_reserve = k / new_token_reserve
 
         gross_sol_out = max(0.0, current_sol_reserve - new_sol_reserve)
-        dex_fee = gross_sol_out * PUMP_FEE_PCT
+        dex_fee = gross_sol_out * eff_fee
         net_sol_out = max(0.0, gross_sol_out - dex_fee - priority_fee_sol)
 
         gross_usd = gross_sol_out * sol_usd
@@ -208,13 +231,15 @@ class ExecutableFillSimulator:
         slot: int = 0,
         timestamp: float = 0.0,
         latency_seconds: float = 0.0,
+        fee_pct: Optional[float] = None,
     ) -> SimulatedFillResult:
         """
-        Simulate an executable buy on a migrated AMM pool with constant product math and 0.25% fee.
+        Simulate an executable buy on a migrated AMM pool with constant product math and verified fee schedule.
         """
         sol_usd = self.oracle.get_price_for_fill(timestamp)
+        eff_fee = fee_pct if fee_pct is not None else POOL_FEE_PCT
 
-        dex_fee = sol_amount * POOL_FEE_PCT
+        dex_fee = sol_amount * eff_fee
         net_sol_in = max(0.0, sol_amount - dex_fee)
 
         k = pool_sol_reserve * pool_token_reserve
@@ -260,12 +285,14 @@ class ExecutableFillSimulator:
         priority_fee_sol: float = 0.005,
         slot: int = 0,
         timestamp: float = 0.0,
+        fee_pct: Optional[float] = None,
     ) -> SimulatedExitResult:
         """
         Simulate an executable sell into pool reserves at exit time.
         Proceeds can NEVER exceed what the pool can pay (capped at pool SOL reserve).
         """
         sol_usd = self.oracle.get_price_for_fill(timestamp)
+        eff_fee = fee_pct if fee_pct is not None else POOL_FEE_PCT
 
         # Check for drained pool or zero liquidity
         if pool_sol_reserve <= 0.01 or pool_token_reserve <= 0.0:
@@ -293,7 +320,7 @@ class ExecutableFillSimulator:
 
         k = pool_sol_reserve * pool_token_reserve
         # Tokens added to pool after deducting fee
-        net_tokens_in = tokens_to_sell * (1.0 - POOL_FEE_PCT)
+        net_tokens_in = tokens_to_sell * (1.0 - eff_fee)
         new_token_reserve = pool_token_reserve + tokens_to_sell
         effective_new_token = pool_token_reserve + net_tokens_in
 
@@ -308,7 +335,7 @@ class ExecutableFillSimulator:
             )
             gross_sol_out = pool_sol_reserve * 0.99  # AMM asymptote limit
 
-        dex_fee = (tokens_to_sell * POOL_FEE_PCT) * (gross_sol_out / tokens_to_sell if tokens_to_sell > 0 else 0.0)
+        dex_fee = (tokens_to_sell * eff_fee) * (gross_sol_out / tokens_to_sell if tokens_to_sell > 0 else 0.0)
         net_sol_out = max(0.0, gross_sol_out - priority_fee_sol)
 
         gross_usd = gross_sol_out * sol_usd

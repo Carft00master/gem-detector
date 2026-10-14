@@ -103,6 +103,16 @@ class GemDetectorEngine:
         self._newly_opened_trades: List[Any] = []
         self._newly_closed_trades: List[Any] = []
 
+        # Single Final Gate Layer (Phase 1h: zero selector bypasses, fail-closed, shadow ledger logging)
+        from src.paper.final_gate_layer import SingleFinalGateLayer
+        self.final_gate_layer = SingleFinalGateLayer(
+            data_validator=getattr(self.paper_engine, "data_validator", None),
+            venue_fsm=getattr(self.paper_engine, "venue_fsm", None),
+            shadow_ledger=getattr(self.paper_engine, "shadow_ledger", None),
+            toxic_venues=getattr(self.paper_engine, "toxic_venues", None),
+            min_liquidity_usd=getattr(self.paper_engine, "min_entry_liquidity_usd", 2500.0),
+        )
+
     async def initialize(self) -> None:
         """Initialize sessions and research sub-components."""
         timeout = aiohttp.ClientTimeout(total=8)
@@ -464,6 +474,20 @@ class GemDetectorEngine:
                         in_cooldown = True
 
                 if v22_eval.is_eligible and is_contract_safe and is_dev_safe and not is_already_open and not is_already_traded and not in_cooldown:
+                    # Single Final Gate Layer (Phase 1h: zero selector bypasses, fail-closed, shadow ledger logging)
+                    gate_eval = self.final_gate_layer.evaluate(
+                        candidate=c,
+                        prediction=pred,
+                        route="ROUTE_A",
+                        position_size_usd=getattr(self.paper_engine, "default_position_size_usd", 100.0),
+                    )
+                    if not gate_eval.is_passed:
+                        logger.info(
+                            f"Final Gate Layer Rejected V2.2 Candidate {c.symbol} ({c.address[:8]}...): "
+                            f"{gate_eval.rejection_reasons}"
+                        )
+                        continue
+
                     now_str = datetime.now(timezone.utc).isoformat()
                     can_admit, reason, displaced_addr = self.opportunity_queue.can_admit(
                         token_address=c.address,
@@ -535,6 +559,16 @@ class GemDetectorEngine:
                         last_state = self._alerted_tokens.get(c.address)
                         is_already_traded = c.address in getattr(self.paper_engine, "traded_tokens", set())
                         if not last_state and not is_already_traded and c.address not in self.paper_engine.active_positions:
+                            # Single Final Gate Layer (Phase 1h: zero selector bypasses)
+                            gate_eval = self.final_gate_layer.evaluate(
+                                candidate=c,
+                                prediction=pred,
+                                route="ROUTE_A",
+                                position_size_usd=getattr(self.paper_engine, "default_position_size_usd", 100.0),
+                            )
+                            if not gate_eval.is_passed:
+                                logger.info(f"Final Gate Layer Rejected (V1) {c.symbol}: {gate_eval.rejection_reasons}")
+                                continue
                             trade = self.paper_engine.on_breakout_alert(c, pred)
                             if trade:
                                 self._alerted_tokens[c.address] = pred.alert_state
