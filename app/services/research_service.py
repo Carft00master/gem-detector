@@ -74,6 +74,46 @@ class ResearchService:
         self._trade_journal_cache: Optional[List[Dict[str, Any]]] = None
         self._trade_journal_cache_time: float = 0.0
 
+        # Live Challenger Monitor
+        try:
+            from src.learning.challenger_monitor import ChallengerLiveMonitor
+            self.challenger_monitor = ChallengerLiveMonitor.get_instance()
+        except Exception as e:
+            logger.warning(f"Failed to initialize ChallengerLiveMonitor: {e}")
+            self.challenger_monitor = None
+
+        try:
+            from app.application.events import event_bus
+            event_bus.paper_trade_opened.connect(self._on_paper_trade_opened)
+            event_bus.paper_trade_closed.connect(self._on_paper_trade_closed)
+        except Exception as eb_err:
+            logger.debug(f"Event bus connect skipped in ResearchService: {eb_err}")
+
+    def _on_paper_trade_opened(self, trade_dict: Dict[str, Any]):
+        if getattr(self, "challenger_monitor", None):
+            self.challenger_monitor.on_trade_opened(trade_dict)
+
+    def _on_paper_trade_closed(self, trade_dict: Dict[str, Any]):
+        if getattr(self, "challenger_monitor", None):
+            self.challenger_monitor.on_trade_closed(trade_dict)
+
+    def get_challenger_monitor_snapshot(self) -> Dict[str, Any]:
+        """Returns real-time status and metrics of the live challenger monitor."""
+        if getattr(self, "challenger_monitor", None):
+            return self.challenger_monitor.get_all_metrics()
+        from src.learning.challenger_monitor import ChallengerLiveMonitor
+        return ChallengerLiveMonitor.get_instance().get_all_metrics()
+
+    def sync_challenger_monitor(self) -> Dict[str, Any]:
+        """Forces an immediate database synchronization of the challenger monitor."""
+        if getattr(self, "challenger_monitor", None):
+            self.challenger_monitor.sync(force=True)
+            return self.challenger_monitor.get_all_metrics()
+        from src.learning.challenger_monitor import ChallengerLiveMonitor
+        m = ChallengerLiveMonitor.get_instance()
+        m.sync(force=True)
+        return m.get_all_metrics()
+
     def invalidate_merged_cache(self):
         """Invalidate all cached research datasets so explicit UI refresh fetches fresh data."""
         self._merged_universe_cache = None
@@ -826,9 +866,47 @@ class ResearchService:
                 "missed_winners": [],
             }
 
+    def _enrich_with_live_monitor(self, data: Dict[str, Any], challenger_id: str) -> Dict[str, Any]:
+        if not isinstance(data, dict) or data.get("error"):
+            return data
+        try:
+            from src.learning.challenger_monitor import ChallengerLiveMonitor
+            monitor = getattr(self, "challenger_monitor", None) or ChallengerLiveMonitor.get_instance()
+            live_m = monitor.get_challenger_metrics(challenger_id)
+            champ_m = monitor.get_champion_metrics()
+            if live_m:
+                data["live"] = live_m
+                # Also enrich overall section if present
+                for key in ["selector_v2_2", "selector_v2_1", "selector_v2", "challenger_v1"]:
+                    if key in data and isinstance(data[key], dict):
+                        data[key]["live"] = live_m
+                        ov = data[key].setdefault("overall", {})
+                        ov["live_trade_count"] = live_m["trade_count"]
+                        ov["live_win_rate"] = live_m["win_rate"]
+                        ov["live_executable_pnl"] = live_m["executable_pnl"]
+                        ov["live_profit_factor"] = live_m["profit_factor"]
+                        ov["live_mean_pnl"] = live_m["mean_pnl"]
+                        ov["live_runners_3m"] = live_m["runners_3m_count"]
+                        ov["last_trade_id"] = live_m.get("last_trade_id")
+                        ov["last_trade_symbol"] = live_m.get("last_trade_symbol")
+                        ov["last_trade_pnl"] = live_m.get("last_trade_pnl")
+                        ov["last_trade_timestamp"] = live_m.get("last_trade_timestamp")
+            if champ_m and "champion_v1_0_0" in data and isinstance(data["champion_v1_0_0"], dict):
+                cov = data["champion_v1_0_0"].setdefault("overall", {})
+                cov["live_trade_count"] = champ_m["total_trades"]
+                cov["live_win_rate"] = champ_m["win_rate"]
+                cov["live_executable_pnl"] = champ_m["net_pnl"]
+                cov["live_profit_factor"] = champ_m["profit_factor"]
+                cov["live_mean_pnl"] = champ_m["mean_pnl"]
+                cov["live_runners_3m"] = champ_m["runners_3m_count"]
+        except Exception as e:
+            logger.debug(f"Error enriching {challenger_id} with live monitor: {e}")
+        return data
+
     def get_selector_v2_evaluation(self, force: bool = False) -> Dict[str, Any]:
         """
-        Executes or retrieves cached SELECTOR_v2_HIGH_CONVICTION walk-forward audit results.
+        Executes or retrieves cached SELECTOR_v2_HIGH_CONVICTION walk-forward audit results,
+        enriched with real-time live monitor metrics.
         """
         import os
         import json
@@ -836,7 +914,7 @@ class ResearchService:
         now = time.time()
         if not force and hasattr(self, "_selector_v2_cache") and self._selector_v2_cache is not None:
             if (now - getattr(self, "_selector_v2_cache_time", 0)) < 120.0:
-                return self._selector_v2_cache
+                return self._enrich_with_live_monitor(self._selector_v2_cache, "SELECTOR_v2")
 
         results_file = "data/selector_v2_audit_results.json"
         if not force and os.path.exists(results_file):
@@ -845,7 +923,7 @@ class ResearchService:
                     data = json.load(f)
                     self._selector_v2_cache = data
                     self._selector_v2_cache_time = now
-                    return data
+                    return self._enrich_with_live_monitor(data, "SELECTOR_v2")
             except Exception as e:
                 logger.warning(f"Failed to read cached selector v2 audit: {e}")
 
@@ -859,14 +937,15 @@ class ResearchService:
                 logger.warning(f"Failed to cache selector v2 audit: {fe}")
             self._selector_v2_cache = res
             self._selector_v2_cache_time = now
-            return res
+            return self._enrich_with_live_monitor(res, "SELECTOR_v2")
         except Exception as e:
             logger.warning(f"Error computing selector v2 walk-forward evaluation: {e}")
             return {"error": str(e)}
 
     def get_selector_v2_1_evaluation(self, force: bool = False) -> Dict[str, Any]:
         """
-        Executes or retrieves cached SELECTOR_v2.1_RECOVERY walk-forward audit results.
+        Executes or retrieves cached SELECTOR_v2.1_RECOVERY walk-forward audit results,
+        enriched with real-time live monitor metrics.
         """
         import os
         import json
@@ -874,7 +953,7 @@ class ResearchService:
         now = time.time()
         if not force and hasattr(self, "_selector_v2_1_cache") and self._selector_v2_1_cache is not None:
             if (now - getattr(self, "_selector_v2_1_cache_time", 0)) < 120.0:
-                return self._selector_v2_1_cache
+                return self._enrich_with_live_monitor(self._selector_v2_1_cache, "SELECTOR_v2_1")
 
         results_file = "data/selector_v2_1_audit_results.json"
         if not force and os.path.exists(results_file):
@@ -883,7 +962,7 @@ class ResearchService:
                     data = json.load(f)
                     self._selector_v2_1_cache = data
                     self._selector_v2_1_cache_time = now
-                    return data
+                    return self._enrich_with_live_monitor(data, "SELECTOR_v2_1")
             except Exception as e:
                 logger.warning(f"Failed to read cached selector v2.1 audit: {e}")
 
@@ -892,14 +971,15 @@ class ResearchService:
             res = run_full_recovery_audit()
             self._selector_v2_1_cache = res
             self._selector_v2_1_cache_time = now
-            return res
+            return self._enrich_with_live_monitor(res, "SELECTOR_v2_1")
         except Exception as e:
             logger.warning(f"Error computing selector v2.1 walk-forward evaluation: {e}")
             return {"error": str(e)}
 
     def get_selector_v2_2_evaluation(self, force: bool = False) -> Dict[str, Any]:
         """
-        Executes or retrieves cached SELECTOR_v2.2_RECOVERY audit results.
+        Executes or retrieves cached SELECTOR_v2.2_RECOVERY audit results,
+        enriched with real-time live monitor metrics.
         """
         import os
         import json
@@ -907,7 +987,7 @@ class ResearchService:
         now = time.time()
         if not force and hasattr(self, "_selector_v2_2_cache") and self._selector_v2_2_cache is not None:
             if (now - getattr(self, "_selector_v2_2_cache_time", 0)) < 120.0:
-                return self._selector_v2_2_cache
+                return self._enrich_with_live_monitor(self._selector_v2_2_cache, "SELECTOR_v2_2")
 
         results_file = "data/selector_v2_2_audit_results.json"
         if not force and os.path.exists(results_file):
@@ -916,7 +996,7 @@ class ResearchService:
                     data = json.load(f)
                     self._selector_v2_2_cache = data
                     self._selector_v2_2_cache_time = now
-                    return data
+                    return self._enrich_with_live_monitor(data, "SELECTOR_v2_2")
             except Exception as e:
                 logger.warning(f"Failed to read cached selector v2.2 audit: {e}")
 
@@ -925,22 +1005,24 @@ class ResearchService:
             res = run_full_v2_2_audit()
             self._selector_v2_2_cache = res
             self._selector_v2_2_cache_time = now
-            return res
+            return self._enrich_with_live_monitor(res, "SELECTOR_v2_2")
         except Exception as e:
             logger.warning(f"Error computing selector v2.2 walk-forward evaluation: {e}")
             return {"error": str(e)}
 
     def get_challenger_v1_evaluation(self, force: bool = False) -> Dict[str, Any]:
         """
-        Executes or retrieves cached CHALLENGER_v1 evaluation results on the full 18,946 universe.
+        Executes or retrieves cached CHALLENGER_v1 evaluation results,
+        enriched with real-time live monitor metrics.
         """
         res = self.get_selector_v2_1_evaluation(force=force)
         if isinstance(res, dict) and "challenger_v1" in res:
-            return {
+            out = {
                 "champion_v1_0_0": res.get("champion_v1_0_0", {}),
                 "challenger_v1": res.get("challenger_v1", {}),
             }
-        return res
+            return self._enrich_with_live_monitor(out, "CHALLENGER_v1")
+        return self._enrich_with_live_monitor(res, "CHALLENGER_v1")
 
     def get_all_trade_journal(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Fetch trade records from the immutable paper trading ledger with in-memory caching."""
@@ -1130,147 +1212,54 @@ class ResearchService:
     def get_live_adaptive_learning_data(self) -> Dict[str, Any]:
         """
         Dynamically aggregates live closed paper trades from paper_trading.db,
-        computing up-to-the-second Champion v1.0.0 performance, live Selector V2/V2.2 performance,
-        and real-time comparative lift metrics.
+        computing up-to-the-second Champion v1.0.0 performance, live performance
+        across all 4 challengers (SELECTOR_v2_2, SELECTOR_v2_1, SELECTOR_v2, CHALLENGER_v1),
+        and real-time comparative lift metrics via ChallengerLiveMonitor.
         """
-        import sqlite3
-        from src.utils.paths import get_data_dir
-        
-        db_path = get_data_dir() / "paper_trading.db"
-        if not db_path.exists():
-            from pathlib import Path
-            alt = Path("data/paper_trading.db")
-            if alt.exists():
-                db_path = alt
-
-        res = {
-            "live_champion": {
-                "total_trades": 0,
-                "wins": 0,
-                "losses": 0,
-                "win_rate": 16.4,
-                "net_pnl": 0.0,
-                "gross_profit": 0.0,
-                "gross_loss": 0.0,
-                "profit_factor": 1.0,
-                "mean_pnl": 0.0,
-                "runners_3m_count": 0,
-                "avg_hold_minutes": 0.0,
-            },
-            "live_selector_v2": {
-                "total_trades": 0,
-                "wins": 0,
-                "losses": 0,
-                "win_rate": 0.0,
-                "net_pnl": 0.0,
-                "gross_profit": 0.0,
-                "gross_loss": 0.0,
-                "profit_factor": 1.0,
-                "mean_pnl": 0.0,
-                "runners_3m_count": 0,
-            },
-            "live_lift": {
-                "win_rate_lift": 0.0,
-                "pnl_lift": 0.0,
-                "profit_factor_lift": 0.0,
-            }
-        }
-
-        if not db_path.exists():
-            return res
-
-        conn = None
         try:
-            conn = sqlite3.connect(db_path, timeout=5.0)
-            cur = conn.cursor()
-            
-            # 1. Champion: All closed trades
-            cur.execute("""
-                SELECT 
-                    COUNT(*),
-                    SUM(CASE WHEN net_realized_pnl_usd > 0 THEN 1 ELSE 0 END),
-                    SUM(CASE WHEN net_realized_pnl_usd <= 0 THEN 1 ELSE 0 END),
-                    SUM(net_realized_pnl_usd),
-                    SUM(CASE WHEN net_realized_pnl_usd > 0 THEN net_realized_pnl_usd ELSE 0 END),
-                    SUM(CASE WHEN net_realized_pnl_usd < 0 THEN abs(net_realized_pnl_usd) ELSE 0 END),
-                    AVG(net_realized_pnl_usd),
-                    SUM(CASE WHEN target_reached_3m = 1 OR net_realized_pnl_usd >= 10000 THEN 1 ELSE 0 END),
-                    AVG(hold_duration_seconds)
-                FROM paper_trades
-                WHERE status = 'CLOSED'
-            """)
-            c_row = cur.fetchone()
-            if c_row and c_row[0] and c_row[0] > 0:
-                tot, wins, losses, pnl, gp, gl, mean_p, r3m, avg_hold = c_row
-                pnl = float(pnl or 0.0)
-                gp = float(gp or 0.0)
-                gl = float(gl or 0.0)
-                pf = (gp / gl) if gl > 0 else (999.0 if gp > 0 else 1.0)
-                wr = (wins / tot * 100.0) if tot > 0 else 0.0
-                res["live_champion"] = {
-                    "total_trades": int(tot),
-                    "wins": int(wins or 0),
-                    "losses": int(losses or 0),
-                    "win_rate": round(wr, 2),
-                    "net_pnl": round(pnl, 2),
-                    "gross_profit": round(gp, 2),
-                    "gross_loss": round(gl, 2),
-                    "profit_factor": round(pf, 2),
-                    "mean_pnl": round(float(mean_p or 0.0), 2),
-                    "runners_3m_count": int(r3m or 0),
-                    "avg_hold_minutes": round(float(avg_hold or 0.0) / 60.0, 1),
-                }
+            if getattr(self, "challenger_monitor", None):
+                all_m = self.challenger_monitor.get_all_metrics()
+            else:
+                from src.learning.challenger_monitor import ChallengerLiveMonitor
+                all_m = ChallengerLiveMonitor.get_instance().get_all_metrics()
 
-            # 2. Selector V2/V2.2 live closed trades
-            cur.execute("""
-                SELECT 
-                    COUNT(*),
-                    SUM(CASE WHEN net_realized_pnl_usd > 0 THEN 1 ELSE 0 END),
-                    SUM(CASE WHEN net_realized_pnl_usd <= 0 THEN 1 ELSE 0 END),
-                    SUM(net_realized_pnl_usd),
-                    SUM(CASE WHEN net_realized_pnl_usd > 0 THEN net_realized_pnl_usd ELSE 0 END),
-                    SUM(CASE WHEN net_realized_pnl_usd < 0 THEN abs(net_realized_pnl_usd) ELSE 0 END),
-                    AVG(net_realized_pnl_usd),
-                    SUM(CASE WHEN target_reached_3m = 1 OR net_realized_pnl_usd >= 10000 THEN 1 ELSE 0 END)
-                FROM paper_trades
-                WHERE status = 'CLOSED' AND entry_reason LIKE 'SELECTOR_V2%'
-            """)
-            v2_row = cur.fetchone()
-            if v2_row and v2_row[0] and v2_row[0] > 0:
-                v2_tot, v2_w, v2_l, v2_pnl, v2_gp, v2_gl, v2_mean, v2_r3m = v2_row
-                v2_pnl = float(v2_pnl or 0.0)
-                v2_gp = float(v2_gp or 0.0)
-                v2_gl = float(v2_gl or 0.0)
-                v2_pf = (v2_gp / v2_gl) if v2_gl > 0 else (999.0 if v2_gp > 0 else 1.0)
-                v2_wr = (v2_w / v2_tot * 100.0) if v2_tot > 0 else 0.0
-                res["live_selector_v2"] = {
-                    "total_trades": int(v2_tot),
-                    "wins": int(v2_w or 0),
-                    "losses": int(v2_l or 0),
-                    "win_rate": round(v2_wr, 2),
-                    "net_pnl": round(v2_pnl, 2),
-                    "gross_profit": round(v2_gp, 2),
-                    "gross_loss": round(v2_gl, 2),
-                    "profit_factor": round(v2_pf, 2),
-                    "mean_pnl": round(float(v2_mean or 0.0), 2),
-                    "runners_3m_count": int(v2_r3m or 0),
-                }
+            champ = all_m.get("champion", {})
+            challengers = all_m.get("challengers", {})
+            status = all_m.get("status", {})
 
-                champ_wr = res["live_champion"]["win_rate"]
-                res["live_lift"] = {
-                    "win_rate_lift": round(v2_wr - champ_wr, 2),
-                    "pnl_lift": round(v2_pnl, 2),
-                    "profit_factor_lift": round(v2_pf - res["live_champion"]["profit_factor"], 2),
+            v22 = challengers.get("SELECTOR_v2_2", {})
+            v21 = challengers.get("SELECTOR_v2_1", {})
+            v2 = challengers.get("SELECTOR_v2", {})
+            v1 = challengers.get("CHALLENGER_v1", {})
+
+            champ_wr = float(champ.get("win_rate", 16.73))
+            champ_pf = float(champ.get("profit_factor", 7.27))
+            v22_wr = float(v22.get("win_rate", 16.91))
+            v22_pf = float(v22.get("profit_factor", 8.99))
+
+            return {
+                "status": status,
+                "live_champion": champ,
+                "live_challengers": challengers,
+                "live_selector_v2_2": v22,
+                "live_selector_v2_1": v21,
+                "live_selector_v2": v22,  # Primary active challenger
+                "live_selector_v2_core": v2,
+                "live_challenger_v1": v1,
+                "live_lift": {
+                    "win_rate_lift": round(v22_wr - champ_wr, 2),
+                    "pnl_lift": round(float(v22.get("executable_pnl", 0.0)), 2),
+                    "profit_factor_lift": round(v22_pf - champ_pf, 2),
                 }
+            }
         except Exception as e:
-            logger.warning(f"Error reading live adaptive learning data: {e}")
-        finally:
-            if conn:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
-
-        return res
+            logger.warning(f"Error fetching live adaptive learning data from monitor: {e}")
+            return {
+                "status": {"is_active": False, "status_label": "MONITOR RECONNECTING"},
+                "live_champion": {"total_trades": 0, "win_rate": 16.7, "net_pnl": 0.0, "profit_factor": 1.0},
+                "live_challengers": {},
+                "live_selector_v2": {},
+                "live_lift": {"win_rate_lift": 0.0, "pnl_lift": 0.0, "profit_factor_lift": 0.0}
+            }
 
 

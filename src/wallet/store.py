@@ -46,6 +46,7 @@ class WalletStore:
                 CREATE TABLE IF NOT EXISTS wallet_sessions (
                     session_id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
+                    route TEXT NOT NULL DEFAULT 'ROUTE_A',
                     starting_capital_usd REAL NOT NULL,
                     risk_pct REAL NOT NULL,
                     sizing_mode TEXT NOT NULL,
@@ -70,6 +71,7 @@ class WalletStore:
                     symbol TEXT NOT NULL,
                     chain TEXT NOT NULL,
                     venue TEXT NOT NULL,
+                    route TEXT NOT NULL DEFAULT 'ROUTE_A',
                     position_size_usd REAL NOT NULL,
                     entry_price_usd REAL NOT NULL,
                     simulated_fill_price_usd REAL NOT NULL,
@@ -100,6 +102,19 @@ class WalletStore:
             cur.execute("CREATE INDEX IF NOT EXISTS idx_wp_paper_id ON wallet_positions(paper_trade_id)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_wp_status ON wallet_positions(status)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_wp_time ON wallet_positions(entry_timestamp)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_wp_route ON wallet_positions(route)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_ws_route ON wallet_sessions(route)")
+
+            # Auto-migrate missing route columns
+            cur.execute("PRAGMA table_info(wallet_sessions)")
+            s_cols = {row[1] for row in cur.fetchall()}
+            if "route" not in s_cols:
+                cur.execute("ALTER TABLE wallet_sessions ADD COLUMN route TEXT NOT NULL DEFAULT 'ROUTE_A'")
+
+            cur.execute("PRAGMA table_info(wallet_positions)")
+            p_cols = {row[1] for row in cur.fetchall()}
+            if "route" not in p_cols:
+                cur.execute("ALTER TABLE wallet_positions ADD COLUMN route TEXT NOT NULL DEFAULT 'ROUTE_A'")
 
             # 3. Ledger Table
             cur.execute("""
@@ -138,13 +153,69 @@ class WalletStore:
 
     # --- Session Management ---
 
+    def reset_wallet_db(self) -> None:
+        """
+        Hard reset the virtual wallet SQLite database for new ledger epoch.
+        Initializes two isolated $1,000 sessions: ROUTE_A (Organic) and ROUTE_B (First-Block Sniping).
+        """
+        with self._get_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM wallet_positions")
+            cur.execute("DELETE FROM wallet_ledger")
+            cur.execute("DELETE FROM wallet_equity_snapshots")
+            cur.execute("DELETE FROM wallet_sessions")
+            conn.commit()
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        routes = [
+            ("session_route_a", "Route A: Organic Launch ($1,000 @ 5%)", "ROUTE_A"),
+            ("session_route_b", "Route B: First-Block Sniping ($1,000 @ 5%)", "ROUTE_B"),
+        ]
+        for sess_id, name, route in routes:
+            sess = WalletSessionRecord(
+                session_id=sess_id,
+                name=name,
+                route=route,
+                starting_capital_usd=1000.0,
+                risk_pct=0.05,
+                sizing_mode="COMPOUNDING",
+                current_cash_usd=1000.0,
+                current_equity_usd=1000.0,
+                peak_equity_usd=1000.0,
+                max_drawdown_pct=0.0,
+                is_active=True,
+                created_at=now_iso,
+                updated_at=now_iso,
+                notes=f"Fresh baseline session for {route} in new ledger epoch"
+            )
+            self.save_session(sess)
+
+            dep = WalletLedgerRecord(
+                entry_id=f"led_dep_{route.lower()}",
+                session_id=sess_id,
+                timestamp=now_iso,
+                entry_type="INITIAL_DEPOSIT",
+                amount_usd=1000.0,
+                cash_balance_after_usd=1000.0,
+                notes=f"Initial virtual capital deposit: $1,000.00 ({route})"
+            )
+            self.record_ledger_entry(dep)
+
+    def get_session_by_route(self, route: str) -> Optional[WalletSessionRecord]:
+        """Retrieve active wallet session for a given route."""
+        with self._get_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM wallet_sessions WHERE route = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1", (route,))
+            row = cur.fetchone()
+            return WalletSessionRecord(**dict(row)) if row else None
+
     def get_or_create_default_session(
         self,
         starting_capital: float = 1000.0,
         risk_pct: float = 0.05,
         sizing_mode: str = "COMPOUNDING"
     ) -> WalletSessionRecord:
-        """Fetch active session or bootstrap default $1,000 forward testing session."""
+        """Fetch active session or bootstrap default route sessions."""
         with self._get_connection() as conn:
             cur = conn.cursor()
             cur.execute("SELECT * FROM wallet_sessions WHERE is_active = 1 ORDER BY created_at DESC LIMIT 1")
@@ -152,39 +223,32 @@ class WalletStore:
             if row:
                 return WalletSessionRecord(**dict(row))
 
-            # Create default session
-            import uuid
-            sess_id = f"sess_{str(uuid.uuid4())[:8]}"
-            now_iso = datetime.now(timezone.utc).isoformat()
-            sess = WalletSessionRecord(
-                session_id=sess_id,
-                name="Live Forward Test ($1,000 @ 5%)",
-                starting_capital_usd=starting_capital,
-                risk_pct=risk_pct,
-                sizing_mode=sizing_mode,
-                current_cash_usd=starting_capital,
-                current_equity_usd=starting_capital,
-                peak_equity_usd=starting_capital,
-                max_drawdown_pct=0.0,
-                is_active=True,
-                created_at=now_iso,
-                updated_at=now_iso,
-            )
-            self.save_session(sess)
-
-            # Record initial deposit in ledger
-            dep_id = f"led_{str(uuid.uuid4())[:8]}"
-            dep = WalletLedgerRecord(
-                entry_id=dep_id,
-                session_id=sess_id,
-                timestamp=now_iso,
-                entry_type="INITIAL_DEPOSIT",
-                amount_usd=starting_capital,
-                cash_balance_after_usd=starting_capital,
-                notes=f"Initial virtual capital deposit: ${starting_capital:,.2f}"
-            )
-            self.record_ledger_entry(dep)
+        self.reset_wallet_db()
+        sess = self.get_session_by_route("ROUTE_A")
+        if sess:
             return sess
+
+        # Fallback if reset failed
+        import uuid
+        sess_id = f"sess_{str(uuid.uuid4())[:8]}"
+        now_iso = datetime.now(timezone.utc).isoformat()
+        sess = WalletSessionRecord(
+            session_id=sess_id,
+            name="Live Forward Test ($1,000 @ 5%)",
+            route="ROUTE_A",
+            starting_capital_usd=starting_capital,
+            risk_pct=risk_pct,
+            sizing_mode=sizing_mode,
+            current_cash_usd=starting_capital,
+            current_equity_usd=starting_capital,
+            peak_equity_usd=starting_capital,
+            max_drawdown_pct=0.0,
+            is_active=True,
+            created_at=now_iso,
+            updated_at=now_iso,
+        )
+        self.save_session(sess)
+        return sess
 
     def get_session(self, session_id: str) -> Optional[WalletSessionRecord]:
         with self._get_connection() as conn:
@@ -205,12 +269,13 @@ class WalletStore:
             cur = conn.cursor()
             cur.execute("""
                 INSERT INTO wallet_sessions (
-                    session_id, name, starting_capital_usd, risk_pct, sizing_mode,
+                    session_id, name, route, starting_capital_usd, risk_pct, sizing_mode,
                     current_cash_usd, current_equity_usd, peak_equity_usd,
                     max_drawdown_pct, is_active, created_at, updated_at, notes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(session_id) DO UPDATE SET
                     name = excluded.name,
+                    route = excluded.route,
                     starting_capital_usd = excluded.starting_capital_usd,
                     risk_pct = excluded.risk_pct,
                     sizing_mode = excluded.sizing_mode,
@@ -222,7 +287,7 @@ class WalletStore:
                     updated_at = excluded.updated_at,
                     notes = excluded.notes
             """, (
-                sess.session_id, sess.name, sess.starting_capital_usd, sess.risk_pct,
+                sess.session_id, sess.name, getattr(sess, "route", "ROUTE_A"), sess.starting_capital_usd, sess.risk_pct,
                 sess.sizing_mode, sess.current_cash_usd, sess.current_equity_usd,
                 sess.peak_equity_usd, sess.max_drawdown_pct, 1 if sess.is_active else 0,
                 sess.created_at, sess.updated_at, sess.notes
@@ -237,17 +302,17 @@ class WalletStore:
             cur.execute("""
                 INSERT INTO wallet_positions (
                     position_id, session_id, paper_trade_id, token_address, symbol,
-                    chain, venue, position_size_usd, entry_price_usd, simulated_fill_price_usd,
+                    chain, venue, route, position_size_usd, entry_price_usd, simulated_fill_price_usd,
                     entry_market_cap_usd, entry_liquidity_usd, entry_timestamp,
                     entry_price_impact_pct, entry_fees_usd, status, skip_reason,
                     exit_price_usd, exit_market_cap_usd, exit_liquidity_usd, exit_timestamp,
                     exit_reason, exit_price_impact_pct, exit_fees_usd, gross_exit_proceeds_usd,
                     net_realized_pnl_usd, net_realized_return_pct, hold_duration_seconds,
                     equity_before_usd, equity_after_usd
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 pos.position_id, pos.session_id, pos.paper_trade_id, pos.token_address, pos.symbol,
-                pos.chain, pos.venue, pos.position_size_usd, pos.entry_price_usd, pos.simulated_fill_price_usd,
+                pos.chain, pos.venue, getattr(pos, "route", "ROUTE_A"), pos.position_size_usd, pos.entry_price_usd, pos.simulated_fill_price_usd,
                 pos.entry_market_cap_usd, pos.entry_liquidity_usd, pos.entry_timestamp,
                 pos.entry_price_impact_pct, pos.entry_fees_usd, pos.status, pos.skip_reason,
                 pos.exit_price_usd, pos.exit_market_cap_usd, pos.exit_liquidity_usd, pos.exit_timestamp,

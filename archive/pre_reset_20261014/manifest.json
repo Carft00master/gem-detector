@@ -1,0 +1,67 @@
+{
+  "timestamp_utc": "2026-10-14T08:09:39.110547+00:00",
+  "archive_directory": "archive/pre_reset_20261014",
+  "file_count": 10,
+  "files": {
+    "data_paper_trading.db": {
+      "original_source": "data/paper_trading.db",
+      "archived_file": "archive/pre_reset_20261014\\data_paper_trading.db",
+      "size_bytes": 53043200,
+      "sha256": "7e19e099746a423ee49fe4b816777055eba3a5d63c6d003e23b168d21b6eac60"
+    },
+    "data_virtual_wallet.db": {
+      "original_source": "data/virtual_wallet.db",
+      "archived_file": "archive/pre_reset_20261014\\data_virtual_wallet.db",
+      "size_bytes": 1646592,
+      "sha256": "b465de76ef35e96eb17dc9c008f87f7b7d95ee0d8e8fe66fc093e5e230efd578"
+    },
+    "data_paper_trades.jsonl": {
+      "original_source": "data/paper_trades.jsonl",
+      "archived_file": "archive/pre_reset_20261014\\data_paper_trades.jsonl",
+      "size_bytes": 116007607,
+      "sha256": "8bda66e4494838a648a0d5d06ff0294a3707ca90fc19c6abfc7a353de3d7c063"
+    },
+    "data_paper_trading.db-shm": {
+      "original_source": "data/paper_trading.db-shm",
+      "archived_file": "archive/pre_reset_20261014\\data_paper_trading.db-shm",
+      "size_bytes": 32768,
+      "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
+    },
+    "data_paper_trading.db-wal": {
+      "original_source": "data/paper_trading.db-wal",
+      "archived_file": "archive/pre_reset_20261014\\data_paper_trading.db-wal",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "exports_blotter_paper_trades.csv": {
+      "original_source": "exports\\blotter_paper_trades.csv",
+      "archived_file": "archive/pre_reset_20261014\\exports_blotter_paper_trades.csv",
+      "size_bytes": 5871564,
+      "sha256": "7cba7cf7398387d558452db00edbe5def542f8dd376b54982e8a50ed24a7a50a"
+    },
+    "exports_test_blotter_export.csv": {
+      "original_source": "exports\\test_blotter_export.csv",
+      "archived_file": "archive/pre_reset_20261014\\exports_test_blotter_export.csv",
+      "size_bytes": 5871564,
+      "sha256": "7cba7cf7398387d558452db00edbe5def542f8dd376b54982e8a50ed24a7a50a"
+    },
+    "exports_test_export_trades.csv": {
+      "original_source": "exports\\test_export_trades.csv",
+      "archived_file": "archive/pre_reset_20261014\\exports_test_export_trades.csv",
+      "size_bytes": 22486824,
+      "sha256": "527d63455ce20ae5ede458eb7d05c9ea1e5f1a0cc1c176654d279b4fb4add205"
+    },
+    "dist_MemecoinScanner_exports_blotter_paper_trades.csv": {
+      "original_source": "dist/MemecoinScanner/exports\\blotter_paper_trades.csv",
+      "archived_file": "archive/pre_reset_20261014\\dist_MemecoinScanner_exports_blotter_paper_trades.csv",
+      "size_bytes": 5871564,
+      "sha256": "7cba7cf7398387d558452db00edbe5def542f8dd376b54982e8a50ed24a7a50a"
+    },
+    "dist_MemecoinScanner_exports_paper_trades_20261013_101809.csv": {
+      "original_source": "dist/MemecoinScanner/exports\\paper_trades_20261013_101809.csv",
+      "archived_file": "archive/pre_reset_20261014\\dist_MemecoinScanner_exports_paper_trades_20261013_101809.csv",
+      "size_bytes": 5871564,
+      "sha256": "7cba7cf7398387d558452db00edbe5def542f8dd376b54982e8a50ed24a7a50a"
+    }
+  }
+}

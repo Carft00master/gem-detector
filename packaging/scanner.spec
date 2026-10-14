@@ -103,6 +103,7 @@ hidden_imports = [
     'src.wallet.store',
     'src.wallet.engine',
     'src.wallet.stats',
+    'src.learning.challenger_monitor',
 ]
 
 a = Analysis(

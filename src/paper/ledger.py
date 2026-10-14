@@ -1,15 +1,18 @@
 """
-Live Paper-Trading Ledger & Immutable Trade Journal (v1.0.0 Frozen Release with Schema v1.1.0)
+Live Paper-Trading Ledger & Immutable Trade Journal (v2.0.0 Release with Ledger Epochs & Fill Simulation)
 Persists simulated live and backtested paper trades into an append-only SQLite schema and JSONL stream.
-Permanently records immutable frozen system versions and granular point-in-time trade events.
+Permanently records immutable frozen system versions, execution routes, point-in-time trade events,
+and granular on-chain fill/lifecycle telemetry.
 """
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+import hashlib
 import json
 import logging
 from pathlib import Path
 import sqlite3
+import subprocess
 from typing import Any, Dict, List, Optional
 import uuid
 
@@ -18,6 +21,7 @@ from src.version import (
     EXECUTION_MODEL_VERSION,
     FEATURE_SCHEMA_VERSION,
     LEARNING_DATA_VERSION,
+    LEDGER_EPOCH,
     MODEL_VERSION,
     REGIME_VERSION,
     RISK_RULES_VERSION,
@@ -26,6 +30,32 @@ from src.version import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def get_current_git_commit() -> str:
+    """Safely obtain the current git commit SHA without raising."""
+    try:
+        res = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=2.0)
+        if res.returncode == 0:
+            return res.stdout.strip()
+    except Exception:
+        pass
+    return ""
+
+
+def get_current_config_hash() -> str:
+    """Compute a deterministic hash of current execution and selector configuration."""
+    try:
+        from src.config import load_config
+        cfg = load_config()
+        data = {
+            "selector": getattr(cfg, "selector", None).__dict__ if hasattr(getattr(cfg, "selector", None), "__dict__") else {},
+            "paper": getattr(cfg, "paper_trading", None).__dict__ if hasattr(getattr(cfg, "paper_trading", None), "__dict__") else {},
+        }
+        raw = json.dumps(data, default=str, sort_keys=True)
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+    except Exception:
+        return ""
 
 
 @dataclass
@@ -54,10 +84,53 @@ class TradeEventRecord:
 
 
 @dataclass
+class QuarantinedTradeRecord:
+    """
+    Trade quarantined due to failed integrity invariants (e.g., price jump across venues,
+    exceeding pool liquidity limit, impossible fills, backwards timeline).
+    """
+    quarantine_id: str
+    token_address: str
+    quarantine_reason: str
+    timestamp: str
+    signal_id: Optional[str] = None
+    trade_id: Optional[str] = None
+    route: str = "ROUTE_A"
+    trade_record_json: str = "{}"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class ShadowTradeRecord:
+    """
+    Candidate rejected by the bot whose counterfactual forward outcome is tracked from on-chain reserves.
+    """
+    shadow_id: str
+    token_address: str
+    rejection_reason: str
+    rejection_timestamp: str
+    symbol: str = ""
+    chain: str = "solana"
+    failed_gates_json: str = "{}"
+    market_cap_at_rejection: float = 0.0
+    liquidity_at_rejection: float = 0.0
+    p_reach_3m_at_rejection: float = 0.0
+    max_future_mc_usd: float = 0.0
+    target_reached_3m: bool = False
+    outcome_label: str = "REJECTED"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
 class PaperTradeRecord:
     """
     Comprehensive immutable trade journal record with full provenance, point-in-time
-    entry state snapshots, and realized exit telemetry.
+    entry state snapshots, realized exit telemetry, on-chain fill simulation,
+    and lifecycle event tracking.
     """
     signal_id: str
     token_address: str
@@ -66,8 +139,13 @@ class PaperTradeRecord:
     venue: str
     timestamp: str
 
-    # Identification & Versions
+    # Identification, Epoch & Versions
     trade_id: Optional[str] = None
+    schema_version: str = TRADE_LEDGER_SCHEMA_VERSION
+    ledger_epoch: str = LEDGER_EPOCH
+    route: str = "ROUTE_A"                 # "ROUTE_A" (Organic) | "ROUTE_B" (First-Block)
+    config_hash: str = ""
+    git_commit: str = ""
     scanner_version: str = SCANNER_VERSION
     model_version: str = MODEL_VERSION
     feature_schema_version: str = FEATURE_SCHEMA_VERSION
@@ -119,6 +197,58 @@ class PaperTradeRecord:
     signal_state_at_entry: str = "EARLY_BREAKOUT"
     regime: str = "NORMAL"
 
+    # Holder Distribution & Order Flow Telemetry at Entry
+    dev_holding_pct: float = 0.0
+    top10_holder_pct: float = 0.0
+    unique_buyers: int = 0
+    buy_sell_ratio: float = 1.0
+
+    # Fill Simulation & On-Chain Mechanics (Phase 1b)
+    entry_venue: str = ""                  # "CURVE" | "POOL"
+    entry_slot: Optional[int] = None
+    entry_block_time: Optional[str] = None
+    entry_tokens_received: float = 0.0
+    entry_effective_sol_usd: float = 0.0
+    entry_priority_fee_sol: float = 0.0
+    entry_pool_sol_reserves_before: float = 0.0
+    entry_pool_sol_reserves_after: float = 0.0
+    entry_pool_token_reserves_before: float = 0.0
+    entry_pool_token_reserves_after: float = 0.0
+    landing_slot: Optional[int] = None
+    landing_ordering: Optional[int] = None
+    exit_venue: str = ""                   # "CURVE" | "POOL"
+    exit_slot: Optional[int] = None
+    exit_block_time: Optional[str] = None
+    exit_tokens_sold: float = 0.0
+    exit_gross_proceeds_usd: float = 0.0
+    exit_net_proceeds_usd: float = 0.0
+    exit_effective_sol_usd: float = 0.0
+    exit_priority_fee_sol: float = 0.0
+    exit_proceeds_pct_of_pool: float = 0.0
+    exit_pool_sol_reserves_before: float = 0.0
+    exit_pool_sol_reserves_after: float = 0.0
+    exit_pool_token_reserves_before: float = 0.0
+    exit_pool_token_reserves_after: float = 0.0
+
+    # Per-Trade Lifecycle & On-Chain Gate Audit (Phase 1a/1c/1d)
+    curve_creation_timestamp: Optional[str] = None
+    curve_creation_slot: Optional[int] = None
+    curve_completed_by_single_tx: bool = False
+    curve_distinct_buyers: int = 0
+    curve_migration_timestamp: Optional[str] = None
+    curve_migration_slot: Optional[int] = None
+    pool_address: Optional[str] = None
+    pool_creation_timestamp: Optional[str] = None
+    pool_creation_slot: Optional[int] = None
+    pool_opening_price_usd: float = 0.0
+    pool_opening_sol_reserve: float = 0.0
+    pool_opening_token_reserve: float = 0.0
+    venue_state_at_entry: str = "CURVE_OPEN"  # "CURVE_OPEN" | "MIGRATED" | "POOL"
+    venue_state_at_exit: str = "CURVE_OPEN"   # "CURVE_OPEN" | "MIGRATED" | "POOL"
+    actual_creator_holding_pct: float = 0.0
+    actual_top10_holding_pct: float = 0.0
+    actual_curve_filler_holding_pct: float = 0.0
+
     # Execution Lifecycle & Outcome
     status: str = "OPEN"                   # "OPEN" | "CLOSED"
     entry_reason: str = "BREAKOUT_CONVICTION"
@@ -142,6 +272,16 @@ class PaperTradeRecord:
     def __post_init__(self):
         if not self.trade_id:
             self.trade_id = self.signal_id
+        if not self.git_commit:
+            self.git_commit = get_current_git_commit()
+        if not self.config_hash:
+            self.config_hash = get_current_config_hash()
+        if not self.schema_version:
+            self.schema_version = self.trade_ledger_schema_version or TRADE_LEDGER_SCHEMA_VERSION
+        if not self.trade_ledger_schema_version:
+            self.trade_ledger_schema_version = self.schema_version
+        if not self.ledger_epoch:
+            self.ledger_epoch = LEDGER_EPOCH
 
         # Keep legacy aliases in sync
         if self.entry_market_cap_usd == 0.0 and self.market_cap_usd > 0.0:
@@ -191,7 +331,7 @@ class PaperTradingLedger:
         self._init_db()
 
     def _init_db(self) -> None:
-        """Initialize append-only SQLite paper trading schema with frozen version fields and timeline events."""
+        """Initialize append-only SQLite paper trading schema with frozen version fields, routes, and timeline events."""
         db_key = str(self.db_path)
         if db_key in _INITIALIZED_LEDGER_DBS:
             return
@@ -216,11 +356,16 @@ class PaperTradingLedger:
                 logger.warning(f"Failed to set journal_mode=WAL for {self.db_path}: {e}")
             cursor.execute("PRAGMA busy_timeout=30000;")
 
-            # 1. Main Paper Trades Table
+            # 1. Main Paper Trades Table (v2.0.0 Schema)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS paper_trades (
                     signal_id TEXT PRIMARY KEY,
                     trade_id TEXT,
+                    schema_version TEXT DEFAULT 'v2.0.0',
+                    ledger_epoch TEXT DEFAULT 'epoch_20261014',
+                    route TEXT DEFAULT 'ROUTE_A',
+                    config_hash TEXT,
+                    git_commit TEXT,
                     scanner_version TEXT,
                     model_version TEXT,
                     feature_schema_version TEXT,
@@ -287,12 +432,60 @@ class PaperTradingLedger:
                     mfe_ratio REAL,
                     mae_ratio REAL,
                     target_reached_3m INTEGER,
-                    outcome_label TEXT
+                    outcome_label TEXT,
+                    dev_holding_pct REAL,
+                    top10_holder_pct REAL,
+                    unique_buyers INTEGER,
+                    buy_sell_ratio REAL,
+                    entry_venue TEXT,
+                    entry_slot INTEGER,
+                    entry_block_time TEXT,
+                    entry_tokens_received REAL,
+                    entry_effective_sol_usd REAL,
+                    entry_priority_fee_sol REAL,
+                    entry_pool_sol_reserves_before REAL,
+                    entry_pool_sol_reserves_after REAL,
+                    entry_pool_token_reserves_before REAL,
+                    entry_pool_token_reserves_after REAL,
+                    landing_slot INTEGER,
+                    landing_ordering INTEGER,
+                    exit_venue TEXT,
+                    exit_slot INTEGER,
+                    exit_block_time TEXT,
+                    exit_tokens_sold REAL,
+                    exit_gross_proceeds_usd REAL,
+                    exit_net_proceeds_usd REAL,
+                    exit_effective_sol_usd REAL,
+                    exit_priority_fee_sol REAL,
+                    exit_proceeds_pct_of_pool REAL,
+                    exit_pool_sol_reserves_before REAL,
+                    exit_pool_sol_reserves_after REAL,
+                    exit_pool_token_reserves_before REAL,
+                    exit_pool_token_reserves_after REAL,
+                    curve_creation_timestamp TEXT,
+                    curve_creation_slot INTEGER,
+                    curve_completed_by_single_tx INTEGER,
+                    curve_distinct_buyers INTEGER,
+                    curve_migration_timestamp TEXT,
+                    curve_migration_slot INTEGER,
+                    pool_address TEXT,
+                    pool_creation_timestamp TEXT,
+                    pool_creation_slot INTEGER,
+                    pool_opening_price_usd REAL,
+                    pool_opening_sol_reserve REAL,
+                    pool_opening_token_reserve REAL,
+                    venue_state_at_entry TEXT,
+                    venue_state_at_exit TEXT,
+                    actual_creator_holding_pct REAL,
+                    actual_top10_holding_pct REAL,
+                    actual_curve_filler_holding_pct REAL
                 )
             """)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_paper_token ON paper_trades(token_address)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_paper_status ON paper_trades(status)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_paper_time ON paper_trades(timestamp)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_paper_route ON paper_trades(route)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_paper_epoch ON paper_trades(ledger_epoch)")
 
             # 2. Trade Event Timeline Table
             cursor.execute("""
@@ -317,10 +510,52 @@ class PaperTradingLedger:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_event_trade ON trade_event_log(trade_id, timestamp)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_event_token ON trade_event_log(token_address)")
 
+            # 3. Trade Quarantine Table (Phase 1e Invariant Failures)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS trade_quarantine (
+                    quarantine_id TEXT PRIMARY KEY,
+                    signal_id TEXT,
+                    trade_id TEXT,
+                    token_address TEXT NOT NULL,
+                    route TEXT DEFAULT 'ROUTE_A',
+                    quarantine_reason TEXT NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    trade_record_json TEXT
+                )
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_quarantine_time ON trade_quarantine(timestamp)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_quarantine_token ON trade_quarantine(token_address)")
+
+            # 4. Shadow Trade Ledger (Phase 1f Counterfactual Outcomes)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS shadow_trade_ledger (
+                    shadow_id TEXT PRIMARY KEY,
+                    token_address TEXT NOT NULL,
+                    symbol TEXT,
+                    chain TEXT DEFAULT 'solana',
+                    rejection_reason TEXT NOT NULL,
+                    failed_gates_json TEXT,
+                    rejection_timestamp TEXT NOT NULL,
+                    market_cap_at_rejection REAL,
+                    liquidity_at_rejection REAL,
+                    p_reach_3m_at_rejection REAL,
+                    max_future_mc_usd REAL DEFAULT 0.0,
+                    target_reached_3m INTEGER DEFAULT 0,
+                    outcome_label TEXT DEFAULT 'REJECTED'
+                )
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_shadow_token ON shadow_trade_ledger(token_address)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_shadow_time ON shadow_trade_ledger(rejection_timestamp)")
+
             # Auto-migrate any missing columns in paper_trades
             cursor.execute("PRAGMA table_info(paper_trades)")
             existing_cols = {row[1] for row in cursor.fetchall()}
             required_cols = {
+                "schema_version": "TEXT DEFAULT 'v2.0.0'",
+                "ledger_epoch": "TEXT DEFAULT 'epoch_20261014'",
+                "route": "TEXT DEFAULT 'ROUTE_A'",
+                "config_hash": "TEXT",
+                "git_commit": "TEXT",
                 "trade_id": "TEXT",
                 "scanner_version": "TEXT",
                 "model_version": "TEXT",
@@ -358,107 +593,190 @@ class PaperTradingLedger:
                 "exit_liquidity_usd": "REAL",
                 "exit_slippage_pct": "REAL",
                 "network_cost_usd": "REAL",
+                "dev_holding_pct": "REAL",
+                "top10_holder_pct": "REAL",
+                "unique_buyers": "INTEGER",
+                "buy_sell_ratio": "REAL",
+                "entry_venue": "TEXT",
+                "entry_slot": "INTEGER",
+                "entry_block_time": "TEXT",
+                "entry_tokens_received": "REAL",
+                "entry_effective_sol_usd": "REAL",
+                "entry_priority_fee_sol": "REAL",
+                "entry_pool_sol_reserves_before": "REAL",
+                "entry_pool_sol_reserves_after": "REAL",
+                "entry_pool_token_reserves_before": "REAL",
+                "entry_pool_token_reserves_after": "REAL",
+                "landing_slot": "INTEGER",
+                "landing_ordering": "INTEGER",
+                "exit_venue": "TEXT",
+                "exit_slot": "INTEGER",
+                "exit_block_time": "TEXT",
+                "exit_tokens_sold": "REAL",
+                "exit_gross_proceeds_usd": "REAL",
+                "exit_net_proceeds_usd": "REAL",
+                "exit_effective_sol_usd": "REAL",
+                "exit_priority_fee_sol": "REAL",
+                "exit_proceeds_pct_of_pool": "REAL",
+                "exit_pool_sol_reserves_before": "REAL",
+                "exit_pool_sol_reserves_after": "REAL",
+                "exit_pool_token_reserves_before": "REAL",
+                "exit_pool_token_reserves_after": "REAL",
+                "curve_creation_timestamp": "TEXT",
+                "curve_creation_slot": "INTEGER",
+                "curve_completed_by_single_tx": "INTEGER",
+                "curve_distinct_buyers": "INTEGER",
+                "curve_migration_timestamp": "TEXT",
+                "curve_migration_slot": "INTEGER",
+                "pool_address": "TEXT",
+                "pool_creation_timestamp": "TEXT",
+                "pool_creation_slot": "INTEGER",
+                "pool_opening_price_usd": "REAL",
+                "pool_opening_sol_reserve": "REAL",
+                "pool_opening_token_reserve": "REAL",
+                "venue_state_at_entry": "TEXT",
+                "venue_state_at_exit": "TEXT",
+                "actual_creator_holding_pct": "REAL",
+                "actual_top10_holding_pct": "REAL",
+                "actual_curve_filler_holding_pct": "REAL",
             }
             for col_name, col_type in required_cols.items():
                 if col_name not in existing_cols:
                     cursor.execute(f"ALTER TABLE paper_trades ADD COLUMN {col_name} {col_type}")
-
-            # Non-destructive backfills for legacy records
-            cursor.execute("""
-                UPDATE paper_trades
-                SET trade_id = signal_id
-                WHERE trade_id IS NULL OR trade_id = ''
-            """)
-            cursor.execute("""
-                UPDATE paper_trades
-                SET entry_market_cap_usd = market_cap_usd
-                WHERE (entry_market_cap_usd IS NULL OR entry_market_cap_usd = 0.0)
-                  AND market_cap_usd IS NOT NULL AND market_cap_usd > 0.0
-            """)
-            cursor.execute("""
-                UPDATE paper_trades
-                SET entry_liquidity_usd = liquidity_usd
-                WHERE (entry_liquidity_usd IS NULL OR entry_liquidity_usd = 0.0)
-                  AND liquidity_usd IS NOT NULL AND liquidity_usd > 0.0
-            """)
-            cursor.execute("""
-                UPDATE paper_trades
-                SET p_reach_3m_at_entry = p_reach_3m,
-                    p_reach_1m_at_entry = p_reach_1m,
-                    p_reach_500k_at_entry = p_reach_500k,
-                    p_reach_100k_at_entry = p_reach_100k,
-                    rug_risk_at_entry = p_rug,
-                    data_confidence_at_entry = data_confidence
-                WHERE p_reach_3m_at_entry IS NULL OR p_reach_3m_at_entry = 0.0
-            """)
-            cursor.execute("""
-                UPDATE paper_trades
-                SET trade_ledger_schema_version = 'v1.1.0'
-                WHERE trade_ledger_schema_version IS NULL OR trade_ledger_schema_version = ''
-            """)
-            cursor.execute("""
-                UPDATE paper_trades
-                SET discovery_timestamp = timestamp,
-                    first_alert_timestamp = timestamp,
-                    entry_signal_timestamp = timestamp,
-                    simulated_entry_timestamp = timestamp,
-                    entry_execution_timestamp = timestamp
-                WHERE discovery_timestamp IS NULL OR discovery_timestamp = ''
-            """)
 
             conn.commit()
         _INITIALIZED_LEDGER_DBS.add(db_key)
 
     def record_entry(self, trade: PaperTradeRecord) -> None:
         """Append initial trade entry to SQLite and JSONL."""
+        fields = {
+            "signal_id": trade.signal_id,
+            "trade_id": trade.trade_id or trade.signal_id,
+            "schema_version": trade.schema_version,
+            "ledger_epoch": trade.ledger_epoch,
+            "route": trade.route,
+            "config_hash": trade.config_hash,
+            "git_commit": trade.git_commit,
+            "scanner_version": trade.scanner_version,
+            "model_version": trade.model_version,
+            "feature_schema_version": trade.feature_schema_version,
+            "calibration_version": trade.calibration_version,
+            "regime_version": trade.regime_version,
+            "risk_rules_version": trade.risk_rules_version,
+            "execution_model_version": trade.execution_model_version,
+            "trade_ledger_schema_version": trade.trade_ledger_schema_version,
+            "token_address": trade.token_address,
+            "symbol": trade.symbol,
+            "chain": trade.chain,
+            "venue": trade.venue,
+            "pool_type": trade.pool_type,
+            "timestamp": trade.timestamp,
+            "discovery_timestamp": trade.discovery_timestamp,
+            "first_alert_timestamp": trade.first_alert_timestamp,
+            "entry_signal_timestamp": trade.entry_signal_timestamp,
+            "simulated_entry_timestamp": trade.simulated_entry_timestamp,
+            "entry_execution_timestamp": trade.entry_execution_timestamp,
+            "exit_signal_timestamp": trade.exit_signal_timestamp,
+            "simulated_exit_timestamp": trade.simulated_exit_timestamp,
+            "exit_execution_timestamp": trade.exit_execution_timestamp,
+            "hold_duration_seconds": trade.hold_duration_seconds,
+            "market_cap_usd": trade.market_cap_usd,
+            "entry_market_cap_usd": trade.entry_market_cap_usd,
+            "liquidity_usd": trade.liquidity_usd,
+            "entry_liquidity_usd": trade.entry_liquidity_usd,
+            "entry_price_usd": trade.entry_price_usd,
+            "simulated_fill_price_usd": trade.simulated_fill_price_usd,
+            "position_size_usd": trade.position_size_usd,
+            "entry_price_impact_pct": trade.entry_price_impact_pct,
+            "entry_slippage_pct": trade.entry_slippage_pct,
+            "p_reach_100k": trade.p_reach_100k,
+            "p_reach_500k": trade.p_reach_500k,
+            "p_reach_1m": trade.p_reach_1m,
+            "p_reach_3m": trade.p_reach_3m,
+            "p_rug": trade.p_rug,
+            "p_reach_100k_at_entry": trade.p_reach_100k_at_entry,
+            "p_reach_500k_at_entry": trade.p_reach_500k_at_entry,
+            "p_reach_1m_at_entry": trade.p_reach_1m_at_entry,
+            "p_reach_3m_at_entry": trade.p_reach_3m_at_entry,
+            "rug_risk_at_entry": trade.rug_risk_at_entry,
+            "manipulation_risk_at_entry": trade.manipulation_risk_at_entry,
+            "cabal_risk_at_entry": trade.cabal_risk_at_entry,
+            "data_confidence": trade.data_confidence,
+            "data_confidence_at_entry": trade.data_confidence_at_entry,
+            "discovery_quality_at_entry": trade.discovery_quality_at_entry,
+            "signal_state_at_entry": trade.signal_state_at_entry,
+            "regime": trade.regime,
+            "status": trade.status,
+            "entry_reason": trade.entry_reason,
+            "exit_policy": trade.exit_policy,
+            "exit_price_usd": trade.exit_price_usd,
+            "exit_market_cap_usd": trade.exit_market_cap_usd,
+            "exit_liquidity_usd": trade.exit_liquidity_usd,
+            "exit_timestamp": trade.exit_timestamp,
+            "exit_reason": trade.exit_reason,
+            "exit_price_impact_pct": trade.exit_price_impact_pct,
+            "exit_slippage_pct": trade.exit_slippage_pct,
+            "total_fees_usd": trade.total_fees_usd,
+            "network_cost_usd": trade.network_cost_usd,
+            "net_realized_pnl_usd": trade.net_realized_pnl_usd,
+            "net_realized_return_pct": trade.net_realized_return_pct,
+            "mfe_ratio": trade.mfe_ratio,
+            "mae_ratio": trade.mae_ratio,
+            "target_reached_3m": int(trade.target_reached_3m),
+            "outcome_label": trade.outcome_label,
+            "dev_holding_pct": getattr(trade, "dev_holding_pct", 0.0),
+            "top10_holder_pct": getattr(trade, "top10_holder_pct", 0.0),
+            "unique_buyers": getattr(trade, "unique_buyers", 0),
+            "buy_sell_ratio": getattr(trade, "buy_sell_ratio", 1.0),
+            "entry_venue": getattr(trade, "entry_venue", ""),
+            "entry_slot": getattr(trade, "entry_slot", None),
+            "entry_block_time": getattr(trade, "entry_block_time", None),
+            "entry_tokens_received": getattr(trade, "entry_tokens_received", 0.0),
+            "entry_effective_sol_usd": getattr(trade, "entry_effective_sol_usd", 0.0),
+            "entry_priority_fee_sol": getattr(trade, "entry_priority_fee_sol", 0.0),
+            "entry_pool_sol_reserves_before": getattr(trade, "entry_pool_sol_reserves_before", 0.0),
+            "entry_pool_sol_reserves_after": getattr(trade, "entry_pool_sol_reserves_after", 0.0),
+            "entry_pool_token_reserves_before": getattr(trade, "entry_pool_token_reserves_before", 0.0),
+            "entry_pool_token_reserves_after": getattr(trade, "entry_pool_token_reserves_after", 0.0),
+            "landing_slot": getattr(trade, "landing_slot", None),
+            "landing_ordering": getattr(trade, "landing_ordering", None),
+            "exit_venue": getattr(trade, "exit_venue", ""),
+            "exit_slot": getattr(trade, "exit_slot", None),
+            "exit_block_time": getattr(trade, "exit_block_time", None),
+            "exit_tokens_sold": getattr(trade, "exit_tokens_sold", 0.0),
+            "exit_gross_proceeds_usd": getattr(trade, "exit_gross_proceeds_usd", 0.0),
+            "exit_net_proceeds_usd": getattr(trade, "exit_net_proceeds_usd", 0.0),
+            "exit_effective_sol_usd": getattr(trade, "exit_effective_sol_usd", 0.0),
+            "exit_priority_fee_sol": getattr(trade, "exit_priority_fee_sol", 0.0),
+            "exit_proceeds_pct_of_pool": getattr(trade, "exit_proceeds_pct_of_pool", 0.0),
+            "exit_pool_sol_reserves_before": getattr(trade, "exit_pool_sol_reserves_before", 0.0),
+            "exit_pool_sol_reserves_after": getattr(trade, "exit_pool_sol_reserves_after", 0.0),
+            "exit_pool_token_reserves_before": getattr(trade, "exit_pool_token_reserves_before", 0.0),
+            "exit_pool_token_reserves_after": getattr(trade, "exit_pool_token_reserves_after", 0.0),
+            "curve_creation_timestamp": getattr(trade, "curve_creation_timestamp", None),
+            "curve_creation_slot": getattr(trade, "curve_creation_slot", None),
+            "curve_completed_by_single_tx": int(getattr(trade, "curve_completed_by_single_tx", False)),
+            "curve_distinct_buyers": getattr(trade, "curve_distinct_buyers", 0),
+            "curve_migration_timestamp": getattr(trade, "curve_migration_timestamp", None),
+            "curve_migration_slot": getattr(trade, "curve_migration_slot", None),
+            "pool_address": getattr(trade, "pool_address", None),
+            "pool_creation_timestamp": getattr(trade, "pool_creation_timestamp", None),
+            "pool_creation_slot": getattr(trade, "pool_creation_slot", None),
+            "pool_opening_price_usd": getattr(trade, "pool_opening_price_usd", 0.0),
+            "pool_opening_sol_reserve": getattr(trade, "pool_opening_sol_reserve", 0.0),
+            "pool_opening_token_reserve": getattr(trade, "pool_opening_token_reserve", 0.0),
+            "venue_state_at_entry": getattr(trade, "venue_state_at_entry", "CURVE_OPEN"),
+            "venue_state_at_exit": getattr(trade, "venue_state_at_exit", "CURVE_OPEN"),
+            "actual_creator_holding_pct": getattr(trade, "actual_creator_holding_pct", 0.0),
+            "actual_top10_holding_pct": getattr(trade, "actual_top10_holding_pct", 0.0),
+            "actual_curve_filler_holding_pct": getattr(trade, "actual_curve_filler_holding_pct", 0.0),
+        }
+        cols = ", ".join(fields.keys())
+        placeholders = ", ".join(["?"] * len(fields))
+
         with sqlite3.connect(self.db_path, timeout=30.0) as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                INSERT OR REPLACE INTO paper_trades (
-                    signal_id, trade_id, scanner_version, model_version, feature_schema_version,
-                    calibration_version, regime_version, risk_rules_version, execution_model_version,
-                    trade_ledger_schema_version, token_address, symbol, chain, venue, pool_type,
-                    timestamp, discovery_timestamp, first_alert_timestamp, entry_signal_timestamp,
-                    simulated_entry_timestamp, entry_execution_timestamp, exit_signal_timestamp,
-                    simulated_exit_timestamp, exit_execution_timestamp, hold_duration_seconds,
-                    market_cap_usd, entry_market_cap_usd, liquidity_usd, entry_liquidity_usd,
-                    entry_price_usd, simulated_fill_price_usd, position_size_usd,
-                    entry_price_impact_pct, entry_slippage_pct, p_reach_100k, p_reach_500k,
-                    p_reach_1m, p_reach_3m, p_rug, p_reach_100k_at_entry, p_reach_500k_at_entry,
-                    p_reach_1m_at_entry, p_reach_3m_at_entry, rug_risk_at_entry, manipulation_risk_at_entry,
-                    cabal_risk_at_entry, data_confidence, data_confidence_at_entry,
-                    discovery_quality_at_entry, signal_state_at_entry, regime, status,
-                    entry_reason, exit_policy, exit_price_usd, exit_market_cap_usd, exit_liquidity_usd,
-                    exit_timestamp, exit_reason, exit_price_impact_pct, exit_slippage_pct,
-                    total_fees_usd, network_cost_usd, net_realized_pnl_usd, net_realized_return_pct,
-                    mfe_ratio, mae_ratio, target_reached_3m, outcome_label
-                ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?
-                )
-            """, (
-                trade.signal_id, trade.trade_id or trade.signal_id, trade.scanner_version, trade.model_version, trade.feature_schema_version,
-                trade.calibration_version, trade.regime_version, trade.risk_rules_version, trade.execution_model_version,
-                trade.trade_ledger_schema_version, trade.token_address, trade.symbol, trade.chain, trade.venue, trade.pool_type,
-                trade.timestamp, trade.discovery_timestamp, trade.first_alert_timestamp, trade.entry_signal_timestamp,
-                trade.simulated_entry_timestamp, trade.entry_execution_timestamp, trade.exit_signal_timestamp,
-                trade.simulated_exit_timestamp, trade.exit_execution_timestamp, trade.hold_duration_seconds,
-                trade.market_cap_usd, trade.entry_market_cap_usd, trade.liquidity_usd, trade.entry_liquidity_usd,
-                trade.entry_price_usd, trade.simulated_fill_price_usd, trade.position_size_usd,
-                trade.entry_price_impact_pct, trade.entry_slippage_pct, trade.p_reach_100k, trade.p_reach_500k,
-                trade.p_reach_1m, trade.p_reach_3m, trade.p_rug, trade.p_reach_100k_at_entry, trade.p_reach_500k_at_entry,
-                trade.p_reach_1m_at_entry, trade.p_reach_3m_at_entry, trade.rug_risk_at_entry, trade.manipulation_risk_at_entry,
-                trade.cabal_risk_at_entry, trade.data_confidence, trade.data_confidence_at_entry,
-                trade.discovery_quality_at_entry, trade.signal_state_at_entry, trade.regime, trade.status,
-                trade.entry_reason, trade.exit_policy, trade.exit_price_usd, trade.exit_market_cap_usd, trade.exit_liquidity_usd,
-                trade.exit_timestamp, trade.exit_reason, trade.exit_price_impact_pct, trade.exit_slippage_pct,
-                trade.total_fees_usd, trade.network_cost_usd, trade.net_realized_pnl_usd, trade.net_realized_return_pct,
-                trade.mfe_ratio, trade.mae_ratio, int(trade.target_reached_3m), trade.outcome_label
-            ))
+            cursor.execute(f"INSERT OR REPLACE INTO paper_trades ({cols}) VALUES ({placeholders})", tuple(fields.values()))
             conn.commit()
 
         # Append to JSONL stream
@@ -466,44 +784,48 @@ class PaperTradingLedger:
             f.write(json.dumps(asdict(trade)) + "\n")
 
     def record_exit(self, trade: PaperTradeRecord) -> None:
-        """Record trade closing with realized exit metrics."""
+        """Record trade closing with realized exit metrics and fill telemetry."""
         trade.status = "CLOSED"
+        exit_fields = {
+            "status": "CLOSED",
+            "exit_price_usd": trade.exit_price_usd,
+            "exit_market_cap_usd": trade.exit_market_cap_usd,
+            "exit_liquidity_usd": trade.exit_liquidity_usd,
+            "exit_signal_timestamp": trade.exit_signal_timestamp or trade.exit_timestamp,
+            "simulated_exit_timestamp": trade.simulated_exit_timestamp or trade.exit_timestamp,
+            "exit_execution_timestamp": trade.exit_execution_timestamp or trade.exit_timestamp,
+            "exit_timestamp": trade.exit_timestamp,
+            "hold_duration_seconds": trade.hold_duration_seconds,
+            "exit_reason": trade.exit_reason,
+            "exit_price_impact_pct": trade.exit_price_impact_pct,
+            "exit_slippage_pct": trade.exit_slippage_pct or trade.exit_price_impact_pct,
+            "total_fees_usd": trade.total_fees_usd,
+            "network_cost_usd": trade.network_cost_usd,
+            "net_realized_pnl_usd": trade.net_realized_pnl_usd,
+            "net_realized_return_pct": trade.net_realized_return_pct,
+            "mfe_ratio": trade.mfe_ratio,
+            "mae_ratio": trade.mae_ratio,
+            "target_reached_3m": int(trade.target_reached_3m),
+            "outcome_label": trade.outcome_label,
+            "exit_venue": getattr(trade, "exit_venue", ""),
+            "exit_slot": getattr(trade, "exit_slot", None),
+            "exit_block_time": getattr(trade, "exit_block_time", None),
+            "exit_tokens_sold": getattr(trade, "exit_tokens_sold", 0.0),
+            "exit_gross_proceeds_usd": getattr(trade, "exit_gross_proceeds_usd", 0.0),
+            "exit_net_proceeds_usd": getattr(trade, "exit_net_proceeds_usd", 0.0),
+            "exit_effective_sol_usd": getattr(trade, "exit_effective_sol_usd", 0.0),
+            "exit_priority_fee_sol": getattr(trade, "exit_priority_fee_sol", 0.0),
+            "exit_proceeds_pct_of_pool": getattr(trade, "exit_proceeds_pct_of_pool", 0.0),
+            "exit_pool_sol_reserves_before": getattr(trade, "exit_pool_sol_reserves_before", 0.0),
+            "exit_pool_sol_reserves_after": getattr(trade, "exit_pool_sol_reserves_after", 0.0),
+            "exit_pool_token_reserves_before": getattr(trade, "exit_pool_token_reserves_before", 0.0),
+            "exit_pool_token_reserves_after": getattr(trade, "exit_pool_token_reserves_after", 0.0),
+            "venue_state_at_exit": getattr(trade, "venue_state_at_exit", "CURVE_OPEN"),
+        }
+        set_clause = ", ".join([f"{k} = ?" for k in exit_fields.keys()])
         with sqlite3.connect(self.db_path, timeout=30.0) as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE paper_trades SET
-                    status = 'CLOSED',
-                    exit_price_usd = ?,
-                    exit_market_cap_usd = ?,
-                    exit_liquidity_usd = ?,
-                    exit_signal_timestamp = ?,
-                    simulated_exit_timestamp = ?,
-                    exit_execution_timestamp = ?,
-                    exit_timestamp = ?,
-                    hold_duration_seconds = ?,
-                    exit_reason = ?,
-                    exit_price_impact_pct = ?,
-                    exit_slippage_pct = ?,
-                    total_fees_usd = ?,
-                    network_cost_usd = ?,
-                    net_realized_pnl_usd = ?,
-                    net_realized_return_pct = ?,
-                    mfe_ratio = ?,
-                    mae_ratio = ?,
-                    target_reached_3m = ?,
-                    outcome_label = ?
-                WHERE signal_id = ?
-            """, (
-                trade.exit_price_usd, trade.exit_market_cap_usd, trade.exit_liquidity_usd,
-                trade.exit_signal_timestamp or trade.exit_timestamp,
-                trade.simulated_exit_timestamp or trade.exit_timestamp,
-                trade.exit_execution_timestamp or trade.exit_timestamp,
-                trade.exit_timestamp, trade.hold_duration_seconds, trade.exit_reason,
-                trade.exit_price_impact_pct, trade.exit_slippage_pct or trade.exit_price_impact_pct,
-                trade.total_fees_usd, trade.network_cost_usd, trade.net_realized_pnl_usd,
-                trade.net_realized_return_pct, trade.mfe_ratio, trade.mae_ratio,
-                int(trade.target_reached_3m), trade.outcome_label, trade.signal_id
-            ))
+            cursor.execute(f"UPDATE paper_trades SET {set_clause} WHERE signal_id = ?", tuple(exit_fields.values()) + (trade.signal_id,))
             conn.commit()
 
         # Append exit log event
@@ -531,6 +853,53 @@ class PaperTradingLedger:
 
         with open(self.event_jsonl_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(asdict(event)) + "\n")
+
+    def record_quarantine(
+        self,
+        token_address: str,
+        reason: str,
+        route: str = "ROUTE_A",
+        signal_id: Optional[str] = None,
+        trade_id: Optional[str] = None,
+        trade_dict: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """Persist a failed invariant violation to the quarantine table for post-mortem analysis."""
+        quarantine_id = f"quar_{str(uuid.uuid4())[:12]}"
+        now_iso = datetime.now(timezone.utc).isoformat()
+        with sqlite3.connect(self.db_path, timeout=30.0) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT OR REPLACE INTO trade_quarantine (
+                    quarantine_id, signal_id, trade_id, token_address, route,
+                    quarantine_reason, timestamp, trade_record_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                quarantine_id, signal_id, trade_id, token_address, route,
+                reason, now_iso, json.dumps(trade_dict or {})
+            ))
+            conn.commit()
+        logger.warning(f"Quarantined trade for {token_address} (route {route}): {reason}")
+        return quarantine_id
+
+    def record_shadow_candidate(self, shadow: ShadowTradeRecord) -> None:
+        """Record a rejected candidate in the shadow ledger for un-biased counterfactual verification."""
+        with sqlite3.connect(self.db_path, timeout=30.0) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT OR REPLACE INTO shadow_trade_ledger (
+                    shadow_id, token_address, symbol, chain, rejection_reason,
+                    failed_gates_json, rejection_timestamp, market_cap_at_rejection,
+                    liquidity_at_rejection, p_reach_3m_at_rejection, max_future_mc_usd,
+                    target_reached_3m, outcome_label
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                shadow.shadow_id, shadow.token_address, shadow.symbol, shadow.chain,
+                shadow.rejection_reason, shadow.failed_gates_json, shadow.rejection_timestamp,
+                shadow.market_cap_at_rejection, shadow.liquidity_at_rejection,
+                shadow.p_reach_3m_at_rejection, shadow.max_future_mc_usd,
+                int(shadow.target_reached_3m), shadow.outcome_label
+            ))
+            conn.commit()
 
     def load_trade_events(self, trade_id: str) -> List[Dict[str, Any]]:
         """Load all chronological timeline events for a given trade."""
@@ -566,6 +935,14 @@ class PaperTradingLedger:
             cursor.execute("SELECT * FROM paper_trades ORDER BY timestamp ASC")
             return [dict(row) for row in cursor.fetchall()]
 
+    def load_trades_by_route(self, route: str) -> List[Dict[str, Any]]:
+        """Load trades belonging exclusively to a specific execution route (ROUTE_A or ROUTE_B)."""
+        with sqlite3.connect(self.db_path, timeout=30.0) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM paper_trades WHERE route = ? ORDER BY timestamp ASC", (route,))
+            return [dict(row) for row in cursor.fetchall()]
+
     def load_closed_trades(self) -> List[Dict[str, Any]]:
         """Load only completed closed paper trades."""
         with sqlite3.connect(self.db_path, timeout=30.0) as conn:
@@ -580,4 +957,20 @@ class PaperTradingLedger:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM paper_trades ORDER BY timestamp DESC LIMIT ?", (limit,))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def load_quarantined_trades(self) -> List[Dict[str, Any]]:
+        """Load all quarantined trades with violation reasons."""
+        with sqlite3.connect(self.db_path, timeout=30.0) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM trade_quarantine ORDER BY timestamp DESC")
+            return [dict(row) for row in cursor.fetchall()]
+
+    def load_shadow_trades(self, limit: int = 500) -> List[Dict[str, Any]]:
+        """Load counterfactual shadow trades for rejection audit."""
+        with sqlite3.connect(self.db_path, timeout=30.0) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM shadow_trade_ledger ORDER BY rejection_timestamp DESC LIMIT ?", (limit,))
             return [dict(row) for row in cursor.fetchall()]

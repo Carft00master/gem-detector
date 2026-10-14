@@ -15,7 +15,12 @@ def paper_engine(tmp_path):
     db_file = tmp_path / "test_paper.db"
     jsonl_file = tmp_path / "test_paper.jsonl"
     ledger = PaperTradingLedger(db_path=db_file, jsonl_path=jsonl_file)
-    return PaperTradingEngine(ledger=ledger, default_position_size_usd=100.0)
+    return PaperTradingEngine(
+        ledger=ledger,
+        default_position_size_usd=100.0,
+        max_entry_market_cap_usd=50000.0,
+        toxic_venues={"meteora", "meteora-dbc", "meteora-damm-v2", "bags-fm", "moonshot", "pons-v2", "pons-v2-dex", "pancakeswap_v2", "uniswap-v4-base", "four-meme", "stonkfun"},
+    )
 
 
 def test_paper_trading_trailing_stop_policy(paper_engine):
@@ -403,18 +408,18 @@ def test_stonkfun_toxic_pool_rejection(paper_engine):
     assert trade is None
 
 
-def test_sub_6000_liquidity_rejected(paper_engine):
-    """Verify that tokens below $6,000 liquidity floor are rejected."""
+def test_sub_2500_liquidity_rejected(paper_engine):
+    """Verify that tokens below calibrated $2,500 liquidity floor are rejected."""
     cand = TokenCandidate(
-        address="Sub6kLiqTokenAddr",
-        pair_address="PairSub6k",
-        symbol="THIN6K",
-        name="Thin 6K Token",
+        address="Sub2500LiqTokenAddr",
+        pair_address="PairSub2500",
+        symbol="THIN2500",
+        name="Thin 2.5K Token",
         chain="solana",
         dex_id="pumpswap",
         market_cap_usd=15000.0,
         price_usd=0.00015,
-        liquidity_usd=4500.0,  # Below $6,000
+        liquidity_usd=1800.0,  # Below $2,500 calibrated floor
     )
     pred = BreakoutPredictionOutput(p_reach_3m=0.20, alert_state="EARLY_BREAKOUT")
     trade = paper_engine.on_breakout_alert(cand, pred, position_size=100.0)
@@ -483,3 +488,149 @@ def test_nascent_token_few_txns_accepted(paper_engine):
     trade = paper_engine.on_breakout_alert(cand, pred, position_size=100.0)
     assert trade is not None
     assert trade.token_address == "NascentGemTokenAddr"
+
+
+def test_default_engine_rejects_market_cap_above_16k(tmp_path):
+    """Verify that default production PaperTradingEngine rejects candidates with MC > $16k."""
+    db_file = tmp_path / "test_default_paper.db"
+    jsonl_file = tmp_path / "test_default_paper.jsonl"
+    ledger = PaperTradingLedger(db_path=db_file, jsonl_path=jsonl_file)
+    default_engine = PaperTradingEngine(ledger=ledger, default_position_size_usd=100.0)
+
+    cand_over = TokenCandidate(
+        address="Over16kTokenAddr",
+        pair_address="PairOver16k",
+        symbol="OVER16K",
+        name="Over 16K Token",
+        chain="solana",
+        dex_id="pump-fun",
+        market_cap_usd=18500.0,
+        price_usd=0.000185,
+        liquidity_usd=11000.0,
+    )
+    pred = BreakoutPredictionOutput(p_reach_3m=0.20, alert_state="EARLY_BREAKOUT")
+    trade = default_engine.on_breakout_alert(cand_over, pred, position_size=100.0)
+    assert trade is None  # Blocked by MC safety gate!
+
+    # Token under $16k is accepted
+    cand_under = TokenCandidate(
+        address="Under16kTokenAddr",
+        pair_address="PairUnder16k",
+        symbol="UNDER16K",
+        name="Under 16K Token",
+        chain="solana",
+        dex_id="pump-fun",
+        market_cap_usd=13500.0,
+        price_usd=0.000135,
+        liquidity_usd=9000.0,
+    )
+    trade_under = default_engine.on_breakout_alert(cand_under, pred, position_size=100.0)
+    assert trade_under is not None
+    assert trade_under.token_address == "Under16kTokenAddr"
+
+
+def test_default_engine_rejects_meteora_dbc_toxic_venue(tmp_path):
+    """Verify that default production PaperTradingEngine rejects candidates on meteora-dbc and accepts pumpswap."""
+    db_file = tmp_path / "test_default_venue.db"
+    jsonl_file = tmp_path / "test_default_venue.jsonl"
+    ledger = PaperTradingLedger(db_path=db_file, jsonl_path=jsonl_file)
+    default_engine = PaperTradingEngine(ledger=ledger, default_position_size_usd=100.0)
+
+    cand_dbc = TokenCandidate(
+        address="MeteoraDbcTokenAddr",
+        pair_address="PairMeteoraDbc",
+        symbol="DBCCOIN",
+        name="DBC Token",
+        chain="solana",
+        dex_id="meteora-dbc",
+        market_cap_usd=12000.0,
+        price_usd=0.00012,
+        liquidity_usd=8000.0,
+    )
+    pred = BreakoutPredictionOutput(p_reach_3m=0.20, alert_state="EARLY_BREAKOUT")
+    trade = default_engine.on_breakout_alert(cand_dbc, pred, position_size=100.0)
+    assert trade is None  # Blocked by toxic venue blacklist!
+
+    # Pumpswap (our #1 winning venue) must be accepted!
+    cand_pumpswap = TokenCandidate(
+        address="PumpSwapTokenAddr",
+        pair_address="PairPumpSwap",
+        symbol="PUMPSWAP",
+        name="PumpSwap Token",
+        chain="solana",
+        dex_id="pumpswap",
+        market_cap_usd=12000.0,
+        price_usd=0.00012,
+        liquidity_usd=8000.0,
+    )
+    trade_ps = default_engine.on_breakout_alert(cand_pumpswap, pred, position_size=100.0)
+    assert trade_ps is not None
+    assert trade_ps.token_address == "PumpSwapTokenAddr"
+
+
+def test_staged_exits_instant_bleeder_fast_cut(paper_engine):
+    """Verify that in STAGED_EXITS, a token held >= 90s with no breakout (< 1.05x) and down <= -15% is cut early."""
+    from datetime import timedelta
+    cand = TokenCandidate(
+        address="BleederTokenAddr",
+        pair_address="PairBleeder",
+        symbol="BLEED",
+        name="Bleeder Token",
+        chain="solana",
+        dex_id="pump-fun",
+        market_cap_usd=12000.0,
+        price_usd=0.00010,
+        liquidity_usd=8000.0,
+    )
+    pred = BreakoutPredictionOutput(p_reach_3m=0.20, alert_state="EARLY_BREAKOUT")
+    trade = paper_engine.on_breakout_alert(cand, pred, position_size=100.0)
+    assert trade is not None
+    trade.exit_policy = "STAGED_EXITS"
+    trade.timestamp = (datetime.now(timezone.utc) - timedelta(seconds=95)).isoformat()
+
+    # Held 95 seconds (1.58 minutes), price dropped to 0.000084 (-16%) with peak never exceeding 0.000102
+    exit_trade = paper_engine.on_price_tick(
+        token_address="BleederTokenAddr",
+        current_price_usd=0.000084,
+        current_market_cap_usd=10080.0,
+        current_liquidity_usd=7000.0,
+        elapsed_minutes=1.58,
+        policy="STAGED_EXITS",
+    )
+    assert exit_trade is not None
+    assert exit_trade.exit_reason == "STAGED_STOP_LOSS"
+    assert "BleederTokenAddr" not in paper_engine.active_positions
+
+
+def test_3_minute_momentum_kill_switch_exits_stalled_underwater_trade(paper_engine):
+    """Verify that tokens held >= 3.0m with zero breakout (< 1.05x) and underwater exit via MOMENTUM_KILL_SWITCH."""
+    from datetime import timedelta
+    cand = TokenCandidate(
+        address="StalledTokenAddr",
+        pair_address="PairStalled",
+        symbol="STALL",
+        name="Stalled Token",
+        chain="solana",
+        dex_id="pumpswap",
+        market_cap_usd=12000.0,
+        price_usd=0.00010,
+        liquidity_usd=8000.0,
+    )
+    pred = BreakoutPredictionOutput(p_reach_3m=0.20, alert_state="EARLY_BREAKOUT")
+    trade = paper_engine.on_breakout_alert(cand, pred, position_size=100.0)
+    assert trade is not None
+    trade.timestamp = (datetime.now(timezone.utc) - timedelta(minutes=3.2)).isoformat()
+
+    # After 3.2 minutes, price is underwater (0.000096, -4%) with peak having never exceeded 1.02x
+    exit_trade = paper_engine.on_price_tick(
+        token_address="StalledTokenAddr",
+        current_price_usd=0.000096,
+        current_market_cap_usd=11520.0,
+        current_liquidity_usd=7800.0,
+        elapsed_minutes=3.2,
+    )
+    assert exit_trade is not None
+    assert exit_trade.exit_reason == "MOMENTUM_KILL_SWITCH"
+    assert exit_trade.outcome_label == "FAILURE"
+    assert "StalledTokenAddr" not in paper_engine.active_positions
+

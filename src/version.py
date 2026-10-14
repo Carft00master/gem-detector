@@ -15,7 +15,8 @@ REGIME_VERSION = "v1.0.0"
 RISK_RULES_VERSION = "v1.0.0"
 EXECUTION_MODEL_VERSION = "v1.0.0"
 LEARNING_DATA_VERSION = "v1.0.0"
-TRADE_LEDGER_SCHEMA_VERSION = "v1.1.0"
+TRADE_LEDGER_SCHEMA_VERSION = "v2.0.0"
+LEDGER_EPOCH = "epoch_20261014"
 SMART_MONEY_ENGINE_VERSION = "v1.0.0"
 SMART_MONEY_MODE = "RESEARCH_ONLY"
 
@@ -31,6 +32,7 @@ class SystemVersionManifest:
     execution_model_version: str = EXECUTION_MODEL_VERSION
     learning_data_version: str = LEARNING_DATA_VERSION
     trade_ledger_schema_version: str = TRADE_LEDGER_SCHEMA_VERSION
+    ledger_epoch: str = LEDGER_EPOCH
     smart_money_engine_version: str = SMART_MONEY_ENGINE_VERSION
     smart_money_mode: str = SMART_MONEY_MODE
 
@@ -45,6 +47,7 @@ class SystemVersionManifest:
             "execution_model_version": self.execution_model_version,
             "learning_data_version": self.learning_data_version,
             "trade_ledger_schema_version": self.trade_ledger_schema_version,
+            "ledger_epoch": self.ledger_epoch,
             "smart_money_engine_version": self.smart_money_engine_version,
             "smart_money_mode": self.smart_money_mode,
         }

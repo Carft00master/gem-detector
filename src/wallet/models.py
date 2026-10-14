@@ -13,6 +13,7 @@ from typing import Optional, Dict, Any
 class WalletSessionRecord:
     session_id: str
     name: str = "Live Forward Test ($1,000 @ 5%)"
+    route: str = "ROUTE_A"                 # "ROUTE_A" | "ROUTE_B"
     starting_capital_usd: float = 1000.0
     risk_pct: float = 0.05                 # 5% (0.05) or 10% (0.10)
     sizing_mode: str = "COMPOUNDING"       # "COMPOUNDING" or "FIXED"
@@ -41,6 +42,7 @@ class WalletPositionRecord:
     entry_market_cap_usd: float
     entry_liquidity_usd: float
     entry_timestamp: str
+    route: str = "ROUTE_A"                 # "ROUTE_A" | "ROUTE_B"
     entry_price_impact_pct: float = 0.0
     entry_fees_usd: float = 0.0            # DEX swap fee + Solana/Base priority fee
     status: str = "OPEN"                   # "OPEN" | "CLOSED" | "SKIPPED"

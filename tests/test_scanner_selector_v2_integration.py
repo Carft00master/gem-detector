@@ -37,6 +37,7 @@ def mock_engine(tmp_path):
 
     with patch("src.paper.engine.PaperTradingLedger"):
         engine = GemDetectorEngine(config=cfg)
+        engine.paper_engine.max_entry_market_cap_usd = 50000.0
         engine.paper_engine.ledger = MagicMock()
         engine.paper_engine.ledger.db_path = str(tmp_path / "paper_test.db")
         engine.paper_engine.ledger.record_entry = MagicMock()

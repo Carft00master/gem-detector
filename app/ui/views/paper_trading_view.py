@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, 
     QTableWidgetItem, QHeaderView, QMenu, QAbstractItemView, QTabWidget, QLabel, 
     QLineEdit, QComboBox, QPushButton, QMessageBox, QApplication,
-    QDialog, QFormLayout, QGroupBox, QFrame
+    QDialog, QFormLayout, QGroupBox, QFrame, QFileDialog
 )
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QAction, QFont
@@ -124,6 +124,103 @@ def _get_trade_exit_mc(t: dict) -> float:
 
 def _get_trade_timestamp(t: dict) -> str:
     return str(t.get("exit_timestamp") or t.get("entry_timestamp") or t.get("timestamp") or "")
+
+
+def _get_trade_mint(t: dict) -> str:
+    return str(t.get("token_address") or t.get("address") or t.get("mint_address") or "")
+
+
+def _get_trade_venue(t: dict) -> str:
+    return str(t.get("venue") or t.get("dex_id") or "")
+
+
+def _get_trade_liquidity(t: dict) -> float:
+    for k in ("entry_liquidity_usd", "liquidity_usd", "liquidity"):
+        v = t.get(k)
+        if v is not None:
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                pass
+    return 0.0
+
+
+def _get_trade_dev_holding(t: dict) -> float:
+    for k in ("dev_holding_pct", "dev_holding"):
+        v = t.get(k)
+        if v is not None:
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                pass
+    return 0.0
+
+
+def _get_trade_top10(t: dict) -> float:
+    for k in ("top10_holder_pct", "top10_effective_pct", "top10_raw_pct"):
+        v = t.get(k)
+        if v is not None:
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                pass
+    return 0.0
+
+
+def _get_trade_buyers(t: dict) -> int:
+    for k in ("unique_buyers", "buyer_count", "unique_buyers_1h", "unique_buyers_5m"):
+        v = t.get(k)
+        if v is not None:
+            try:
+                return int(v)
+            except (ValueError, TypeError):
+                pass
+    return 0
+
+
+def _get_trade_buy_sell_ratio(t: dict) -> float:
+    for k in ("buy_sell_ratio", "buy_sell_ratio_5m", "buy_sell_ratio_1h"):
+        v = t.get(k)
+        if v is not None:
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                pass
+    buys = float(t.get("txns_5m_buys") or 0)
+    sells = float(t.get("txns_5m_sells") or 0)
+    if buys > 0 or sells > 0:
+        return round(buys / max(1.0, sells), 2)
+    return 1.0
+
+
+def _get_trade_mfe(t: dict) -> float:
+    for k in ("mfe_ratio", "peak_multiple", "mfe"):
+        v = t.get(k)
+        if v is not None:
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                pass
+    return 1.0
+
+
+def _get_trade_mae(t: dict) -> float:
+    for k in ("mae_ratio", "worst_dip_multiple", "mae"):
+        v = t.get(k)
+        if v is not None:
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                pass
+    return 1.0
+
+
+def _get_trade_exit_reason(t: dict) -> str:
+    status = str(t.get("status") or "")
+    if status.upper() == "OPEN":
+        return "OPEN_POSITION"
+    reason = str(t.get("exit_reason") or "")
+    return reason if reason else "—"
 
 
 class CustomFilterDialog(QDialog):
@@ -1241,11 +1338,35 @@ class PaperTradingView(QWidget):
                 clean_time = time_val[11:19] if len(time_val) >= 19 else time_val
                 _set_cell(table, i, 0, clean_time, font=mono_font, data=t.get('trade_id', ''), tooltip=time_val)
                 
+                addr = _get_trade_mint(t)
+                venue = _get_trade_venue(t)
+                liq = _get_trade_liquidity(t)
+                dev_pct = _get_trade_dev_holding(t)
+                top10_pct = _get_trade_top10(t)
+                buyers = _get_trade_buyers(t)
+                bs_ratio = _get_trade_buy_sell_ratio(t)
+                mfe = _get_trade_mfe(t)
+                mae = _get_trade_mae(t)
+                dd_pct = round((mae - 1.0) * 100.0, 1) if (mae > 0 and mae <= 1.0) else 0.0
+                exit_r = _get_trade_exit_reason(t)
+
                 # 1. TOKEN
                 sym = str(t.get('symbol') or 'UNK').upper()
-                addr = str(t.get('token_address', ''))
                 short_addr = f"· {addr[:4]}..{addr[-4:]}" if len(addr) > 8 else ""
-                _set_cell(table, i, 1, f"{sym}  {short_addr}".strip(), font=bold_font, fg_color=QColor("#f8fafc"), data=addr, tooltip=f"{sym} ({addr})" if addr else sym)
+                tok_tooltip = (
+                    f"Token: {sym}\n"
+                    f"Mint: {addr}\n"
+                    f"Venue: {venue}\n"
+                    f"Pool Liquidity: ${liq:,.0f}\n"
+                    f"Dev Holding: {dev_pct:.1f}%\n"
+                    f"Top-10: {top10_pct:.1f}%\n"
+                    f"Buyers: {buyers:,}\n"
+                    f"Buy/Sell Ratio: {bs_ratio:.2f}x\n"
+                    f"Peak Multiple (MFE): {mfe:.2f}x\n"
+                    f"Worst Dip (MAE): {mae:.2f}x ({dd_pct:.1f}%)\n"
+                    f"Exit Reason: {exit_r}"
+                )
+                _set_cell(table, i, 1, f"{sym}  {short_addr}".strip(), font=bold_font, fg_color=QColor("#f8fafc"), data=addr, tooltip=tok_tooltip)
                 
                 # 2. TIER
                 entry_r = str(t.get('entry_reason') or '')
@@ -1260,11 +1381,11 @@ class PaperTradingView(QWidget):
 
                 # 3. ENTRY MC
                 emc = _get_trade_entry_mc(t)
-                _set_cell(table, i, 3, f"${emc:,.0f}" if emc > 0 else "—", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=QColor("#cbd5e1"))
+                _set_cell(table, i, 3, f"${emc:,.0f}" if emc > 0 else "—", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=QColor("#cbd5e1"), tooltip=f"Entry MC: ${emc:,.0f} | Liquidity: ${liq:,.0f} | Venue: {venue}")
                 
                 # 4. EXIT MC
                 xmc = _get_trade_exit_mc(t)
-                _set_cell(table, i, 4, f"${xmc:,.0f}" if xmc > 0 else "—", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=QColor("#cbd5e1"))
+                _set_cell(table, i, 4, f"${xmc:,.0f}" if xmc > 0 else "—", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=QColor("#cbd5e1"), tooltip=f"Exit MC: ${xmc:,.0f} | Exit Reason: {exit_r}")
                 
                 # 5. HOLD DURATION
                 h_min = _get_trade_hold_minutes(t)
@@ -1284,11 +1405,11 @@ class PaperTradingView(QWidget):
                 # 6. P(3M)
                 p3 = float(t.get('p_reach_3m') or t.get('p3m') or 0.0)
                 p3_color = QColor("#10b981" if p3 >= 0.14 else "#38bdf8" if p3 >= 0.08 else "#64748b")
-                _set_cell(table, i, 6, f"{p3:.1%}", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=p3_color)
+                _set_cell(table, i, 6, f"{p3:.1%}", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=p3_color, tooltip=f"P(3M) Probability: {p3:.2%}")
                 
                 # 7. POLICY
                 pol = str(t.get('exit_policy') or t.get('policy') or 'TRAIL_STOP')
-                _set_cell(table, i, 7, pol, font=policy_font, alignment=Qt.AlignCenter, fg_color=QColor("#c084fc"))
+                _set_cell(table, i, 7, pol, font=policy_font, alignment=Qt.AlignCenter, fg_color=QColor("#c084fc"), tooltip=f"Exit Policy: {pol}")
                 
                 # 8. NET P&L
                 pnl = _get_trade_pnl(t)
@@ -1299,7 +1420,8 @@ class PaperTradingView(QWidget):
                 # 9. RETURN%
                 ret = _get_trade_return_pct(t)
                 ret_color = QColor("#10b981" if ret >= 0 else "#ef4444")
-                _set_cell(table, i, 9, f"{ret:+.2f}%", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=ret_color)
+                ret_tooltip = f"Realized: {ret:+.2f}%\nPeak (MFE): {mfe:.2f}x\nWorst Dip (MAE): {mae:.2f}x ({dd_pct:.1f}%)"
+                _set_cell(table, i, 9, f"{ret:+.2f}%", font=mono_font, alignment=Qt.AlignRight | Qt.AlignVCenter, fg_color=ret_color, tooltip=ret_tooltip)
                 
                 # 10. STATUS
                 status = str(t.get('status') or 'OPEN').upper()
@@ -1312,7 +1434,7 @@ class PaperTradingView(QWidget):
                 else:
                     st_badge = "✕ LOSS"
                     st_color = "#ef4444"
-                _set_cell(table, i, 10, st_badge, font=policy_font, alignment=Qt.AlignCenter, fg_color=QColor(st_color))
+                _set_cell(table, i, 10, st_badge, font=policy_font, alignment=Qt.AlignCenter, fg_color=QColor(st_color), tooltip=f"Status: {status}\nExit Reason: {exit_r}")
         finally:
             table.setUpdatesEnabled(True)
 
@@ -1341,7 +1463,7 @@ class PaperTradingView(QWidget):
         act_copy_id = QAction("📋 Copy Trade ID", self)
         act_copy_id.triggered.connect(lambda: QApplication.clipboard().setText(str(trade_id)))
         
-        act_copy_addr = QAction("📋 Copy Token Address", self)
+        act_copy_addr = QAction("📋 Copy Mint Address", self)
         act_copy_addr.triggered.connect(lambda: QApplication.clipboard().setText(str(addr)))
         
         menu.addAction(act_view)
@@ -1352,30 +1474,140 @@ class PaperTradingView(QWidget):
 
     def _export_csv(self):
         try:
-            export_path = Path("exports") / "blotter_paper_trades.csv"
-            export_path.parent.mkdir(parents=True, exist_ok=True)
+            export_dir = Path("exports")
+            export_dir.mkdir(parents=True, exist_ok=True)
+            ts_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            default_path = export_dir / f"paper_trades_{ts_str}.csv"
             
+            # Interactive file save selection
+            file_path = ""
+            app_inst = QApplication.instance()
+            if app_inst:
+                try:
+                    file_path, _ = QFileDialog.getSaveFileName(
+                        self,
+                        "Export Paper Trades CSV",
+                        str(default_path.resolve()),
+                        "CSV Files (*.csv);;All Files (*)"
+                    )
+                except Exception:
+                    file_path = str(default_path)
+            else:
+                file_path = str(default_path)
+
+            if not file_path:
+                return
+
+            export_path = Path(file_path)
+            export_path.parent.mkdir(parents=True, exist_ok=True)
+
+            trades_to_export = getattr(self, "_filtered_all", None) if self._has_active_filters() else self.trades
+            if not trades_to_export:
+                trades_to_export = self.trades or (self.trading_svc.get_all_trades() if hasattr(self, 'trading_svc') else [])
+            if not trades_to_export:
+                QMessageBox.information(self, "No Records", "No trade records available to export.")
+                return
+
+            headers = [
+                "TIME",
+                "MINT ADDRESS",
+                "TOKEN",
+                "VENUE",
+                "CHAIN",
+                "STATUS",
+                "TIER",
+                "ENTRY MC",
+                "EXIT MC",
+                "LIQUIDITY",
+                "DEV HOLDING %",
+                "TOP-10 %",
+                "BUYER COUNTS",
+                "BUY/SELL RATIO",
+                "P(3M)",
+                "HOLD (MIN)",
+                "POLICY",
+                "EXIT REASON",
+                "PEAK MULTIPLE (MFE)",
+                "MAX DRAWDOWN (MAE)",
+                "MAX DRAWDOWN %",
+                "POSITION SIZE",
+                "NET P&L",
+                "RETURN %",
+            ]
+
+            rows = []
+            for t in trades_to_export:
+                time_val = _get_trade_timestamp(t)
+                mint_addr = _get_trade_mint(t)
+                sym = str(t.get('symbol') or '')
+                venue = _get_trade_venue(t)
+                chain = str(t.get('chain') or 'solana')
+                status = str(t.get('status') or '')
+                entry_r = str(t.get('entry_reason') or '')
+                tier = t.get('setup_tier') or ('A+' if 'A+' in entry_r else 'A' if 'A' in entry_r else '—')
+                emc = round(_get_trade_entry_mc(t), 2)
+                xmc = round(_get_trade_exit_mc(t), 2)
+                liq = round(_get_trade_liquidity(t), 2)
+                dev_pct = round(_get_trade_dev_holding(t), 2)
+                top10_pct = round(_get_trade_top10(t), 2)
+                buyers = _get_trade_buyers(t)
+                bs_ratio = round(_get_trade_buy_sell_ratio(t), 2)
+                p3 = round(float(t.get('p_reach_3m') or t.get('p3m') or 0.0), 4)
+                hold_min = round(_get_trade_hold_minutes(t), 2)
+                pol = str(t.get('exit_policy') or t.get('policy') or '')
+                exit_r = _get_trade_exit_reason(t)
+                mfe = round(_get_trade_mfe(t), 2)
+                mae = round(_get_trade_mae(t), 2)
+                dd_pct = round((mae - 1.0) * 100.0, 1) if (mae > 0 and mae <= 1.0) else 0.0
+                pos_size = round(float(t.get('position_size_usd') or 250.0), 2)
+                pnl = round(_get_trade_pnl(t), 2)
+                ret = round(_get_trade_return_pct(t), 2)
+
+                rows.append([
+                    time_val,
+                    mint_addr,
+                    sym,
+                    venue,
+                    chain,
+                    status,
+                    tier,
+                    emc,
+                    xmc,
+                    liq,
+                    dev_pct,
+                    top10_pct,
+                    buyers,
+                    bs_ratio,
+                    p3,
+                    hold_min,
+                    pol,
+                    exit_r,
+                    mfe,
+                    mae,
+                    dd_pct,
+                    pos_size,
+                    pnl,
+                    ret,
+                ])
+
             with open(export_path, mode="w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
-                writer.writerow(BLOTTER_COLUMNS)
-                for t in self.trades:
-                    time_val = _get_trade_timestamp(t)
-                    sym = str(t.get('symbol') or '')
-                    entry_r = str(t.get('entry_reason') or '')
-                    tier = t.get('setup_tier') or ('A+' if 'A+' in entry_r else 'A' if 'A' in entry_r else '—')
-                    emc = _get_trade_entry_mc(t)
-                    xmc = _get_trade_exit_mc(t)
-                    hold_min = round(_get_trade_hold_minutes(t), 2)
-                    p3 = float(t.get('p_reach_3m') or t.get('p3m') or 0.0)
-                    pol = str(t.get('exit_policy') or t.get('policy') or '')
-                    pnl = _get_trade_pnl(t)
-                    ret = _get_trade_return_pct(t)
-                    status = str(t.get('status') or '')
-                    writer.writerow([time_val, sym, tier, emc, xmc, hold_min, p3, pol, pnl, ret, status])
-                    
+                writer.writerow(headers)
+                writer.writerows(rows)
+
+            legacy_path = export_dir / "blotter_paper_trades.csv"
+            if export_path.resolve() != legacy_path.resolve():
+                with open(legacy_path, mode="w", newline="", encoding="utf-8") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(headers)
+                    writer.writerows(rows)
+
             QMessageBox.information(
                 self, "Export Successful",
-                f"Paper trading blotter exported successfully to:\n\n{export_path.resolve()}"
+                f"Paper trading history exported successfully ({len(rows):,} records) to:\n\n{export_path.resolve()}\n\n"
+                f"Includes: Liquidity, Venue, Dev Holding %, Top-10 %, Buyer Counts, "
+                f"Buy/Sell Ratio, MFE (Peak Multiple), MAE (Max Drawdown), Exit Reason, and Mint Address."
             )
         except Exception as e:
+            logger.exception("Failed to export paper trades CSV")
             QMessageBox.warning(self, "Export Failed", f"Could not export CSV: {e}")

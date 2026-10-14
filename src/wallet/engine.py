@@ -130,6 +130,7 @@ class VirtualWalletEngine:
         symbol = _extract_field(paper_trade, "symbol", "UNKNOWN")
         chain = _extract_field(paper_trade, "chain", "solana")
         venue = _extract_field(paper_trade, "venue", "raydium")
+        route = _extract_field(paper_trade, "route", getattr(self.session, "route", "ROUTE_A"))
         entry_price = float(_extract_field(paper_trade, "entry_price_usd", 0.0) or 0.0)
         entry_mc = float(_extract_field(paper_trade, "entry_market_cap_usd", 0.0) or _extract_field(paper_trade, "market_cap_usd", 0.0) or 0.0)
         entry_liq = float(_extract_field(paper_trade, "entry_liquidity_usd", 0.0) or _extract_field(paper_trade, "liquidity_usd", 0.0) or 0.0)
@@ -156,6 +157,7 @@ class VirtualWalletEngine:
                 symbol=symbol,
                 chain=chain,
                 venue=venue,
+                route=route,
                 position_size_usd=0.0,
                 entry_price_usd=entry_price,
                 simulated_fill_price_usd=entry_price,
@@ -198,6 +200,7 @@ class VirtualWalletEngine:
             symbol=symbol,
             chain=chain,
             venue=venue,
+            route=route,
             position_size_usd=committed_size,
             entry_price_usd=entry_price,
             simulated_fill_price_usd=sim_fill,

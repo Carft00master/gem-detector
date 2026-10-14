@@ -48,6 +48,18 @@ class ExportService:
         out_path = self.export_dir / fname
 
         df = pd.DataFrame(trades)
+        priority_order = [
+            "timestamp", "trade_id", "token_address", "symbol", "venue", "chain", "status",
+            "entry_market_cap_usd", "exit_market_cap_usd", "liquidity_usd", "exit_liquidity_usd",
+            "dev_holding_pct", "top10_holder_pct", "unique_buyers", "buy_sell_ratio",
+            "p_reach_3m", "hold_duration_seconds", "exit_policy", "exit_reason",
+            "mfe_ratio", "mae_ratio", "position_size_usd", "net_realized_pnl_usd", "net_realized_return_pct"
+        ]
+        if not df.empty:
+            existing_p = [c for c in priority_order if c in df.columns]
+            other_cols = [c for c in df.columns if c not in priority_order]
+            df = df[existing_p + other_cols]
+
         df.to_csv(out_path, index=False, encoding="utf-8")
         logger.info(f"Exported {len(trades)} paper trading records to {out_path}")
         return out_path

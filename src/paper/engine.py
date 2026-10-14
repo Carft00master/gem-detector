@@ -56,18 +56,29 @@ class PaperTradingEngine:
         "TIME_BASED",
     ]
 
+    DEFAULT_TOXIC_VENUES = {
+        "meteora-dbc", "meteora-damm-v2", "bags-fm", "moonshot",
+        "pons-v2", "pons-v2-dex", "four-meme", "stonkfun",
+    }
+
     def __init__(
         self,
         ledger: Optional[PaperTradingLedger] = None,
         execution_sim: Optional[AMMExecutionSimulator] = None,
         default_position_size_usd: float = 100.0,
         default_exit_policy: str = "STAGED_EXITS",
+        max_entry_market_cap_usd: float = 16000.0,
+        min_entry_liquidity_usd: float = 2500.0,
+        toxic_venues: Optional[set] = None,
     ):
 
         self.ledger = ledger or PaperTradingLedger()
         self.execution_sim = execution_sim or AMMExecutionSimulator()
         self.default_position_size_usd = default_position_size_usd
         self.default_exit_policy = default_exit_policy
+        self.max_entry_market_cap_usd = max_entry_market_cap_usd
+        self.min_entry_liquidity_usd = min_entry_liquidity_usd
+        self.toxic_venues = set(toxic_venues) if toxic_venues is not None else set(self.DEFAULT_TOXIC_VENUES)
         self.active_positions: Dict[str, PaperTradeRecord] = {}
         self.peak_prices: Dict[str, float] = {}
         self.trough_prices: Dict[str, float] = {}
@@ -110,6 +121,11 @@ class PaperTradingEngine:
                     timestamp=r["timestamp"],
                     market_cap_usd=r["market_cap_usd"],
                     liquidity_usd=r["liquidity_usd"],
+                    entry_liquidity_usd=r.get("entry_liquidity_usd", r["liquidity_usd"]),
+                    dev_holding_pct=float(r.get("dev_holding_pct", 0.0) or 0.0),
+                    top10_holder_pct=float(r.get("top10_holder_pct", 0.0) or 0.0),
+                    unique_buyers=int(r.get("unique_buyers", 0) or 0),
+                    buy_sell_ratio=float(r.get("buy_sell_ratio", 1.0) or 1.0),
                     p_reach_100k=r["p_reach_100k"],
                     p_reach_500k=r["p_reach_500k"],
                     p_reach_1m=r["p_reach_1m"],
@@ -178,15 +194,15 @@ class PaperTradingEngine:
 
         # 1. Toxic Venue Defense: Reject unmodeled/concentrated dump pools
         venue_str = str(getattr(candidate, "dex_id", None) or getattr(candidate, "venue", "") or "").lower()
-        toxic_venues = {"meteora", "meteora-dbc", "meteora-damm-v2", "bags-fm", "moonshot", "pons-v2", "pons-v2-dex", "pancakeswap_v2", "uniswap-v4-base", "four-meme", "stonkfun"}
-        if any(tv in venue_str for tv in toxic_venues):
+        if any(tv in venue_str for tv in self.toxic_venues):
             logger.info(f"Skipping paper trade for {candidate.symbol}: Venue {venue_str} is in toxic pool blacklist.")
             return None
 
-        # 1b. Liquidity Safety Gate: Minimum $6,000 pool depth (eliminates 86.8% illiquid loss rate)
+        # 1b. Calibrated Liquidity Safety Gate: Minimum $2,500 pool depth (filters out micro-dust & drained pools)
         cand_liq = float(getattr(candidate, "liquidity_usd", 0.0) or 0.0)
-        if 0 < cand_liq < 6000.0:
-            logger.info(f"Skipping paper trade for {candidate.symbol}: Liquidity below $6,000 safety floor (${cand_liq:,.0f} < $6,000).")
+        min_liq = getattr(self, "min_entry_liquidity_usd", 2500.0)
+        if 0 < cand_liq < min_liq:
+            logger.info(f"Skipping paper trade for {candidate.symbol}: Liquidity below ${min_liq:,.0f} calibrated safety floor (${cand_liq:,.0f} < ${min_liq:,.0f}).")
             return None
 
         # 1c. Anti-Fake-Volume Defense: Reject Bump Bot micro-churn and Hyper-Turnover circular wash volume
@@ -206,7 +222,7 @@ class PaperTradingEngine:
                 return None
 
         # Rule B: Hyper-turnover circular volume (> 300% pool liquidity churned in 5m)
-        if cand_liq >= 6000.0 and cand_vol_5m > 0:
+        if cand_liq >= min_liq and cand_vol_5m > 0:
             turnover_ratio = cand_vol_5m / cand_liq
             if turnover_ratio > 3.0:
                 logger.info(
@@ -215,22 +231,24 @@ class PaperTradingEngine:
                 )
                 return None
 
-        # 2. Liquidity-to-Market-Cap Ratio Gate: 0.20 <= ratio <= 1.35
-        # Rejects paper-thin pools (< 0.20) and unburned developer LP traps (> 1.35)
+        # 2. Calibrated Liquidity-to-Market-Cap Ratio Gate: 0.30 <= ratio <= 1.35
+        # Rejects paper-thin pools (< 0.30) that suffer instant slippage crashes while safely admitting bonding curves (0.30 - 0.50)
         mc = float(getattr(candidate, "market_cap_usd", 0.0) or 0.0)
         liq = float(getattr(candidate, "liquidity_usd", 0.0) or 0.0)
         liq_mc_ratio = (liq / mc) if mc > 0 else 0.0
-        if liq_mc_ratio < 0.20:
-            logger.info(f"Skipping paper trade for {candidate.symbol}: Paper-thin liquidity-to-MC ratio ({liq_mc_ratio:.2f} < 0.20).")
+        if liq_mc_ratio < 0.30:
+            logger.info(f"Skipping paper trade for {candidate.symbol}: Paper-thin liquidity-to-MC ratio ({liq_mc_ratio:.2f} < 0.30).")
             return None
         if liq_mc_ratio > 1.35:
             logger.info(f"Skipping paper trade for {candidate.symbol}: Suspicious creator-seeded LP trap ({liq_mc_ratio:.2f} > 1.35).")
             return None
 
-        # 3. Anti-Late-Bonding-Curve Gate: Avoid buying the exhausted top of bonding curves before dev dumps
-        p500k = getattr(prediction, "p_reach_500k", 0.0)
-        if mc > 40000.0 and (liq_mc_ratio < 1.0 or p500k < 0.38):
-            logger.info(f"Skipping paper trade for {candidate.symbol}: Over-extended bonding curve with exhausted momentum (MC ${mc:,.0f}, P500k={p500k:.2f}).")
+        # 3. Market Cap Safety Gate: Avoid buying the exhausted top of bonding curves before sniper/dev dumps
+        # Empirical analysis shows 66% of all session losses occur above $16,000 MC,
+        # while 100% of top 10 monster wins entered under $13,000 MC.
+        max_mc = getattr(self, "max_entry_market_cap_usd", 16000.0)
+        if mc > max_mc:
+            logger.info(f"Skipping paper trade for {candidate.symbol}: Exceeds maximum safe entry market cap (${mc:,.0f} > ${max_mc:,.0f}).")
             return None
 
         # Position Sizing: explicit size or liquidity-scaled (max $100 base size or 1.0% pool depth)
@@ -261,6 +279,16 @@ class PaperTradingEngine:
         simulated_fill = candidate.price_usd * impact_factor
         now_iso = datetime.now(timezone.utc).isoformat()
         trade_id = str(uuid.uuid4())[:8]
+        # Extract entry telemetry
+        cand_sec = getattr(candidate, "security", None)
+        dev_pct = float(getattr(cand_sec, "dev_holding_pct", 0.0) or 0.0) if cand_sec else 0.0
+        top10_pct = float(getattr(cand_sec, "top10_holder_pct", 0.0) or 0.0) if cand_sec else 0.0
+        buyers_cnt = int(getattr(candidate, "unique_buyers_1h", 0) or getattr(candidate, "unique_buyers", 0) or 0)
+        bs_rat = float(getattr(candidate, "buy_sell_ratio_5m", 0.0) or getattr(candidate, "buy_sell_ratio_1h", 0.0) or 0.0)
+        if bs_rat == 0.0:
+            b_cnt = float(getattr(candidate, "txns_5m_buys", 0) or 0)
+            s_cnt = float(getattr(candidate, "txns_5m_sells", 0) or 0)
+            bs_rat = round(b_cnt / max(1.0, s_cnt), 2) if (b_cnt + s_cnt) > 0 else 1.0
 
         trade = PaperTradeRecord(
             signal_id=trade_id,
@@ -275,6 +303,11 @@ class PaperTradingEngine:
             market_cap_usd=candidate.market_cap_usd,
             entry_market_cap_usd=candidate.market_cap_usd,
             liquidity_usd=candidate.liquidity_usd,
+            entry_liquidity_usd=candidate.liquidity_usd,
+            dev_holding_pct=dev_pct,
+            top10_holder_pct=top10_pct,
+            unique_buyers=buyers_cnt,
+            buy_sell_ratio=bs_rat,
             p_reach_100k=prediction.p_reach_100k,
             p_reach_500k=prediction.p_reach_500k,
             p_reach_1m=prediction.p_reach_1m,
@@ -341,7 +374,8 @@ class PaperTradingEngine:
         if trade.timestamp:
             try:
                 t_dt = datetime.fromisoformat(trade.timestamp.replace("Z", "+00:00"))
-                elapsed_minutes = max(0.0, (datetime.now(timezone.utc) - t_dt).total_seconds() / 60.0)
+                wall_elapsed = max(0.0, (datetime.now(timezone.utc) - t_dt).total_seconds() / 60.0)
+                elapsed_minutes = max(elapsed_minutes, wall_elapsed)
             except Exception:
                 pass
 
@@ -468,39 +502,56 @@ class PaperTradingEngine:
                 if drawdown_from_peak >= 0.40:
                     should_exit = True
                     exit_reason = "STAGED_TRAILING_PROFIT"
-            # C. Breakeven / Initial Runner Protection (After 2x gain, lock at breakeven +15%)
-            elif peak >= fill_price * 2.0:
-                if current_price_usd <= fill_price * 1.15:
-                    should_exit = True
-                    exit_reason = "STAGED_BREAKEVEN_PROTECTION"
-                elif (peak - current_price_usd) / peak >= 0.35:
+            # C. Multi-Bag Runner Protection (After 2x gain, lock at least +30% profit or 30% trailing drop)
+            elif peak >= fill_price * 1.90:
+                drawdown_from_peak = (peak - current_price_usd) / peak
+                if drawdown_from_peak >= 0.30:
                     should_exit = True
                     exit_reason = "STAGED_TRAILING_PROFIT"
-            # C1. Intermediate Momentum Trailing Stop (After +40% gain, lock profits on 25% drop from peak)
+                elif current_price_usd <= fill_price * 1.30:
+                    should_exit = True
+                    exit_reason = "STAGED_TRAILING_PROFIT"
+            # C1. Intermediate Momentum Trailing Stop (After +45-50% gain, lock profits on 25% drop or floor at +15%)
             elif peak >= fill_price * 1.40:
                 drawdown_from_peak = (peak - current_price_usd) / peak
                 if drawdown_from_peak >= 0.25:
                     should_exit = True
                     exit_reason = "STAGED_TRAILING_PROFIT"
-                elif current_price_usd <= fill_price * 1.05:
+                elif current_price_usd <= fill_price * 1.15:
                     should_exit = True
-                    exit_reason = "STAGED_BREAKEVEN_PROTECTION"
-            # C2. Early Excursion Breakeven Lock (After +25% breakout, protect principal + friction)
-            elif peak >= fill_price * 1.25:
-                if current_price_usd <= fill_price * 1.05:
+                    exit_reason = "STAGED_TRAILING_PROFIT"
+            # C2. Early Excursion Breakeven Lock (After +20-25% breakout, protect principal + friction cushion at +8%)
+            elif peak >= fill_price * 1.20:
+                if current_price_usd <= fill_price * 1.08:
                     should_exit = True
                     exit_reason = "STAGED_BREAKEVEN_PROTECTION"
                 elif current_price_usd <= fill_price * 0.75:
                     should_exit = True
                     exit_reason = "STAGED_STOP_LOSS"
+            # C3. Instant Bleeder Fast Cut: If held >= 90s with zero upward excursion (< 1.05x) and price drops <= -15%
+            elif elapsed_minutes >= 1.5 and peak < fill_price * 1.05 and current_price_usd <= fill_price * 0.85:
+                should_exit = True
+                exit_reason = "STAGED_STOP_LOSS"
+            # C4. 3-Minute Momentum Kill Switch (Momentum Stalemate Exit):
+            # In memecoins, tokens with zero upward excursion after 3 minutes almost never recover.
+            # Exit immediately at market rather than riding into -50% stop loss or LP drain.
+            elif elapsed_minutes >= 3.0 and peak < fill_price * 1.05 and current_price_usd < fill_price:
+                should_exit = True
+                exit_reason = "MOMENTUM_KILL_SWITCH"
             # D. Initial Stop Loss (-25% tight initial stop before breakout)
             elif current_price_usd <= fill_price * 0.75:
                 should_exit = True
                 exit_reason = "STAGED_STOP_LOSS"
 
-        # 6. Universal Stale Bag Decay Gate:
+        # 6. Universal 3-Minute Momentum Kill Switch:
+        # If held >= 3.0m with zero upward excursion (< 1.05x) and currently underwater across any policy, exit immediately
+        if not should_exit and elapsed_minutes >= 3.0 and peak < fill_price * 1.05 and current_price_usd < fill_price:
+            should_exit = True
+            exit_reason = "MOMENTUM_KILL_SWITCH"
+
+        # 7. Universal Stale Bag Decay Gate:
         # If a token has not produced a +25% excursion within 30 minutes, exit to free capital
-        if not should_exit and elapsed_minutes >= 30.0 and peak < fill_price * 1.25:
+        elif not should_exit and elapsed_minutes >= 30.0 and peak < fill_price * 1.25:
             should_exit = True
             exit_reason = "STALE_DECAY_EXIT"
 
@@ -582,7 +633,7 @@ class PaperTradingEngine:
 
             if trade.target_reached_3m and exit_reason != "RISK_INVALIDATION" and exec_exit.net_realized_return_pct > 0:
                 trade.outcome_label = "SUCCESS"
-            elif is_dev_dump or exit_reason in ("RISK_INVALIDATION", "STOP_LOSS", "INITIAL_STOP_LOSS") or exec_exit.net_realized_return_pct <= -40.0:
+            elif is_dev_dump or exit_reason in ("RISK_INVALIDATION", "STOP_LOSS", "INITIAL_STOP_LOSS", "MOMENTUM_KILL_SWITCH") or exec_exit.net_realized_return_pct <= -40.0:
                 trade.outcome_label = "FAILURE"
                 if trade.symbol and not is_bonding_curve and (exit_reason == "RISK_INVALIDATION" or exec_exit.net_realized_return_pct <= -50.0):
                     self.rugged_symbols.add(trade.symbol.upper())
