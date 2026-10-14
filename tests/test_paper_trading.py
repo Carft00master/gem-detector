@@ -279,8 +279,12 @@ def test_pumpswap_drained_pool_dust_spike_invalidation(paper_engine):
         market_cap_usd=10761.80,
         price_usd=0.00001076,
         liquidity_usd=10483.43,
+        volume_5m_usd=1000.0,
+        unique_buyers_1h=45,
+        txns_5m_buys=30,
+        txns_5m_sells=10,
     )
-    pred = BreakoutPredictionOutput(p_reach_3m=0.08, alert_state="EARLY_BREAKOUT")
+    pred = BreakoutPredictionOutput(p_reach_3m=0.15, alert_state="EARLY_BREAKOUT")
     trade = paper_engine.on_breakout_alert(cand, pred, position_size=100.0)
     assert trade is not None
     assert trade.venue == "pumpswap"

@@ -119,9 +119,8 @@ class DexScreenerFeed(BaseFeed):
             # Liquidity
             liq_data = pair.get("liquidity") or {}
             liquidity_usd = float(liq_data.get("usd") or 0.0)
-            if dex_id in ("pumpfun", "pump-fun") or (token_address.lower().endswith("pump") and dex_id not in ("pumpswap", "raydium", "meteora")):
-                if liquidity_usd < 500.0 and market_cap > 0:
-                    liquidity_usd = max(1500.0, market_cap * 0.60)
+            # Fail-closed: Never synthesize liquidity for bonding curves or pools
+            # Real on-chain reserve liquidity only
 
             # Volume
             vol_data = pair.get("volume", {})

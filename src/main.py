@@ -567,12 +567,7 @@ class GemDetectorEngine:
             )
 
             cand_liq = c.liquidity_usd
-            if is_bc:
-                ratio = (trade_rec.liquidity_usd / trade_rec.market_cap_usd) if trade_rec and trade_rec.market_cap_usd > 0 else 0.60
-                cand_liq = max(1500.0, c.market_cap_usd * ratio)
-                is_drained = False
-            else:
-                is_drained = (cand_liq < 500.0)
+            is_drained = (cand_liq < 500.0) if not is_bc else False
 
             exit_trade = self.paper_engine.on_price_tick(
                 token_address=c.address,
@@ -643,10 +638,12 @@ class GemDetectorEngine:
                                     )
 
                                     if is_pump_bonding_curve:
-                                        # On pump.fun bonding curves, quote SOL is locked in the curve program until graduation.
-                                        # DexScreener does not track a standard AMM LP pair, returning liquidity: null.
-                                        ratio = (trade_rec.liquidity_usd / trade_rec.market_cap_usd) if trade_rec.market_cap_usd > 0 else 0.60
-                                        liq_usd = max(1500.0, mc_usd * ratio)
+                                        # On pump.fun bonding curves, use real liquidity recorded or reported
+                                        liq_raw = pair.get("liquidity")
+                                        if liq_raw and isinstance(liq_raw, dict) and "usd" in liq_raw and liq_raw.get("usd") is not None:
+                                            liq_usd = float(liq_raw.get("usd") or 0.0)
+                                        else:
+                                            liq_usd = trade_rec.liquidity_usd if trade_rec else 0.0
                                         is_drained = False
                                     else:
                                         liq_raw = pair.get("liquidity")
