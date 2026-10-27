@@ -1,0 +1,14 @@
+{
+  "signature": "5p58kQ1QXCgbpQSmjiDH8SKu3Vcwfrahu8Zi9WuDECsqHQSUWcM2UjXGRAaG3S1Vt1iuMvx3V9a92Pe5r7VscXSE",
+  "slot": 462000125,
+  "err": null,
+  "mint": "3XLdvSS6iEXm7eZqMauQim9uBdsPnPSEuc7Pguojpump",
+  "wallet": "BwWK17cbHxwWBKZkUYvzxLcNQ1YVyaFezduWbtm2de6s",
+  "bonding_curve_pda": "CYUvJgUZxnHJiPXHH8Gm9RkrHf58uMDz98EbUaJwdDTo",
+  "quote_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "sol_lamports_offset_40_48": 0,
+  "token_base_units_offset_48_56": 18852485192738,
+  "quote_amount_usdc_base_units_offset_334_342": 401559,
+  "anchor_6040_fixture": "2ARW8LrnpoZzFx2ijiBPtDAqqyimvW8bQj8X7wP6tZdxtXosHtVVVkucT9ScFsEAuBYAGmJjL8W97LQiWL9e972j",
+  "anchor_6004_fixture": "21bZHvGTYuX7yPEh66GEJhKUBNPGUJHTirNeZL5ziKdxjmoXrLa4B2uuFjBotzF4ThHUGYyJZ3ribQEZZrexoUKp"
+}
