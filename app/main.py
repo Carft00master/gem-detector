@@ -13,6 +13,9 @@ root_dir = Path(__file__).resolve().parent.parent
 if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
+from src.utils.env_loader import load_env_file
+load_env_file()
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 

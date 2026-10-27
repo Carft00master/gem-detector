@@ -20,7 +20,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.ui.components.help_icon import QLabel
 from app.ui.components.stat_card import StatCard
 
 
@@ -113,7 +112,85 @@ class SystemHealthView(QWidget):
         l_subs.addWidget(self.table)
         layout.addWidget(g_subs)
 
+        # 4. RPC Provider Rates & Credit Budget Matrix
+        g_budget = QGroupBox("⚡ RPC Provider Rates & Credit Budget Consumption (Helius, Ankr, dRPC)")
+        l_budget = QVBoxLayout(g_budget)
+        
+        self.BUDGET_COLS = [
+            "PROVIDER",
+            "ENDPOINT (MASKED)",
+            "RATE LIMIT",
+            "TODAY CALLS",
+            "MONTHLY USAGE",
+            "MONTHLY BUDGET",
+            "USED %",
+            "BUDGET STATUS",
+        ]
+        self.budget_table = QTableWidget()
+        self.budget_table.setColumnCount(len(self.BUDGET_COLS))
+        self.budget_table.setHorizontalHeaderLabels(self.BUDGET_COLS)
+        self.budget_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.budget_table.verticalHeader().setVisible(False)
+        self.budget_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        l_budget.addWidget(self.budget_table)
+        layout.addWidget(g_budget)
+
+        self.refresh_data()
+
     def refresh_data(self):
-        """Called on navigation or manual refresh."""
+        """Called on navigation or manual refresh to update subsystem health and provider credit rates."""
         self.banner.setText("● SYSTEM HEALTH: ALL SUBSYSTEMS NOMINAL (12 / 12 Connected)")
+
+        try:
+            from src.onchain.credit_budget import CreditBudgetTracker
+            tracker = CreditBudgetTracker()
+            usage_data = tracker.get_all_usage(include_aliases=False)
+            endpoints = usage_data.get("endpoints", {})
+            self.budget_table.setRowCount(len(endpoints))
+
+            for row, (eid, info) in enumerate(endpoints.items()):
+                p_name = info.get("provider_name", eid)
+                alias = info.get("alias", eid)
+                rate = info.get("rate_limit", "N/A")
+                today = f"{info.get('daily_calls_today', 0):,}"
+                unit = info.get("unit", "credits")
+                monthly = f"{info.get('monthly_calls', 0):,} {unit}"
+                budget = f"{info.get('monthly_budget', 0):,} {unit}"
+                pct = info.get("pct_used", 0.0)
+                is_warned = info.get("is_warned_70", False)
+                is_stopped = info.get("is_stopped_95", False)
+
+                if is_stopped:
+                    status_text = "⛔ STOPPED (>=95%)"
+                    status_color = QColor("#ef4444")
+                elif is_warned:
+                    status_text = "⚠ WARN (>=70%)"
+                    status_color = QColor("#f59e0b")
+                else:
+                    status_text = "● HEALTHY"
+                    status_color = QColor("#10b981")
+
+                pct_item = QTableWidgetItem(f"{pct:.2f}%")
+                pct_item.setForeground(status_color)
+
+                status_item = QTableWidgetItem(status_text)
+                status_item.setForeground(status_color)
+
+                items = [
+                    QTableWidgetItem(p_name),
+                    QTableWidgetItem(alias),
+                    QTableWidgetItem(rate),
+                    QTableWidgetItem(today),
+                    QTableWidgetItem(monthly),
+                    QTableWidgetItem(budget),
+                    pct_item,
+                    status_item,
+                ]
+
+                for col, itm in enumerate(items):
+                    itm.setTextAlignment(Qt.AlignCenter if col not in (0, 1) else Qt.AlignLeft | Qt.AlignVCenter)
+                    self.budget_table.setItem(row, col, itm)
+        except Exception:
+            pass
+
 

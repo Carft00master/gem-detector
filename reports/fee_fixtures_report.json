@@ -1,0 +1,274 @@
+{
+  "fee_fixtures": [
+    {
+      "tier": 0,
+      "status": "VERIFIED",
+      "transaction_status": "SUCCESS",
+      "is_reverted": false,
+      "revert_reason": null,
+      "signature": "4MtxeAMrak91NA42Vv2cEJb2MTG4j1BCr8DYDdQRQ1RPV8gXiTsE7gsiyhX2BCFz1vdYTgEMYGMH9vzsJnEVq1Nk",
+      "solscan_url": "https://solscan.io/tx/4MtxeAMrak91NA42Vv2cEJb2MTG4j1BCr8DYDdQRQ1RPV8gXiTsE7gsiyhX2BCFz1vdYTgEMYGMH9vzsJnEVq1Nk",
+      "slot": 456718840,
+      "block_time": 1791954967,
+      "swap_index_in_tx": 0,
+      "swap_description": "Sniper Buy 1 of 2 (1.0 SOL gross)",
+      "token_mint": "qTFyfJiSQhMooT6LzybsWHjMXSGWsdkY3w8C9aXpump",
+      "mint_supply": 999727198.236995,
+      "pool_address": "BNchF8GCxGKxsWbpkUE5D8RhGfB31QGT7DbAvMPY7RiV",
+      "pre_swap_reserves": {
+        "vault_sol": 67.405853768,
+        "boost_sol": 17.58401036,
+        "effective_sol": 84.989864128,
+        "tokens": 206900000.0
+      },
+      "market_cap_sol": 410.67,
+      "market_cap_current_supply_sol": 410.67,
+      "market_cap_1b_supply_sol": 410.78,
+      "tier_band": "< 420 SOL",
+      "fee_return_bps": {
+        "lp_bps": 2,
+        "protocol_bps": 93,
+        "creator_bps": 30,
+        "total_bps": 125
+      }
+    },
+    {
+      "tier": 1,
+      "status": "VERIFIED",
+      "transaction_status": "SUCCESS",
+      "is_reverted": false,
+      "revert_reason": null,
+      "signature": "4MtxeAMrak91NA42Vv2cEJb2MTG4j1BCr8DYDdQRQ1RPV8gXiTsE7gsiyhX2BCFz1vdYTgEMYGMH9vzsJnEVq1Nk",
+      "solscan_url": "https://solscan.io/tx/4MtxeAMrak91NA42Vv2cEJb2MTG4j1BCr8DYDdQRQ1RPV8gXiTsE7gsiyhX2BCFz1vdYTgEMYGMH9vzsJnEVq1Nk",
+      "slot": 456718840,
+      "block_time": 1791954967,
+      "swap_index_in_tx": 1,
+      "swap_description": "Sniper Buy 2 of 2 (978.86 SOL gross)",
+      "token_mint": "qTFyfJiSQhMooT6LzybsWHjMXSGWsdkY3w8C9aXpump",
+      "mint_supply": 999727198.236995,
+      "pool_address": "BNchF8GCxGKxsWbpkUE5D8RhGfB31QGT7DbAvMPY7RiV",
+      "pre_swap_reserves": {
+        "vault_sol": 68.393705618,
+        "boost_sol": 17.58401036,
+        "effective_sol": 85.97771597799999,
+        "tokens": 204523279.829579
+      },
+      "market_cap_sol": 420.27,
+      "market_cap_current_supply_sol": 420.27,
+      "market_cap_1b_supply_sol": 420.38,
+      "tier_band": "420 - 1,470 SOL",
+      "fee_return_bps": {
+        "lp_bps": 20,
+        "protocol_bps": 5,
+        "creator_bps": 95,
+        "total_bps": 120
+      }
+    },
+    {
+      "tier": 2,
+      "status": "VERIFIED (Reverted tx on slippage 0x1774, fee evaluation executed)",
+      "transaction_status": "REVERTED_ON_CHAIN",
+      "is_reverted": true,
+      "revert_reason": "Slippage error 0x1774 (fee evaluation executed pre-revert)",
+      "signature": "ZgM86snaoHKHzswTFnqqsPfaHW2dw6rB4V215S4AZxGNm4H9tmYCJ6vkYA5xUKR3FQGV2Dd1oqg76pzEQuZBLPC",
+      "solscan_url": "https://solscan.io/tx/ZgM86snaoHKHzswTFnqqsPfaHW2dw6rB4V215S4AZxGNm4H9tmYCJ6vkYA5xUKR3FQGV2Dd1oqg76pzEQuZBLPC",
+      "slot": 457297103,
+      "block_time": 1792080167,
+      "swap_index_in_tx": 0,
+      "swap_description": "Swap instruction 3 (evaluated pre-swap, reverted on slippage 0x1774)",
+      "token_mint": "GpACuhDe83JHRRhyNGm8zovfW1a9SrWdsCNVbLXTQ4GU",
+      "mint_supply": 967608554.223937,
+      "pool_address": "6gSkeaNuTVyZ7CiCViVJZ99EVVyMvQxGL8LQ49QefjdN",
+      "pre_swap_reserves": {
+        "vault_sol": 170.841804212,
+        "boost_sol": 17.583496214,
+        "effective_sol": 188.425300426,
+        "tokens": 100584068.7888
+      },
+      "market_cap_sol": 1812.63,
+      "market_cap_current_supply_sol": 1812.63,
+      "market_cap_1b_supply_sol": 1873.31,
+      "tier_band": "1,470 - 2,460 SOL",
+      "fee_return_bps": {
+        "lp_bps": 20,
+        "protocol_bps": 5,
+        "creator_bps": 90,
+        "total_bps": 115
+      }
+    },
+    {
+      "tier": 5,
+      "status": "VERIFIED",
+      "transaction_status": "SUCCESS",
+      "is_reverted": false,
+      "revert_reason": null,
+      "signature": "72ssJMFuQaPD8F5SMa87HaqGEW8J4NL1PsFCTCoMQGnwNvWS6b5ewqY9hWopL1qXEkVC3Zijbox8STQrKt7fh21",
+      "solscan_url": "https://solscan.io/tx/72ssJMFuQaPD8F5SMa87HaqGEW8J4NL1PsFCTCoMQGnwNvWS6b5ewqY9hWopL1qXEkVC3Zijbox8STQrKt7fh21",
+      "slot": 457296887,
+      "block_time": 1792080120,
+      "swap_index_in_tx": 0,
+      "swap_description": "Swap instruction sell (succeeded)",
+      "token_mint": "125PmQ6TXqisrhdi2cTH9RL2za6EXGPYBqPX1E5Bpump",
+      "mint_supply": 995832342.900095,
+      "pool_address": "3uj1sQuyiwEzAXzN6FSXSGuzshmmkxoce5HLTeNrgvZb",
+      "pre_swap_reserves": {
+        "vault_sol": 373.4225,
+        "boost_sol": 17.583117894,
+        "effective_sol": 391.005617894,
+        "tokens": 45126792.8446
+      },
+      "market_cap_sol": 8628.49,
+      "market_cap_current_supply_sol": 8628.49,
+      "market_cap_1b_supply_sol": 8664.6,
+      "tier_band": "4,420 - 9,820 SOL",
+      "fee_return_bps": {
+        "lp_bps": 20,
+        "protocol_bps": 5,
+        "creator_bps": 75,
+        "total_bps": 100
+      }
+    },
+    {
+      "tier": 6,
+      "status": "VERIFIED",
+      "transaction_status": "SUCCESS",
+      "is_reverted": false,
+      "revert_reason": null,
+      "signature": "5ApemkxqALaWKwnTtQQRGBLo7DpuBquhT7vJ9B9fcxUEycABKJbwokGNsxLrAAHQqXcCpihWxD9Q1Qdin2eYLY9G",
+      "solscan_url": "https://solscan.io/tx/5ApemkxqALaWKwnTtQQRGBLo7DpuBquhT7vJ9B9fcxUEycABKJbwokGNsxLrAAHQqXcCpihWxD9Q1Qdin2eYLY9G",
+      "slot": 457297103,
+      "block_time": 1792080167,
+      "swap_index_in_tx": 0,
+      "swap_description": "Swap instruction buy (succeeded)",
+      "token_mint": "ocjMSsFzMf4anB91fVdHv1MDWoqZjkM48rGsx75pump",
+      "mint_supply": 987142131.704883,
+      "pool_address": "3H1kDaJpr7twTSG2nWeSzcpa2FApAkN5DQkTuNB3bNxS",
+      "pre_swap_reserves": {
+        "vault_sol": 428.4745,
+        "boost_sol": 17.58450529,
+        "effective_sol": 446.05900528999996,
+        "tokens": 44045310.5005
+      },
+      "market_cap_sol": 9997.06,
+      "market_cap_current_supply_sol": 9997.06,
+      "market_cap_1b_supply_sol": 10127.28,
+      "tier_band": "9,820 - 14,740 SOL",
+      "fee_return_bps": {
+        "lp_bps": 20,
+        "protocol_bps": 5,
+        "creator_bps": 70,
+        "total_bps": 95
+      }
+    },
+    {
+      "tier": 7,
+      "status": "VERIFIED",
+      "transaction_status": "SUCCESS",
+      "is_reverted": false,
+      "revert_reason": null,
+      "signature": "3Xz5iuec2mDBGQWHfFmP65oSb3w8zBTFZ58FLkpi8ErZPKtLU4BFeGXeyWvU28UnANdWNyQrqZ5xsW9bBz1eJFuF",
+      "solscan_url": "https://solscan.io/tx/3Xz5iuec2mDBGQWHfFmP65oSb3w8zBTFZ58FLkpi8ErZPKtLU4BFeGXeyWvU28UnANdWNyQrqZ5xsW9bBz1eJFuF",
+      "slot": 457296887,
+      "block_time": 1792080120,
+      "swap_index_in_tx": 0,
+      "swap_description": "Swap instruction sell (succeeded)",
+      "token_mint": "4VXNQUEVq5BPHWAnKDrBN6zqqumKDVy6mYjvBtLipump",
+      "mint_supply": 995744444.954879,
+      "pool_address": "Fj2LCUkacJzQosMBZHMVLrQ6bZmqn5CZTVTR2DUTns5H",
+      "pre_swap_reserves": {
+        "vault_sol": 497.7218,
+        "boost_sol": 17.584341051,
+        "effective_sol": 515.3061410509999,
+        "tokens": 34311062.715
+      },
+      "market_cap_sol": 14954.75,
+      "market_cap_current_supply_sol": 14954.75,
+      "market_cap_1b_supply_sol": 15018.66,
+      "tier_band": "14,740 - 19,650 SOL",
+      "fee_return_bps": {
+        "lp_bps": 20,
+        "protocol_bps": 5,
+        "creator_bps": 65,
+        "total_bps": 90
+      }
+    },
+    {
+      "tier": 14,
+      "status": "UNVERIFIED",
+      "signature": "eCLvnbfPF1t119VqN1weMCjD87tnSfP97fuCz3rBuNjsZkApaed8KCzazaZbDdAWKoJ6tZi1HDv43KT99J3NJRt",
+      "solscan_url": "https://solscan.io/tx/eCLvnbfPF1t119VqN1weMCjD87tnSfP97fuCz3rBuNjsZkApaed8KCzazaZbDdAWKoJ6tZi1HDv43KT99J3NJRt",
+      "reason": "Multi-hop routing transaction ambiguity; cannot isolate single pool fee return.",
+      "token_mint": "NOT_OBTAINED",
+      "mint_supply": "NOT_OBTAINED",
+      "pool_address": "NOT_OBTAINED",
+      "pre_swap_reserves": "NOT_OBTAINED",
+      "market_cap_sol": "NOT_OBTAINED",
+      "tier_band": "49,120 - 54,030 SOL",
+      "fee_return_bps": "NOT_OBTAINED"
+    },
+    {
+      "tier": 16,
+      "status": "VERIFIED",
+      "transaction_status": "SUCCESS",
+      "is_reverted": false,
+      "revert_reason": null,
+      "signature": "615fx6Lx574jRMVSCcJU8mvFm2N1CT4CFiUtwq7AZesgbYomApyZ2NSBc7ekdBTyR5adLhbhtNKx66qrSyDxQBjK",
+      "solscan_url": "https://solscan.io/tx/615fx6Lx574jRMVSCcJU8mvFm2N1CT4CFiUtwq7AZesgbYomApyZ2NSBc7ekdBTyR5adLhbhtNKx66qrSyDxQBjK",
+      "slot": 456719056,
+      "block_time": 1791955014,
+      "swap_index_in_tx": 0,
+      "swap_description": "Real sell transaction on seasoned NODF pool (succeeded)",
+      "token_mint": "qTFyfJiSQhMooT6LzybsWHjMXSGWsdkY3w8C9aXpump",
+      "mint_supply": 999727198.236995,
+      "pool_address": "BNchF8GCxGKxsWbpkUE5D8RhGfB31QGT7DbAvMPY7RiV",
+      "pre_swap_reserves": {
+        "vault_sol": 1041.785776429,
+        "boost_sol": 17.58401036,
+        "effective_sol": 1059.369786789,
+        "tokens": 16629653.949729
+      },
+      "market_cap_sol": 63686.28,
+      "market_cap_current_supply_sol": 63686.28,
+      "market_cap_1b_supply_sol": 63703.66,
+      "tier_band": "58,940 - 63,860 SOL",
+      "fee_return_bps": {
+        "lp_bps": 20,
+        "protocol_bps": 5,
+        "creator_bps": 25,
+        "total_bps": 50
+      }
+    },
+    {
+      "tier": 24,
+      "status": "VERIFIED",
+      "transaction_status": "SUCCESS",
+      "is_reverted": false,
+      "revert_reason": null,
+      "signature": "4wafQfNxHuvtFPGSmVGM4aoxy2y1JFeh6YXFfasPftsy6EW8sjndNCCZAs13kAHKn465mXgecHe5PjV4tPiKMy2L",
+      "solscan_url": "https://solscan.io/tx/4wafQfNxHuvtFPGSmVGM4aoxy2y1JFeh6YXFfasPftsy6EW8sjndNCCZAs13kAHKn465mXgecHe5PjV4tPiKMy2L",
+      "slot": 457296887,
+      "block_time": 1792080120,
+      "swap_index_in_tx": 0,
+      "swap_description": "Swap instruction sell (succeeded)",
+      "token_mint": "DPr39FjXbdf83rZzmephqjmyzM552782cUh2vTSXpump",
+      "mint_supply": 999865374.801754,
+      "pool_address": "FuxU8Uph4kSy6hTKkxXXzD1JF2xoYgkrgwu5B4FjfXoq",
+      "pre_swap_reserves": {
+        "vault_sol": 2221.6114,
+        "boost_sol": 17.584491738,
+        "effective_sol": 2239.195891738,
+        "tokens": 7897233.4915
+      },
+      "market_cap_sol": 283503.64,
+      "market_cap_current_supply_sol": 283503.64,
+      "market_cap_1b_supply_sol": 283541.81,
+      "tier_band": ">= 98,240 SOL",
+      "fee_return_bps": {
+        "lp_bps": 20,
+        "protocol_bps": 5,
+        "creator_bps": 5,
+        "total_bps": 30
+      }
+    }
+  ]
+}

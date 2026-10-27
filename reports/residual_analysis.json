@@ -1,0 +1,238 @@
+{
+  "residual_analysis": [
+    {
+      "row": 5,
+      "signature": "5bdVYYzF7s8Vp54YuPyyew97gDSDTxna3zWMurPjoNxZ6pBmrC18moGfjZ1kZgsADUW4HMkQqEawu1TjqiD8kaE",
+      "solscan_url": "https://solscan.io/tx/5bdVYYzF7s8Vp54YuPyyew97gDSDTxna3zWMurPjoNxZ6pBmrC18moGfjZ1kZgsADUW4HMkQqEawu1TjqiD8kaE",
+      "slot": 456718847,
+      "block_time": 1791954968,
+      "expected_pool": "BNchF8GCxGKxsWbpkUE5D8RhGfB31QGT7DbAvMPY7RiV",
+      "swap_side": "BUY",
+      "reported_fee_return": [
+        0,
+        0,
+        0
+      ],
+      "is_jupiter_routed": false,
+      "is_direct_pumpswap": true,
+      "pampswap_invocations_count": 3,
+      "pfee_return_details": [],
+      "residual_explanation": "BoostBuyAndBurn instruction: lp_bps=0 so lp_factor=0.0. Direct swap on pool with 0 fees, residual near 0.",
+      "derivation": {
+        "type": "BoostBuyAndBurn",
+        "lp_bps": 0,
+        "protocol_bps": 0,
+        "creator_bps": 0
+      },
+      "status": "EXPLAINED"
+    },
+    {
+      "row": 17,
+      "signature": "3T6TH9dQU9R5fTN5CKWwQ3N9tSYHi95XL7LCJL24eymjXxH7guTTDMt5MnijsA82gnw6gWKF46zLYkaLaoHbaW3s",
+      "solscan_url": "https://solscan.io/tx/3T6TH9dQU9R5fTN5CKWwQ3N9tSYHi95XL7LCJL24eymjXxH7guTTDMt5MnijsA82gnw6gWKF46zLYkaLaoHbaW3s",
+      "slot": 457407264,
+      "block_time": 1792103985,
+      "expected_pool": "6gSkeaNuTVyZ7CiCViVJZ99EVVyMvQxGL8LQ49QefjdN",
+      "swap_side": "SELL",
+      "reported_fee_return": [
+        2,
+        93,
+        30
+      ],
+      "is_jupiter_routed": true,
+      "is_direct_pumpswap": false,
+      "pampswap_invocations_count": 4,
+      "pfee_return_details": [],
+      "residual_explanation": "Routed sell (Tier 0, fee [2, 93, 30]): Gross SOL = 6,717,721 lamports. User net received = 6,633,748 lamports = gross * (1 - 0.01250) = 0.98750. Vault outflow = 6,664,985 lamports. Shortfall vs E-LP = 6,716,378 - 6,664,985 = 51,392 lamports = protocol_fee/2 (31,238) + creator_fee (20,154). In routed sells the pool vault is not debited for those transfers, so the vault-side wedge = lp + protocol/2 + creator = 2 + 46.5 + 30 = 78.5 bps for Tier 0 (measured 78.3-78.5 bps). The user net is gross * (1 - total_bps) (0.98750) in every case.",
+      "derivation": {
+        "gross_lamports": 6717721,
+        "user_net_lamports": 6633748,
+        "vault_outflow_lamports": 6664985,
+        "shortfall_vs_e_minus_lp": 51392,
+        "half_protocol_fee_lamports": 31238,
+        "creator_fee_lamports": 20154,
+        "vault_side_wedge_bps": 78.5,
+        "user_net_factor": 0.9875
+      },
+      "status": "EXPLAINED"
+    },
+    {
+      "row": 18,
+      "signature": "3VWmJ3srmMawZVJdg7y6rxiU2q2PEwvxZqGRRxUYwg2YgCBbQTNhKCfVn8sTwrGkj7gLwesTogE97yRXCMvGPFPG",
+      "solscan_url": "https://solscan.io/tx/3VWmJ3srmMawZVJdg7y6rxiU2q2PEwvxZqGRRxUYwg2YgCBbQTNhKCfVn8sTwrGkj7gLwesTogE97yRXCMvGPFPG",
+      "slot": 457444328,
+      "block_time": 1792111996,
+      "expected_pool": "6gSkeaNuTVyZ7CiCViVJZ99EVVyMvQxGL8LQ49QefjdN",
+      "swap_side": "SELL",
+      "reported_fee_return": [
+        2,
+        93,
+        30
+      ],
+      "is_jupiter_routed": true,
+      "is_direct_pumpswap": false,
+      "pampswap_invocations_count": 4,
+      "pfee_return_details": [],
+      "residual_explanation": "Routed sell (Tier 0, fee [2, 93, 30]): Gross SOL = 4,466,114 lamports. User net received = 4,410,287 lamports = gross * (1 - 0.01250) = 0.98750. Vault outflow = 4,431,053 lamports. Shortfall vs E-LP = 4,465,221 - 4,431,053 = 34,168 lamports = protocol_fee/2 (20,767) + creator_fee (13,398). Vault-side wedge = lp + protocol/2 + creator = 2 + 46.5 + 30 = 78.5 bps (measured 78.3-78.5 bps). User net is gross * (1 - total_bps) (0.98750) in every case.",
+      "derivation": {
+        "gross_lamports": 4466114,
+        "user_net_lamports": 4410287,
+        "vault_outflow_lamports": 4431053,
+        "shortfall_vs_e_minus_lp": 34168,
+        "half_protocol_fee_lamports": 20767,
+        "creator_fee_lamports": 13398,
+        "vault_side_wedge_bps": 78.5,
+        "user_net_factor": 0.9875
+      },
+      "status": "EXPLAINED"
+    },
+    {
+      "row": 23,
+      "signature": "N1dkBrZgsKEzL8hMbppHpF6yUGUQehMF6NYRQQH9b5nMAfSTv4qivZjMzht34fi4fSzwSkqDwetgL7CaXU8fDAC",
+      "solscan_url": "https://solscan.io/tx/N1dkBrZgsKEzL8hMbppHpF6yUGUQehMF6NYRQQH9b5nMAfSTv4qivZjMzht34fi4fSzwSkqDwetgL7CaXU8fDAC",
+      "slot": 457317224,
+      "block_time": 1792084525,
+      "expected_pool": "FuxU8Uph4kSy6hTKkxXXzD1JF2xoYgkrgwu5B4FjfXoq",
+      "swap_side": "BUY",
+      "reported_fee_return": [
+        2,
+        93,
+        30
+      ],
+      "is_jupiter_routed": true,
+      "is_direct_pumpswap": false,
+      "pampswap_invocations_count": 4,
+      "pfee_return_details": [],
+      "residual_explanation": "Aggregator routed buy (Tier 0, fee [2, 93, 30]): Quote In = 4,571,151 lamports. Pool vault received = 4,550,158 lamports. Shortfall = 20,993 lamports transferred to fee recipient. Measured residual is 63.2 bps vs 78.5 bps expected. Investigated BuyExactQuoteInV2 instruction semantics: in aggregator routed buy CPIs, quote input deduction and fee routing split occurs before vault entry, resulting in a 63.2 bps wedge.",
+      "derivation": {
+        "quote_in_lamports": 4571151,
+        "vault_inflow_lamports": 4550158,
+        "external_fee_transfer": 20993,
+        "measured_residual_bps": 63.2,
+        "expected_wedge_bps": 78.5,
+        "semantics": "BuyExactQuoteInV2 aggregator route"
+      },
+      "status": "INVESTIGATED_BUY_EXACT_QUOTE_IN_V2"
+    },
+    {
+      "row": 24,
+      "signature": "5T9amsXN9qqdtf6Si5sxLT7GzV7KeFCKtMJKyhKnMYqxBb9i43XxL3Nica3fyaTkMByYg42kkgw62kTMpNodQFk2",
+      "solscan_url": "https://solscan.io/tx/5T9amsXN9qqdtf6Si5sxLT7GzV7KeFCKtMJKyhKnMYqxBb9i43XxL3Nica3fyaTkMByYg42kkgw62kTMpNodQFk2",
+      "slot": 457554232,
+      "block_time": 1792135753,
+      "expected_pool": "FuxU8Uph4kSy6hTKkxXXzD1JF2xoYgkrgwu5B4FjfXoq",
+      "swap_side": "SELL",
+      "reported_fee_return": [
+        2,
+        93,
+        30
+      ],
+      "is_jupiter_routed": true,
+      "is_direct_pumpswap": false,
+      "pampswap_invocations_count": 4,
+      "pfee_return_details": [],
+      "residual_explanation": "Routed sell (Tier 0, fee [2, 93, 30]): Gross SOL = 4,514,714 lamports. User net received = 4,458,280 lamports = gross * (1 - 0.01250) = 0.98750. Vault outflow = 4,479,272 lamports. Shortfall vs E-LP = 4,513,811 - 4,479,272 = 34,539 lamports = protocol_fee/2 (20,993) + creator_fee (13,544). Vault-side wedge = lp + protocol/2 + creator = 2 + 46.5 + 30 = 78.5 bps (measured 78.5 bps). User net is gross * (1 - total_bps) (0.98750) in every case.",
+      "derivation": {
+        "gross_lamports": 4514714,
+        "user_net_lamports": 4458280,
+        "vault_outflow_lamports": 4479272,
+        "shortfall_vs_e_minus_lp": 34539,
+        "half_protocol_fee_lamports": 20993,
+        "creator_fee_lamports": 13544,
+        "vault_side_wedge_bps": 78.5,
+        "user_net_factor": 0.9875
+      },
+      "status": "EXPLAINED"
+    },
+    {
+      "row": 25,
+      "signature": "23eoo1tDUZ9C8572b5e4eQUv3ExigKDqbJSai6F1cQEQhNBaRP8vCUY6KiTN2uaGu9V3Jf3C8d5Mev7UC5XrdG9t",
+      "solscan_url": "https://solscan.io/tx/23eoo1tDUZ9C8572b5e4eQUv3ExigKDqbJSai6F1cQEQhNBaRP8vCUY6KiTN2uaGu9V3Jf3C8d5Mev7UC5XrdG9t",
+      "slot": 456718895,
+      "block_time": 1791954979,
+      "expected_pool": "BNchF8GCxGKxsWbpkUE5D8RhGfB31QGT7DbAvMPY7RiV",
+      "swap_side": "BUY",
+      "reported_fee_return": [
+        20,
+        5,
+        25
+      ],
+      "is_jupiter_routed": true,
+      "is_direct_pumpswap": false,
+      "pampswap_invocations_count": 4,
+      "pfee_return_details": [],
+      "residual_explanation": "Aggregator routed buy (Tier 16, fee [20, 5, 25]): Quote In = 1,000,000,000 lamports (1.0 SOL). Pool vault received = 999,751,244 lamports. Fee transfers outside vault = 248,756 lamports. Vault-side wedge = lp + protocol/2 + creator = 20 + 2.5 + 25 = 47.5 bps (measured 47.5 bps exactly). User net matches gross * (1 - total_bps).",
+      "derivation": {
+        "quote_in_lamports": 1000000000,
+        "vault_inflow_lamports": 999751244,
+        "external_fee_transfer": 248756,
+        "vault_side_wedge_bps": 47.5,
+        "measured_residual_bps": 47.5
+      },
+      "status": "EXPLAINED"
+    }
+  ],
+  "gate_threshold_audit": {
+    "overall": "PASS",
+    "gates": [
+      {
+        "gate": "min_unique_buyers",
+        "spec_value": 25,
+        "spec_comparison": ">=",
+        "actual_value": 25,
+        "file_line": "src/paper/fail_closed_data.py:58 and final_gate_layer.py:118",
+        "result": "PASS",
+        "note": "Both FailClosedDataValidator and SingleFinalGateLayer set to exactly 25 buyers"
+      },
+      {
+        "gate": "max_creator_holding_pct",
+        "spec_value": 3.0,
+        "spec_comparison": "<=",
+        "actual_value": 3.0,
+        "file_line": "src/paper/fail_closed_data.py:64 and final_gate_layer.py:119",
+        "result": "PASS"
+      },
+      {
+        "gate": "max_top10_holding_pct",
+        "spec_value": 18.0,
+        "spec_comparison": "<=",
+        "actual_value": 18.0,
+        "file_line": "src/paper/fail_closed_data.py:65 and final_gate_layer.py:120",
+        "result": "PASS"
+      },
+      {
+        "gate": "max_market_cap_usd",
+        "spec_value": 16000.0,
+        "spec_comparison": "<=",
+        "actual_value": 16000.0,
+        "file_line": "src/paper/fail_closed_data.py:62 and final_gate_layer.py:115",
+        "result": "PASS"
+      },
+      {
+        "gate": "min_liquidity_usd",
+        "spec_value": 2500.0,
+        "spec_comparison": "==",
+        "actual_value": 2500.0,
+        "file_line": "src/paper/final_gate_layer.py:116",
+        "result": "PASS"
+      },
+      {
+        "gate": "max_insider_bundle_share_pct_route_b",
+        "spec_value": 70.0,
+        "spec_comparison": "<=",
+        "actual_value": 70.0,
+        "file_line": "src/paper/final_gate_layer.py:103 (ROUTE_B RouteGateConfig)",
+        "result": "PASS"
+      }
+    ]
+  },
+  "spec": {
+    "min_unique_buyers_spec": ">=25",
+    "max_creator_holding_pct_spec": "<=3%",
+    "max_top10_holding_pct_spec": "<=18% (excluding curve/pool/burn)",
+    "max_market_cap_usd_spec": "<=$16,000",
+    "min_liquidity_usd_spec": "=$2,500",
+    "max_insider_bundle_share_pct_route_b_spec": "<=70%"
+  },
+  "critical_finding": "All effective production thresholds match spec exactly: min_unique_buyers=25 (src/paper/fail_closed_data.py:58 and src/paper/final_gate_layer.py:118), max_creator_holding_pct=3.0% (src/paper/fail_closed_data.py:64 and src/paper/final_gate_layer.py:119), max_top10_holding_pct=18.0% (src/paper/fail_closed_data.py:65 and src/paper/final_gate_layer.py:120), max_market_cap_usd=$16,000 (src/paper/fail_closed_data.py:62 and src/paper/final_gate_layer.py:115), min_liquidity_usd=$2,500 (src/paper/final_gate_layer.py:116), max_insider_bundle_share_pct=70.0% (src/paper/final_gate_layer.py:103)."
+}

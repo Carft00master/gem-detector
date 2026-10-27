@@ -20,6 +20,7 @@ import numpy as np
 from src.feeds.base_feed import TokenCandidate
 from src.models.predictor import BreakoutPredictionOutput
 from src.onchain.events import OnChainEventStore
+from src.onchain.provider import SolanaProvider, ProviderTier
 from src.oracle.sol_usd import PythSolUsdOracle, StaleOraclePriceError
 from src.paper.fail_closed_data import FailClosedDataValidator, ValidatedCandidateTelemetry
 from src.paper.fill_simulator import ExecutableFillSimulator, SimulatedFillResult, SimulatedExitResult
@@ -104,9 +105,11 @@ class PaperTradingEngine:
         invariant_validator: Optional[LedgerInvariantValidator] = None,
         shadow_ledger: Optional[ShadowLedgerManager] = None,
         event_store: Optional[OnChainEventStore] = None,
+        provider: Optional[SolanaProvider] = None,
         enforce_fail_closed: bool = True,
     ):
         self.ledger = ledger or PaperTradingLedger()
+        self.provider = provider or SolanaProvider()
         self.execution_sim = execution_sim or AMMExecutionSimulator()
         self.default_position_size_usd = default_position_size_usd
         self.default_exit_policy = default_exit_policy
@@ -236,6 +239,23 @@ class PaperTradingEngine:
         cand_symbol = str(getattr(candidate, "symbol", "") or "").upper()
         target_route = route or self.route
         pos_key = f"{target_route}:{token_addr}"
+
+        # Route B Defense: Route B is disabled in FREE tier
+        if target_route == "ROUTE_B" and not self.provider.is_route_b_allowed():
+            logger.info(
+                f"Skipping paper trade for {candidate.symbol}: Route B is disabled in {self.provider.config.tier.value} tier."
+            )
+            self.shadow_ledger.record_rejected_candidate(
+                token_address=token_addr,
+                symbol=cand_symbol,
+                rejection_reason="ROUTE_B_DISABLED_IN_FREE_TIER",
+                failed_gates=["Route B requires PAID tier with Yellowstone gRPC"],
+                market_cap_usd=float(getattr(candidate, "market_cap_usd", 0.0) or 0.0),
+                liquidity_usd=float(getattr(candidate, "liquidity_usd", 0.0) or 0.0),
+                p_reach_3m=float(getattr(prediction, "p_reach_3m", 0.0) or 0.0),
+                chain=str(getattr(candidate, "chain", "solana")),
+            )
+            return None
 
         if token_addr in self.active_positions or token_addr in self.traded_tokens:
             logger.debug(f"Paper trade rejected: {candidate.symbol} ({token_addr}) has already been traded previously or is currently open.")
@@ -453,6 +473,9 @@ class PaperTradingEngine:
             schema_version=TRADE_LEDGER_SCHEMA_VERSION,
             ledger_epoch=LEDGER_EPOCH,
             route=target_route,
+            provider_tier=self.provider.config.tier.value,
+            detection_mode="polled, not streamed" if self.provider.config.tier == ProviderTier.FREE else "streamed_processed",
+            mint_lifecycle_id=f"lifecycle_{token_addr}",
             config_hash=get_current_config_hash(),
             git_commit=get_current_git_commit(),
             scanner_version=FROZEN_VERSION_MANIFEST.scanner_version,

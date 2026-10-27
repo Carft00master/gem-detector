@@ -1,0 +1,21 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "context": {
+      "slot": 457570594,
+      "apiVersion": "4.3.0-alpha.2"
+    },
+    "value": {
+      "lamports": 2179320,
+      "data": [
+        "8ZptBBGxbbz7AADDwAAQo0zevBhfs1FSriR1YkSUolR1TiUz26P1oMR5aur0Aqou4RabG0hHsEJuSuaGLTdVc/KGR0YCd3/Y35alBpuIV/6rgYT7aH9jRhjANdrEOdwa6ztVmKDwAAAAAAGCI7iR7vfwKJTJumLI+rdxWOxkqAuliqOn/6ybeoWMnMb29Gq0AiolnK8RBtGTmZ0wlW/CycIAIsfIuJFwltfiyPJclzqS5u+Iu8VeKJl/nJONkr4PrJuSCen5PKrTzY5ppWtZ0AMAAJrUA1votx/In792+e/rJhgBZOnHmZNWSfyKMvrfncrzAAAW3A4YBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAhmYPAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+        "base64"
+      ],
+      "owner": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+      "executable": false,
+      "rentEpoch": 18446744073709551615,
+      "space": 301
+    }
+  },
+  "id": 1
+}

@@ -1,0 +1,92 @@
+{
+  "metadata": {
+    "title": "Provider Live Dashboard Reconciliation Template",
+    "calls_per_endpoint": 10,
+    "generated_at_utc": "2026-10-16T09:06:35Z"
+  },
+  "verified_provider_citations": [
+    {
+      "provider": "Helius",
+      "plan": "Free Plan",
+      "monthly_quota": "1,000,000 credits/month",
+      "rate_limit": "10 req/s RPC, 2 req/s DAS",
+      "method_weights": "1 credit std RPC, 10 credits getProgramAccounts/archival/DAS",
+      "citation_url": "https://www.helius.dev/pricing",
+      "exact_quoted_text": "Monthly Credit Allowance: 1000000 credits/month. RPC calls are 1 credit with two exceptions: getProgramAccounts and archival calls are 10 credits. DAS calls are 10 credits."
+    },
+    {
+      "provider": "QuickNode",
+      "plan": "30-Day Trial (24 days remaining, EXPIRING)",
+      "monthly_quota": "10,000,000 API credits (trial period)",
+      "rate_limit": "25 req/s",
+      "method_weights": "1 credit std Solana JSON-RPC",
+      "citation_url": "https://www.quicknode.com/pricing",
+      "exact_quoted_text": "30-day trial with 10M API credits. Expiring trial account, not a recurring monthly free tier."
+    },
+    {
+      "provider": "Alchemy",
+      "plan": "Free tier (UNVERIFIED)",
+      "monthly_quota": "UNVERIFIED (0 requests observed in 24h, pending confirmation from user plan page)",
+      "rate_limit": "330 CUPS (~30 req/s)",
+      "method_weights": "15 CUs std read calls (getSlot, getLatestBlockhash), 25 CUs getTransaction, 10 CUs getBalance",
+      "citation_url": "https://www.alchemy.com/pricing",
+      "exact_quoted_text": "Quota marked UNVERIFIED pending verification from Alchemy dashboard plan page."
+    }
+  ],
+  "endpoints": [
+    {
+      "endpoint_index": 0,
+      "provider_name": "helius",
+      "masked_url": "endpoint_0 (https://mainnet.helius-rpc.com/[REDACTED])",
+      "calls_attempted": 10,
+      "calls_successful": 10,
+      "method_weight": 1,
+      "unit": "credits",
+      "expected_local_usage": 10,
+      "test_window_start_utc": "2026-10-16T09:06:17Z",
+      "test_window_end_utc": "2026-10-16T09:06:21Z",
+      "user_dashboard_verification": {
+        "dashboard_pre_count": "[TO BE FILLED BY USER]",
+        "dashboard_post_count": "[TO BE FILLED BY USER]",
+        "observed_dashboard_delta": "[TO BE FILLED BY USER]",
+        "discrepancy_delta": "[TO BE FILLED BY USER]"
+      }
+    },
+    {
+      "endpoint_index": 1,
+      "provider_name": "quicknode",
+      "masked_url": "endpoint_1 (https://[REDACTED].solana-mainnet.quiknode.pro/[REDACTED])",
+      "calls_attempted": 10,
+      "calls_successful": 10,
+      "method_weight": 1,
+      "unit": "API credits",
+      "expected_local_usage": 10,
+      "test_window_start_utc": "2026-10-16T09:06:21Z",
+      "test_window_end_utc": "2026-10-16T09:06:30Z",
+      "user_dashboard_verification": {
+        "dashboard_pre_count": "[TO BE FILLED BY USER]",
+        "dashboard_post_count": "[TO BE FILLED BY USER]",
+        "observed_dashboard_delta": "[TO BE FILLED BY USER]",
+        "discrepancy_delta": "[TO BE FILLED BY USER]"
+      }
+    },
+    {
+      "endpoint_index": 2,
+      "provider_name": "alchemy",
+      "masked_url": "endpoint_2 (https://solana-mainnet.g.alchemy.com/[REDACTED])",
+      "calls_attempted": 10,
+      "calls_successful": 10,
+      "method_weight": 15,
+      "unit": "Compute Units (CUs)",
+      "expected_local_usage": 150,
+      "test_window_start_utc": "2026-10-16T09:06:30Z",
+      "test_window_end_utc": "2026-10-16T09:06:35Z",
+      "user_dashboard_verification": {
+        "dashboard_pre_count": "[TO BE FILLED BY USER]",
+        "dashboard_post_count": "[TO BE FILLED BY USER]",
+        "observed_dashboard_delta": "[TO BE FILLED BY USER]",
+        "discrepancy_delta": "[TO BE FILLED BY USER]"
+      }
+    }
+  ]
+}

@@ -18,6 +18,9 @@ from typing import Any, Dict
 # Ensure project root is in sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from src.utils.env_loader import load_env_file
+load_env_file()
+
 # Ensure Windows stdout/stderr supports UTF-8 Unicode emojis
 if sys.platform == "win32":
     try:

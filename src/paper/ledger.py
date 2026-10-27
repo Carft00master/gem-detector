@@ -144,6 +144,9 @@ class PaperTradeRecord:
     schema_version: str = TRADE_LEDGER_SCHEMA_VERSION
     ledger_epoch: str = LEDGER_EPOCH
     route: str = "ROUTE_A"                 # "ROUTE_A" (Organic) | "ROUTE_B" (First-Block)
+    provider_tier: str = "FREE"            # "FREE" | "PAID"
+    detection_mode: str = "polled, not streamed" # "polled, not streamed" | "streamed_processed"
+    mint_lifecycle_id: Optional[str] = None
     config_hash: str = ""
     git_commit: str = ""
     scanner_version: str = SCANNER_VERSION
@@ -478,9 +481,21 @@ class PaperTradingLedger:
                     venue_state_at_exit TEXT,
                     actual_creator_holding_pct REAL,
                     actual_top10_holding_pct REAL,
-                    actual_curve_filler_holding_pct REAL
+                    actual_curve_filler_holding_pct REAL,
+                    provider_tier TEXT DEFAULT 'FREE',
+                    detection_mode TEXT DEFAULT 'polled, not streamed',
+                    mint_lifecycle_id TEXT
                 )
             """)
+            # Migration check for existing databases
+            cursor.execute("PRAGMA table_info(paper_trades)")
+            existing_cols = {row[1] for row in cursor.fetchall()}
+            if "provider_tier" not in existing_cols:
+                cursor.execute("ALTER TABLE paper_trades ADD COLUMN provider_tier TEXT DEFAULT 'FREE'")
+            if "detection_mode" not in existing_cols:
+                cursor.execute("ALTER TABLE paper_trades ADD COLUMN detection_mode TEXT DEFAULT 'polled, not streamed'")
+            if "mint_lifecycle_id" not in existing_cols:
+                cursor.execute("ALTER TABLE paper_trades ADD COLUMN mint_lifecycle_id TEXT")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_paper_token ON paper_trades(token_address)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_paper_status ON paper_trades(status)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_paper_time ON paper_trades(timestamp)")

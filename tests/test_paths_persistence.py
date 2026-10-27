@@ -31,7 +31,7 @@ def test_data_persistence_invariants():
     paper_db = data_dir / "paper_trading.db"
     assert paper_db.exists()
 
-    with sqlite3.connect(paper_db) as conn:
+    with sqlite3.connect(f"file:{paper_db.as_posix()}?mode=ro", uri=True) as conn:
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 

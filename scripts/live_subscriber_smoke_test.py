@@ -24,9 +24,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-import aiohttp
 import websockets
 
+from src.feeds.dexscreener import DexScreenerFeed
 from src.onchain.events import OnChainEvent, OnChainEventStore
 from src.onchain.provider import SolanaProvider
 from src.onchain.subscriber import OnChainEventSubscriber
@@ -58,49 +58,48 @@ class LiveSubscriberSmokeTest:
         self.reconnects_count: int = 0
         self.errors_count: int = 0
         
-        # Latency buckets (in ms)
-        self.latency_buckets = {
-            "<500ms": 0,
-            "500ms-1s": 0,
-            "1s-2s": 0,
-            "2s-5s": 0,
-            ">5s": 0,
+        # Slot-level timing distribution (replaces discrete 1-second block-time calculation)
+        self.slot_delta_buckets = {
+            "S+0 (same slot)": 0,
+            "S+1 (+1 slot, ~400ms)": 0,
+            "S+2 (+2 slots, ~800ms)": 0,
+            "S+3..S+5 (+1.2s-2.0s)": 0,
+            ">S+5 (>2.0s)": 0,
         }
-        self.latency_samples: List[float] = []
+        self.slot_delta_samples: List[int] = []
+        self.highest_observed_slot: int = 0
         
         # Comparison with DexScreener
         self.onchain_mints: set = set()
         self.dexscreener_mints: set = set()
         self.matching_mints: set = set()
 
-    def record_latency(self, latency_ms: float):
-        self.latency_samples.append(latency_ms)
-        if latency_ms < 500:
-            self.latency_buckets["<500ms"] += 1
-        elif latency_ms < 1000:
-            self.latency_buckets["500ms-1s"] += 1
-        elif latency_ms < 2000:
-            self.latency_buckets["1s-2s"] += 1
-        elif latency_ms < 5000:
-            self.latency_buckets["2s-5s"] += 1
+    def record_slot_delta(self, delta_slots: int):
+        self.slot_delta_samples.append(delta_slots)
+        if delta_slots == 0:
+            self.slot_delta_buckets["S+0 (same slot)"] += 1
+        elif delta_slots == 1:
+            self.slot_delta_buckets["S+1 (+1 slot, ~400ms)"] += 1
+        elif delta_slots == 2:
+            self.slot_delta_buckets["S+2 (+2 slots, ~800ms)"] += 1
+        elif 3 <= delta_slots <= 5:
+            self.slot_delta_buckets["S+3..S+5 (+1.2s-2.0s)"] += 1
         else:
-            self.latency_buckets[">5s"] += 1
+            self.slot_delta_buckets[">S+5 (>2.0s)"] += 1
 
-    async def poll_dexscreener_pairs(self, session: aiohttp.ClientSession):
+    async def poll_dexscreener_pairs(self):
         """Poll DexScreener latest token profiles and pairs to measure detection coverage."""
-        url = "https://api.dexscreener.com/token-profiles/latest/v1"
         try:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    if isinstance(data, list):
-                        for item in data:
-                            if item.get("chainId") == "solana":
-                                t_addr = item.get("tokenAddress")
-                                if t_addr:
-                                    self.dexscreener_mints.add(t_addr)
-                                    if t_addr in self.onchain_mints:
-                                        self.matching_mints.add(t_addr)
+            feed = DexScreenerFeed()
+            data = await feed.fetch_token_profiles()
+            if isinstance(data, list):
+                for item in data:
+                    if item.get("chainId") == "solana":
+                        t_addr = item.get("tokenAddress")
+                        if t_addr:
+                            self.dexscreener_mints.add(t_addr)
+                            if t_addr in self.onchain_mints:
+                                self.matching_mints.add(t_addr)
         except Exception as e:
             logger.debug(f"DexScreener poll error: {e}")
 
@@ -111,10 +110,8 @@ class LiveSubscriberSmokeTest:
         
         from src.utils.ssl_context import get_verified_ssl_context
         ssl_ctx = get_verified_ssl_context()
-        connector = aiohttp.TCPConnector(ssl=ssl_ctx)
         
-        async with aiohttp.ClientSession(connector=connector) as http_session:
-            while time.time() < end_time:
+        while time.time() < end_time:
                 try:
                     logger.info("Connecting to live WebSocket stream...")
                     async with websockets.connect(
@@ -136,7 +133,7 @@ class LiveSubscriberSmokeTest:
                             now_t = time.time()
                             if now_t - last_dex_poll >= 15.0:
                                 last_dex_poll = now_t
-                                asyncio.create_task(self.poll_dexscreener_pairs(http_session))
+                                asyncio.create_task(self.poll_dexscreener_pairs())
 
                             # Periodic telemetry logging every 30s
                             if now_t - last_stats_log >= 30.0:
@@ -167,10 +164,12 @@ class LiveSubscriberSmokeTest:
                                 elif ev.event_type == "MIGRATION":
                                     self.migrations_count += 1
 
-                                # Compute detection latency
-                                if ev.block_time > 0:
-                                    latency_ms = max(0.0, (recv_ts - ev.block_time) * 1000.0)
-                                    self.record_latency(latency_ms)
+                                # Slot-level timing (replaces discrete 1-second block-time calculation)
+                                if ev.slot > 0:
+                                    if ev.slot > self.highest_observed_slot:
+                                        self.highest_observed_slot = ev.slot
+                                    delta_slots = max(0, self.highest_observed_slot - ev.slot)
+                                    self.record_slot_delta(delta_slots)
 
                 except asyncio.CancelledError:
                     break
@@ -187,10 +186,11 @@ class LiveSubscriberSmokeTest:
         elapsed = max(1.0, time.time() - self.start_time)
         eps = self.total_events / elapsed
         
-        avg_lat = sum(self.latency_samples) / max(1, len(self.latency_samples))
-        sorted_lat = sorted(self.latency_samples)
-        p50_lat = sorted_lat[int(len(sorted_lat) * 0.5)] if sorted_lat else 0.0
-        p95_lat = sorted_lat[int(len(sorted_lat) * 0.95)] if sorted_lat else 0.0
+        sorted_slots = sorted(self.slot_delta_samples)
+        p50_slot = sorted_slots[int(len(sorted_slots) * 0.5)] if sorted_slots else 0
+        p95_slot = sorted_slots[int(len(sorted_slots) * 0.95)] if sorted_slots else 0
+        p99_slot = sorted_slots[int(len(sorted_slots) * 0.99)] if sorted_slots else 0
+        mean_slot = sum(self.slot_delta_samples) / max(1, len(self.slot_delta_samples))
         
         coverage_pct = (len(self.matching_mints) / max(1, len(self.dexscreener_mints))) * 100.0 if self.dexscreener_mints else 100.0
 
@@ -205,11 +205,14 @@ class LiveSubscriberSmokeTest:
                 "sells": self.sells_count,
                 "migrations": self.migrations_count,
             },
-            "detection_latency_ms": {
-                "mean_ms": round(avg_lat, 1),
-                "median_p50_ms": round(p50_lat, 1),
-                "p95_ms": round(p95_lat, 1),
-                "histogram_distribution": self.latency_buckets,
+            "slot_delta_timing": {
+                "n_samples": len(self.slot_delta_samples),
+                "mean_slot_lag": round(mean_slot, 2),
+                "p50_slot_lag": p50_slot,
+                "p95_slot_lag": p95_slot,
+                "p99_slot_lag": p99_slot,
+                "histogram_distribution": self.slot_delta_buckets,
+                "timing_disclaimer": "Discrete 1-second block-time calculation discarded. Slot-level timing (delta slots) used. Sub-slot millisecond latency requires Yellowstone gRPC.",
             },
             "coverage_vs_dexscreener": {
                 "onchain_mints_detected": len(self.onchain_mints),

@@ -39,11 +39,20 @@ class OnChainEvent:
     commitment: str = "processed"          # "processed" | "confirmed" | "finalized"
     received_at: float = field(default_factory=lambda: datetime.now(timezone.utc).timestamp())
     latency_ms: float = 0.0
+    slot_delta: Optional[int] = None       # Slot lag: max(0, current_slot - slot)
     details: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
-        if self.latency_ms == 0.0 and self.received_at > 0 and self.block_time > 0:
-            self.latency_ms = round((self.received_at - self.block_time) * 1000.0, 2)
+        # Discard second-resolution block_time subtraction:
+        # Subtracting 1-second integer block_time from float received_at creates quantization artifacts.
+        # Slot-level timing (slot_delta) is used instead:
+        if self.slot_delta is None and "current_slot" in self.details:
+            try:
+                curr = int(self.details["current_slot"])
+                if curr >= self.slot:
+                    self.slot_delta = curr - self.slot
+            except (ValueError, TypeError):
+                pass
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

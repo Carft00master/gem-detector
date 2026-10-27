@@ -81,6 +81,11 @@ def _make_candidate(address: str, symbol: str, mc: float, liq: float, p3m: float
         ),
     )
     cand.calculate_ratios()
+    cand.p_rug = 0.05
+    cand.data_confidence = 0.85
+    cand.is_single_wallet_curve_filler = False
+    cand.price_impact_pct = 0.83
+    cand.slippage_pct = 1.0
     return cand
 
 

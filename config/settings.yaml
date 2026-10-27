@@ -22,6 +22,42 @@ scanner:
   dashboard_display_limit: 15
 
 # ==============================================================================
+# PROVIDER TIER ARCHITECTURE & BUDGETS (Zero-Budget FREE Tier vs PAID)
+# ==============================================================================
+provider:
+  tier: "FREE"                         # "FREE" (PumpPortal detection + polled reserves) | "PAID" (Yellowstone gRPC)
+  endpoint_budgets:                    # Explicit per-endpoint monthly credit budgets (strictly enforced, fails if missing)
+    # 1. Helius Free Plan: 1,000,000 credits/month, 10 req/s RPC, 2 req/s DAS (Verified Oct 2026)
+    #    Unit: credits (1 credit/std RPC: getTransaction, getSignaturesForAddress, getAccountInfo; 10 credits: DAS/getProgramAccounts)
+    #    Source: https://www.helius.dev/pricing | https://docs.helius.dev/welcome-to-helius/limits-and-plans
+    helius: 1000000
+
+    # 2. QuickNode 30-Day Trial: 10,000,000 API credits (24 days remaining, EXPIRING) (~25 req/s limit)
+    #    Unit: API credits (1 credit/call for standard Solana JSON-RPC)
+    #    Source: https://www.quicknode.com/pricing (30-day trial account, not recurring monthly free tier)
+    quicknode: 10000000
+
+    # 3. Alchemy Free Tier: Quota UNVERIFIED (0 requests in 24h observed on dashboard, pending confirmation from user plan page)
+    #    Unit: Compute Units (CUs) (10-25 CUs per standard Solana JSON-RPC method)
+    #    Source: https://www.alchemy.com/pricing (marked UNVERIFIED until verified from user dashboard plan page)
+    alchemy: 30000000
+
+    # 4. Ankr Freemium Tier (Free): 200,000,000 API credits/month (~30 req/s limit) (Verified Oct 2026)
+    #    Unit: API credits (Standard EVM/Solana JSON-RPC weight; historical tx methods disabled on free plan)
+    #    Source: https://www.ankr.com/rpc/pricing/ | https://www.ankr.com/docs/rpc-service/service-plans/
+    ankr: 200000000
+
+    # 5. dRPC Free Tier ($0 Plan): 210,000,000 Compute Units (CUs)/month (~2,100 CUPS / ~100 RPS) (Verified Oct 2026)
+    #    Unit: Compute Units (CUs) (20 CU: getTransaction, getMultipleAccounts; 10 CU: getAccountInfo, getLatestBlockhash)
+    #    Source: https://drpc.org/pricing | https://drpc.org/docs/pricing
+    drpc: 210000000
+
+  credit_warn_threshold_pct: 0.70      # Log warning alert at 70% of monthly budget
+  credit_hard_stop_threshold_pct: 0.95 # Hard stop at 95% of monthly budget
+  pool_poll_interval_sec: 3.0          # Batched polling interval for open positions + watchlist (2-5s)
+  enable_live_route_b_in_free_tier: false # Live Route B disabled in FREE tier
+
+# ==============================================================================
 # PAPER TRADING & EXECUTION ENGINE
 # ==============================================================================
 paper_trading:

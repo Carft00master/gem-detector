@@ -1,0 +1,824 @@
+{
+  "metadata": {
+    "title": "Route B First-Block Migration Retrospective Analysis",
+    "sample_size_non_calibration": 35,
+    "sample_size_calibration": 0,
+    "generated_at_utc": "2026-10-25T13:20:00Z"
+  },
+  "non_calibration_summary": {
+    "pools_total": 35,
+    "pools_reached_creation": 34,
+    "pools_unreached_creation": 1,
+    "pools_with_s0_swaps_count": 17,
+    "pools_with_s0_swaps_share_pct": 50.0,
+    "wilson_95_ci_s0_swap_share": {
+      "lower_pct": 34.07,
+      "upper_pct": 65.93
+    },
+    "total_verified_pumpswap_swaps": {
+      "S+0": 31,
+      "S+1": 71,
+      "S+2": 85,
+      "S+3": 58
+    },
+    "failed_transaction_counts_by_error_code": {
+      "{'InstructionError': [0, {'Custom': 7312}]}": 51,
+      "{'InstructionError': [4, {'Custom': 6040}]}": 29,
+      "{'InstructionError': [7, {'Custom': 6040}]}": 20,
+      "{'InstructionError': [3, {'Custom': 6004}]}": 16,
+      "{'InstructionError': [3, {'Custom': 6040}]}": 131,
+      "{'InstructionError': [2, {'Custom': 9003}]}": 8,
+      "{'InstructionError': [1, {'Custom': 2006}]}": 23,
+      "{'InstructionError': [5, {'Custom': 6000}]}": 1,
+      "{'InstructionError': [8, {'Custom': 6040}]}": 1,
+      "{'InstructionError': [2, {'Custom': 6040}]}": 1,
+      "{'InstructionError': [3, {'Custom': 3012}]}": 2,
+      "{'InstructionError': [2, {'Custom': 9002}]}": 1,
+      "{'InstructionError': [4, {'Custom': 1}]}": 1,
+      "{'InstructionError': [4, {'Custom': 6004}]}": 4,
+      "{'InstructionError': [0, {'Custom': 12}]}": 1,
+      "{'InstructionError': [6, {'Custom': 6004}]}": 1,
+      "{'InstructionError': [0, 'InvalidAccountData']}": 1
+    },
+    "failed_pamm_program_errors": {
+      "total_pamm_failures": 229,
+      "breakdown": {
+        "{'InstructionError': [4, {'Custom': 6040}]}": 29,
+        "{'InstructionError': [7, {'Custom': 6040}]}": 20,
+        "{'InstructionError': [3, {'Custom': 6004}]}": 16,
+        "{'InstructionError': [3, {'Custom': 6040}]}": 131,
+        "{'InstructionError': [1, {'Custom': 2006}]}": 23,
+        "{'InstructionError': [8, {'Custom': 6040}]}": 1,
+        "{'InstructionError': [2, {'Custom': 6040}]}": 1,
+        "{'InstructionError': [3, {'Custom': 3012}]}": 2,
+        "{'InstructionError': [4, {'Custom': 1}]}": 1,
+        "{'InstructionError': [4, {'Custom': 6004}]}": 4,
+        "{'InstructionError': [6, {'Custom': 6004}]}": 1
+      }
+    },
+    "failed_outer_bot_wrapper_errors": {
+      "total_outer_failures": 63,
+      "breakdown": {
+        "{'InstructionError': [0, {'Custom': 7312}]}": 51,
+        "{'InstructionError': [2, {'Custom': 9003}]}": 8,
+        "{'InstructionError': [5, {'Custom': 6000}]}": 1,
+        "{'InstructionError': [2, {'Custom': 9002}]}": 1,
+        "{'InstructionError': [0, {'Custom': 12}]}": 1,
+        "{'InstructionError': [0, 'InvalidAccountData']}": 1
+      }
+    },
+    "total_failed_transactions_combined": 292,
+    "missing_data_share": {
+      "S+0": "1/35 (2.86% NOT_OBTAINED), 17/34 NO_SWAP_IN_WINDOW",
+      "S+1": "1/35 (2.86% NOT_OBTAINED), 7/34 NO_SWAP_IN_WINDOW",
+      "S+2": "1/35 (2.86% NOT_OBTAINED), 5/34 NO_SWAP_IN_WINDOW",
+      "S+3": "1/35 (2.86% NOT_OBTAINED), 15/34 NO_SWAP_IN_WINDOW"
+    },
+    "retraction_statement": "Retraction: Earlier preliminary reports claimed '34/35 pools reached creation with 161,643 swaps in S+0' and 'all 34 pools have active trading'. Those claims are fully retracted. Detailed pagination back to migration signature reveals 245 total verified PumpSwap AMM swaps across all 34 reached pools in [S, S+3] (S+0: 31, S+1: 71, S+2: 85, S+3: 58). Exactly 17 of 34 reached pools (50.00%) have confirmed swaps in S+0, with a Wilson 95% confidence interval of [34.07%, 65.93%]. Row 8 (pool 6o21eU5RUvaNABzCzHAS...) was stopped at 100,000 signatures without reaching creation (~11,939 slots remaining) and is marked NOT_OBTAINED (lower bound AT_LEAST 0).",
+    "version_1_tx_audit": "The 9 signatures previously reported NOT FOUND (row 1: dZu1..., 5Yiz..., 57YA...; row 6: 2xYE..., 2ej3..., 37xq..., 46My..., 5biz..., 4rhA...) were Version 1 transactions. When queried with maxSupportedTransactionVersion: 1, RPC returned full valid transactions at confirmed commitment without error. All 9 fixtures are fully downloaded and verified in tests/fixtures/txs/."
+  },
+  "calibration_nodf": {
+    "mint": "qTFyfJiSQhMooT6LzybsWHjMXSGWsdkY3w8C9aXpump",
+    "migration_sig": "3LXpRAvn5DNvVV1aP7e3Euw7Kbmxpq5xycyQkfHmJneVyjtFjKwsPh6c9JuckKQhuGG3TwFNfZ411ARiZoSpkbGQ",
+    "solscan_migration_url": "https://solscan.io/tx/3LXpRAvn5DNvVV1aP7e3Euw7Kbmxpq5xycyQkfHmJneVyjtFjKwsPh6c9JuckKQhuGG3TwFNfZ411ARiZoSpkbGQ",
+    "pool_address": "BNchF8GCxGKxsWbpkUE5D8RhGfB31QGT7DbAvMPY7RiV",
+    "creation_slot": 456718840,
+    "sniper_sig": "4MtxeAMrak91NA42Vv2cEJb2MTG4j1BCr8DYDdQRQ1RPV8gXiTsE7gsiyhX2BCFz1vdYTgEMYGMH9vzsJnEVq1Nk",
+    "solscan_sniper_url": "https://solscan.io/tx/4MtxeAMrak91NA42Vv2cEJb2MTG4j1BCr8DYDdQRQ1RPV8gXiTsE7gsiyhX2BCFz1vdYTgEMYGMH9vzsJnEVq1Nk",
+    "effective_opening_sol_reserves": 84.990359,
+    "opening_token_reserves": 206900000.0,
+    "opening_price_sol": 4.1077988883518607e-07,
+    "post_sniper_effective_sol_reserves": 1055.167358,
+    "post_sniper_token_reserves": 16695781.67,
+    "post_sniper_price_sol": 6.319963801970345e-05,
+    "slot_s0_price_jump_multiple": 153.853,
+    "jump_multiple_label": "153.853x (audited jump on consistent 84.990 SOL reserve basis)",
+    "is_unreachable": true,
+    "curve_filler_holding_pct": 79.31,
+    "migrated_pool_token_reserve_pct": 20.69
+  },
+  "endpoint_credit_usage_logs": {
+    "endpoint_0 (Helius)": {
+      "calls_recorded_wrapper": 3728,
+      "credits_dashboard_reconciled": 4280,
+      "untracked_prior_calls": 552,
+      "status": "RECONCILED_WITH_DASHBOARD",
+      "note": "Free Plan (1,000,000 credits/month). Dashboard reports 4,280 credits; local wrapper logged 3,728 calls (wrapper-only, incomplete)."
+    },
+    "endpoint_1 (QuickNode)": {
+      "calls_recorded_wrapper": 559,
+      "credits_dashboard_reconciled": 5900,
+      "untracked_prior_calls": 5341,
+      "status": "RECONCILED_WITH_DASHBOARD",
+      "note": "30-Day Trial (24 days remaining, EXPIRING; rate limit unverified). Dashboard reports ~5,900 credits; local wrapper logged 559 calls (wrapper-only, incomplete)."
+    },
+    "endpoint_2 (Alchemy)": {
+      "calls_recorded_wrapper": 10290,
+      "credits_dashboard_reconciled": "0 req/24h on dashboard",
+      "status": "QUOTA_UNVERIFIED",
+      "note": "Free Tier (30,000,000 CUs/month). Dashboard shows 0 requests in 24h; pending confirmation from user plan page."
+    }
+  },
+  "per_migration_table": [
+    {
+      "index": 1,
+      "mint": "kKKZCfz8eRMsWFhnriMd6neQfE1XqQvgdwj3Ghbpump",
+      "migration_signature": "5xp2FqpDjKoC5K5rmpjAy3sJawHokjaXQX72es6eUgvVKAnw2XAoSCfBThHQz6ds4ggeCscVxabAGV9yVEd3qx9R",
+      "solscan_url": "https://solscan.io/tx/5xp2FqpDjKoC5K5rmpjAy3sJawHokjaXQX72es6eUgvVKAnw2XAoSCfBThHQz6ds4ggeCscVxabAGV9yVEd3qx9R",
+      "pool_address": "2aDTTadiRyUPEZPicRbXx4GjdzttFLFuLpdFonwW8iYM",
+      "pool_status": "UNVERIFIED_ACCOUNT",
+      "creation_slot": 456805124,
+      "timestamp": 1791973691,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 2,
+        "S+1": 3,
+        "S+2": 1,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 3085,
+      "min_slot_reached": 456805124
+    },
+    {
+      "index": 2,
+      "mint": "t8DeLig6nw3N7CAePH7QjCRvihbYsn5fYENCdVoMSDh",
+      "migration_signature": "2WoRkTzaAuZzUkXnMTSzgDJMFwbVfEJxVXF5xVdhqr8EBw3szibaP2VmsnRck3QeGX5eLB39MJZfTwxpseQNQwT6",
+      "solscan_url": "https://solscan.io/tx/2WoRkTzaAuZzUkXnMTSzgDJMFwbVfEJxVXF5xVdhqr8EBw3szibaP2VmsnRck3QeGX5eLB39MJZfTwxpseQNQwT6",
+      "pool_address": "5sv6vBwB62u1mwcqXBKVoVCiD2Ws3GrHZGBxnSkddwPb",
+      "pool_status": "UNVERIFIED_ACCOUNT",
+      "creation_slot": 456805624,
+      "timestamp": 1791973797,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 3,
+        "S+1": 1,
+        "S+2": 1,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 4807,
+      "min_slot_reached": 456805624
+    },
+    {
+      "index": 3,
+      "mint": "CuztpLLNi4Tpb5bjwKkwMkh5zvckeTDugXM2Ec7upump",
+      "migration_signature": "Nk2JxZCcZmcdBMAs48Qdc9XVYLjZK68AnEZCaMcyuPvZNuE8bXg8YENnPZ578pFSriwktC5XChZoR45DeU5Nwpe",
+      "solscan_url": "https://solscan.io/tx/Nk2JxZCcZmcdBMAs48Qdc9XVYLjZK68AnEZCaMcyuPvZNuE8bXg8YENnPZ578pFSriwktC5XChZoR45DeU5Nwpe",
+      "pool_address": "ALxrCNAAWa8kE9rRUwZjh44AifLfPsoX4WVEJSv4cHsA",
+      "pool_status": "UNVERIFIED_ACCOUNT",
+      "creation_slot": 456805832,
+      "timestamp": 1791973842,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 1,
+        "S+2": 3,
+        "S+3": 2
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 8080,
+      "min_slot_reached": 456805832
+    },
+    {
+      "index": 4,
+      "mint": "ELxeTgpj7HwhJ4EmD3S482ZaQ8NhjAfFgTWn3Phpump",
+      "migration_signature": "4VFMaNfBxnKmQjetqtXM7WWJSAhDpxtA1GL6Kzpr7xNo1wooCmPKqAYowu8w1AaZPMJbbXakDiwoYJRK2MYtHLpk",
+      "solscan_url": "https://solscan.io/tx/4VFMaNfBxnKmQjetqtXM7WWJSAhDpxtA1GL6Kzpr7xNo1wooCmPKqAYowu8w1AaZPMJbbXakDiwoYJRK2MYtHLpk",
+      "pool_address": "4fEYFhmZmVhNX3GNDHWKrmeEWNcAMdaN5Dq9WfZB3Ktq",
+      "pool_status": "UNVERIFIED_ACCOUNT",
+      "creation_slot": 456806912,
+      "timestamp": 1791974074,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 1,
+        "S+1": 1,
+        "S+2": 3,
+        "S+3": 1
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 2822,
+      "min_slot_reached": 456806912
+    },
+    {
+      "index": 5,
+      "mint": "DLDrtrpassobFPMu2UMV35H7dAJ3Juo3dCs5V7NshBFg",
+      "migration_signature": "5VS3A9dmiW5DxhAX6QHn9Hw8YPAQ3gXD1nqTFPXZrXQPdSbJgCZHuRkD9838ZjQg5zYjdZ6JGqaniE7Si6KDMZH3",
+      "solscan_url": "https://solscan.io/tx/5VS3A9dmiW5DxhAX6QHn9Hw8YPAQ3gXD1nqTFPXZrXQPdSbJgCZHuRkD9838ZjQg5zYjdZ6JGqaniE7Si6KDMZH3",
+      "pool_address": "5AdSGRTSz8G4z2wdzPC85P3bMWeG6TSjvkS87XSSCFTD",
+      "pool_status": "UNVERIFIED_ACCOUNT",
+      "creation_slot": 456807044,
+      "timestamp": 1791974103,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 1,
+        "S+1": 0,
+        "S+2": 5,
+        "S+3": 1
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 8633,
+      "min_slot_reached": 456807044
+    },
+    {
+      "index": 6,
+      "mint": "6ziKs4YXGC5P8rv69GZTvipVfmdk4rMuPwLYQaoFpump",
+      "migration_signature": "3yAyuGAcNH9djVeuXvFdnrfPstB7U9mNewWsHYpYLrNE3nxHJNfYgQhuqnNgJFjpAooE2XThQGsDmcMmRUAVSiUZ",
+      "solscan_url": "https://solscan.io/tx/3yAyuGAcNH9djVeuXvFdnrfPstB7U9mNewWsHYpYLrNE3nxHJNfYgQhuqnNgJFjpAooE2XThQGsDmcMmRUAVSiUZ",
+      "pool_address": "5iN6UpMNKkAjBJSAHroqPd33GwBHS2N3mCuahpzRgVod",
+      "pool_status": "UNVERIFIED_ACCOUNT",
+      "creation_slot": 456807310,
+      "timestamp": 1791974160,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 1,
+        "S+2": 4,
+        "S+3": 2
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 20358,
+      "min_slot_reached": 456807310
+    },
+    {
+      "index": 7,
+      "mint": "DU57CPe15AV1f1W5JXLMPdrTUksa7uPkbd73ahwZpump",
+      "migration_signature": "5G7XheGLUwXJhvAc8a92c9GF4xM5hbqmrPvApDHQdZM3NQmu3ia517Ccy4823bS27q8hQxEPS2yZMhcR23EskgxS",
+      "solscan_url": "https://solscan.io/tx/5G7XheGLUwXJhvAc8a92c9GF4xM5hbqmrPvApDHQdZM3NQmu3ia517Ccy4823bS27q8hQxEPS2yZMhcR23EskgxS",
+      "pool_address": "DELN2eauLz8gwM7jnMALA6zkDzSGckyakbMgaQDB12RS",
+      "pool_status": "UNVERIFIED_ACCOUNT",
+      "creation_slot": 456807889,
+      "timestamp": 1791974284,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 3,
+        "S+2": 1,
+        "S+3": 3
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 3587,
+      "min_slot_reached": 456807889
+    },
+    {
+      "index": 8,
+      "mint": "DPdH8mWRCntu8dDyWrrnDo1byHSYkeRz2BN6Vk21pump",
+      "migration_signature": "2GB5SucJxvHpC4DH7e1ensJaFV3Vfg2oAaSRADh5V11xzcAdtWwCQ7Rd9JQgYsAKcPjAkSyTBFAfzgEFfg59b1un",
+      "solscan_url": "https://solscan.io/tx/2GB5SucJxvHpC4DH7e1ensJaFV3Vfg2oAaSRADh5V11xzcAdtWwCQ7Rd9JQgYsAKcPjAkSyTBFAfzgEFfg59b1un",
+      "pool_address": "6o21eU5RUvaNABzCzHAS24S7FaEHDsYGqtJW2B5KZ7i6",
+      "pool_status": "UNVERIFIED_ACCOUNT",
+      "creation_slot": 456807909,
+      "timestamp": 1791974288,
+      "reached_creation_slot": false,
+      "swaps_found_s0_to_s3": {
+        "S+0": "NOT_OBTAINED",
+        "S+1": "NOT_OBTAINED",
+        "S+2": "NOT_OBTAINED",
+        "S+3": "NOT_OBTAINED"
+      },
+      "pagination_status": "PAGINATED_TO_100K_CAP_UNREACHED",
+      "signatures_paginated_count": 100000,
+      "min_slot_reached": 456819153
+    },
+    {
+      "index": 9,
+      "mint": "8M9muYMNErZvfEU7az5nyd8CaUmjkqHbsWmcSYpepump",
+      "migration_signature": "62xoksvnGq7qW1K7SDT12d1EtdbgyfhuGZwL164qfAj2X894vxXg4MUffjsCvT2cEBgr6wibSUMZ9CwDnAHMPH6o",
+      "solscan_url": "https://solscan.io/tx/62xoksvnGq7qW1K7SDT12d1EtdbgyfhuGZwL164qfAj2X894vxXg4MUffjsCvT2cEBgr6wibSUMZ9CwDnAHMPH6o",
+      "pool_address": "EcXpnn56MpxyxQH5cywRLovCS5PM4ohWDdeEtubjFgjf",
+      "pool_status": "UNVERIFIED_ACCOUNT",
+      "creation_slot": 456808010,
+      "timestamp": 1791974310,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 4,
+        "S+2": 1,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 1878,
+      "min_slot_reached": 456808010
+    },
+    {
+      "index": 10,
+      "mint": "aD4sGMosNYT3XCKrPTvhF1ZK66TjVmdBHnxqDadpump",
+      "migration_signature": "4hfEsTS3W4tTcXyEHg7j6HKQhKb2wE8oUcG1HyHsmXnzwrsqTmopeuKdyPhjUGjwiRztaUzjuYUua6dcYjLcaZUk",
+      "solscan_url": "https://solscan.io/tx/4hfEsTS3W4tTcXyEHg7j6HKQhKb2wE8oUcG1HyHsmXnzwrsqTmopeuKdyPhjUGjwiRztaUzjuYUua6dcYjLcaZUk",
+      "pool_address": "CqTqdMRxgS654yyYxFnT4cu16vYXxwXni5vC6PtUfMfD",
+      "pool_status": "UNVERIFIED_ACCOUNT",
+      "creation_slot": 456808208,
+      "timestamp": 1791974352,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 2,
+        "S+1": 3,
+        "S+2": 1,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 3836,
+      "min_slot_reached": 456808208
+    },
+    {
+      "index": 11,
+      "mint": "BcAjKtS1q6XZ1GCkGqWZPRepFZd7dfKnENEos8Ygbvx3",
+      "migration_signature": "27BSXmxUWmXcDV2AhKKevTns5XtwEFQ6e8UryGU1KjnVRbdgzYahherSnr25mZRM6ociw89AzLRy82a2cLkP5j11",
+      "solscan_url": "https://solscan.io/tx/27BSXmxUWmXcDV2AhKKevTns5XtwEFQ6e8UryGU1KjnVRbdgzYahherSnr25mZRM6ociw89AzLRy82a2cLkP5j11",
+      "pool_address": "LdkJZoNoQftVK9QneANfPNoBAtpkZn4HikArxGu773g",
+      "pool_status": "UNVERIFIED_ACCOUNT",
+      "creation_slot": 456809032,
+      "timestamp": 1791974529,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 2,
+        "S+1": 3,
+        "S+2": 0,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 12245,
+      "min_slot_reached": 456809032
+    },
+    {
+      "index": 12,
+      "mint": "tTRnxty3hGAQKu5ypMW85mS5dzSa59TZaftzg5Gpump",
+      "migration_signature": "4p86bMUpLFrCfeXpFyBWRBm2F2fXBu15R8sz9ooweaUmTm6v8czgCcCRBAojabGm2uRnfPcTabLXp1fKC9ZFT5Tg",
+      "solscan_url": "https://solscan.io/tx/4p86bMUpLFrCfeXpFyBWRBm2F2fXBu15R8sz9ooweaUmTm6v8czgCcCRBAojabGm2uRnfPcTabLXp1fKC9ZFT5Tg",
+      "pool_address": "6ZGSgYGE5AvrfMdEhfveGE3HtpNa3ZmNSMXzsUh1Tb9E",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456809612,
+      "timestamp": 1791974653,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 2,
+        "S+1": 1,
+        "S+2": 2,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 4853,
+      "min_slot_reached": 456809612
+    },
+    {
+      "index": 13,
+      "mint": "LowBh76dd8pNTY3H8C8g9vEfMmu3U8eFvcBtKNspump",
+      "migration_signature": "5T1D9XSBuQf5ozfo7rQx94YeRPmvuhcgUrhdG6uwnoXqguT3yx7yLK1dbohAuhPK89NGmjmVdYC4WVJwqFa7jXtj",
+      "solscan_url": "https://solscan.io/tx/5T1D9XSBuQf5ozfo7rQx94YeRPmvuhcgUrhdG6uwnoXqguT3yx7yLK1dbohAuhPK89NGmjmVdYC4WVJwqFa7jXtj",
+      "pool_address": "EZJ8Hu1p5biRLcwbA8mZXPfVTLPVUJgTTzkuLBewUwLr",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456810938,
+      "timestamp": 1791974938,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 4,
+        "S+2": 3,
+        "S+3": 2
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 1115,
+      "min_slot_reached": 456810938
+    },
+    {
+      "index": 14,
+      "mint": "9sbukATUQfovuZat3KWaTRxo96BQp7QJ9TSsNkh2pump",
+      "migration_signature": "5hncBtS9oxbYsBv8AJX8TL4fWzsgLsmaQNz4G6NmkuZoe1eutCPAtbemuhhpscnyTPjMAsSvK9QNaH9JgQ9gjTEu",
+      "solscan_url": "https://solscan.io/tx/5hncBtS9oxbYsBv8AJX8TL4fWzsgLsmaQNz4G6NmkuZoe1eutCPAtbemuhhpscnyTPjMAsSvK9QNaH9JgQ9gjTEu",
+      "pool_address": "A3ND2CDA8sWLoovG9WFJoHxkWFPgbcaXF6pJQkUBurmG",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456811241,
+      "timestamp": 1791975004,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 0,
+        "S+2": 6,
+        "S+3": 1
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 6455,
+      "min_slot_reached": 456811241
+    },
+    {
+      "index": 15,
+      "mint": "8buVGWdDSNpF1hTYBai2Q8p4uRGjZaBg96TKPB2vGKak",
+      "migration_signature": "22SUjgJBKNiqRcPTCTTuBkENSXfjZE2ZfteYxcgsJKEvsXzsforR18gaoDKVLKkq8hqr9MMVVBgpwUjh2EtWByrF",
+      "solscan_url": "https://solscan.io/tx/22SUjgJBKNiqRcPTCTTuBkENSXfjZE2ZfteYxcgsJKEvsXzsforR18gaoDKVLKkq8hqr9MMVVBgpwUjh2EtWByrF",
+      "pool_address": "A95xqVKYeqnYXaqKdhyFCegSatwpQGAMgs1uzFyEwduk",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456811253,
+      "timestamp": 1791975007,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 1,
+        "S+1": 1,
+        "S+2": 5,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 22622,
+      "min_slot_reached": 456811253
+    },
+    {
+      "index": 16,
+      "mint": "F6YZtTn91shdbHd9GFLmqPFDoy44YRghx3cFUx4Kpump",
+      "migration_signature": "4pT4WWrgBsZZNaMKBj8PcFCokMX19tXnG81nASuoYv2taVpacZH8oJDBXTAaSFYCp6TfUsUVJSfteCDfbh7jrFPJ",
+      "solscan_url": "https://solscan.io/tx/4pT4WWrgBsZZNaMKBj8PcFCokMX19tXnG81nASuoYv2taVpacZH8oJDBXTAaSFYCp6TfUsUVJSfteCDfbh7jrFPJ",
+      "pool_address": "CWBb7yNgi1YCio9uDqCt5ELnXqAEW22oJAuMkVJAuAPX",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456811848,
+      "timestamp": 1791975135,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 0,
+        "S+2": 4,
+        "S+3": 4
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 4895,
+      "min_slot_reached": 456811848
+    },
+    {
+      "index": 17,
+      "mint": "5iRVyztZjL7RJchSpmpmcuwqy3pniUUH98qZgRAHpump",
+      "migration_signature": "4p8UzaMW1f58VGx3qopMDFoh3TbjFUgPA86UyCX6PrK4v5ZCHwBWZGEnvs2TP57QXXP8vPtyRsUVMfzoDhqy2h8g",
+      "solscan_url": "https://solscan.io/tx/4p8UzaMW1f58VGx3qopMDFoh3TbjFUgPA86UyCX6PrK4v5ZCHwBWZGEnvs2TP57QXXP8vPtyRsUVMfzoDhqy2h8g",
+      "pool_address": "G9MxxnCorKjMhegDmSBTzabrncZZJa6i1CpE6EzGqVq9",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456812267,
+      "timestamp": 1791975227,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 1,
+        "S+1": 3,
+        "S+2": 5,
+        "S+3": 6
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 26489,
+      "min_slot_reached": 456812148
+    },
+    {
+      "index": 18,
+      "mint": "FxZQYEfzLSvXUcYV8j78QK7J9HwsEJs61xwyujVU86vL",
+      "migration_signature": "2aCr4xtGCijT7t764w6xAtNzuKvynmAypGH8cgmLh6tjF33TnXeSUjBRgLqJwvEtosq76EeGRGMwpBASktrABqFQ",
+      "solscan_url": "https://solscan.io/tx/2aCr4xtGCijT7t764w6xAtNzuKvynmAypGH8cgmLh6tjF33TnXeSUjBRgLqJwvEtosq76EeGRGMwpBASktrABqFQ",
+      "pool_address": "7PJcLPYMus8oL6nN243L1TTdR8Z2UB7Zu4VQmWkg1cPo",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456812376,
+      "timestamp": 1791975250,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 2,
+        "S+1": 1,
+        "S+2": 2,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 4282,
+      "min_slot_reached": 456812376
+    },
+    {
+      "index": 19,
+      "mint": "9u23TWCiuDzEbY3Q3PfFvL1hADtZiL1zAe8oSb2opump",
+      "migration_signature": "5V32MWoqU8jq79tgCMMKpur1wTDenpLeYEo5N5a2CzUGmFrvs5Z69cXCVRhpGdpqDKnG71wNVG6KouakcAk5riD7",
+      "solscan_url": "https://solscan.io/tx/5V32MWoqU8jq79tgCMMKpur1wTDenpLeYEo5N5a2CzUGmFrvs5Z69cXCVRhpGdpqDKnG71wNVG6KouakcAk5riD7",
+      "pool_address": "24z9ba1YbNdWufoFAydBVMUQgkNn2CKYCW1YwHLZ8R3b",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456812496,
+      "timestamp": 1791975276,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 1,
+        "S+2": 4,
+        "S+3": 3
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 6251,
+      "min_slot_reached": 456812496
+    },
+    {
+      "index": 20,
+      "mint": "GmXPGqvFqBZeXTJ9NDSp2qgzuqwPTXH1qRGv448Npump",
+      "migration_signature": "BTRpedbeXrQ75B6GmRtqVKBGzLW9h4YVHuDpKpuvSLjUzpQAA2p7nzFD8vswFc5dwLtcDoA2hcVf4d8rrDviSjD",
+      "solscan_url": "https://solscan.io/tx/BTRpedbeXrQ75B6GmRtqVKBGzLW9h4YVHuDpKpuvSLjUzpQAA2p7nzFD8vswFc5dwLtcDoA2hcVf4d8rrDviSjD",
+      "pool_address": "u4uBrqEKgc4ho26F3ojCs5pAskHdxvCXEwr8Hk3VJ9h",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456813084,
+      "timestamp": 1791975402,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 4,
+        "S+2": 2,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 45511,
+      "min_slot_reached": 456813084
+    },
+    {
+      "index": 21,
+      "mint": "8rUdZKL3TNrZTBGqD13QqDoJPhU4AdbGTFLNbQeJpump",
+      "migration_signature": "55khWdXzyeGKNErJtTkqicv4TnxGj4aQ8WtmB31HY2QNsUEnyKnFx6rB1FUuHiwjNxr9dcXqTngva9HPrV3vcGns",
+      "solscan_url": "https://solscan.io/tx/55khWdXzyeGKNErJtTkqicv4TnxGj4aQ8WtmB31HY2QNsUEnyKnFx6rB1FUuHiwjNxr9dcXqTngva9HPrV3vcGns",
+      "pool_address": "ELLCjTTZLmeiVYmgAMnh6hxeCRbmePZES5ddeGk3qGpm",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456814229,
+      "timestamp": 1791975651,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 4,
+        "S+2": 4,
+        "S+3": 5
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 12775,
+      "min_slot_reached": 456814229
+    },
+    {
+      "index": 22,
+      "mint": "24R47vFRtfV9sBeM8ZQHBvFJnkUe1RybQCauugabpump",
+      "migration_signature": "28Jch8uHZG1PCPoZjQeUDmJLVyUSsibXgbDQVJRwveSQF4gQxqSXrTwM7cPLZnSvoe47dTERAGTwXmcwPWb9QaHi",
+      "solscan_url": "https://solscan.io/tx/28Jch8uHZG1PCPoZjQeUDmJLVyUSsibXgbDQVJRwveSQF4gQxqSXrTwM7cPLZnSvoe47dTERAGTwXmcwPWb9QaHi",
+      "pool_address": "DsRcm2obZZ58efqSwbEkewkpEwgF7YUj7oYKvsaAbpxA",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456814519,
+      "timestamp": 1791975713,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 1,
+        "S+2": 4,
+        "S+3": 1
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 3261,
+      "min_slot_reached": 456814519
+    },
+    {
+      "index": 23,
+      "mint": "94As2YWjrKTUzWGL9P1oqgorc73Mbn4qRaf25GtQpump",
+      "migration_signature": "4LohtNpNUB82JSrJwzAz2AAVHtXGt84jxUm9QBbYWH7sX5bpFb7wyPHwh8r7rSgVT9iRRwFmgstGe5oQB5y6gqpv",
+      "solscan_url": "https://solscan.io/tx/4LohtNpNUB82JSrJwzAz2AAVHtXGt84jxUm9QBbYWH7sX5bpFb7wyPHwh8r7rSgVT9iRRwFmgstGe5oQB5y6gqpv",
+      "pool_address": "AVUxPp5ytLH5y438e1V1uXzYuSMJ6ndnKYrmnoWr68Vp",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456815155,
+      "timestamp": 1791975850,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 0,
+        "S+2": 0,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 556,
+      "min_slot_reached": 456815155
+    },
+    {
+      "index": 24,
+      "mint": "jf5kPAcD5k5QUnrSokTE731Tx3PjaQh91w9P54Wpump",
+      "migration_signature": "cVy2MpD4DMsDgpPPRP778pEkdu43h2qcATAX1Cs1nu7koh9CBgQaXvDAUQq4t2FAu491zMoM9ocfn4dPg3sJGYb",
+      "solscan_url": "https://solscan.io/tx/cVy2MpD4DMsDgpPPRP778pEkdu43h2qcATAX1Cs1nu7koh9CBgQaXvDAUQq4t2FAu491zMoM9ocfn4dPg3sJGYb",
+      "pool_address": "2AgbKfYmDkm7sUzGHjRkozu2wR6tfxuVxei9fBis6Wkh",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456815520,
+      "timestamp": 1791975930,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 1,
+        "S+1": 1,
+        "S+2": 1,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 4083,
+      "min_slot_reached": 456815520
+    },
+    {
+      "index": 25,
+      "mint": "w63sogrWkQ7X5VTfcSxdDWMYmGWcaMZjbBV3LDGdAtU",
+      "migration_signature": "5LDQtR3nx2fFwHAC1fKM4uhYVvYejjAAgSPN2LG8EJZvHnQXCiLE1zyNEDCXaK57upiV2Jcy4KbPBsRb8dELAwrc",
+      "solscan_url": "https://solscan.io/tx/5LDQtR3nx2fFwHAC1fKM4uhYVvYejjAAgSPN2LG8EJZvHnQXCiLE1zyNEDCXaK57upiV2Jcy4KbPBsRb8dELAwrc",
+      "pool_address": "6ixidtDybBJ9rube6bPNrhSZ4TDL6eFAXYdjuXibG4wo",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456815680,
+      "timestamp": 1791975965,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 2,
+        "S+1": 1,
+        "S+2": 0,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 5348,
+      "min_slot_reached": 456815680
+    },
+    {
+      "index": 26,
+      "mint": "Ecc29WYm2EZaggKg9ynSctgKfxGWj5t1NBZzm3h6pump",
+      "migration_signature": "bcuKKK9B6ZcE3kvvMvy44yAaA5CGvJvJzcMAYtUgLesJMTh8MG5zr4LGpc7qvyf5tJX8oT228kcwCGkzdgPq5Wk",
+      "solscan_url": "https://solscan.io/tx/bcuKKK9B6ZcE3kvvMvy44yAaA5CGvJvJzcMAYtUgLesJMTh8MG5zr4LGpc7qvyf5tJX8oT228kcwCGkzdgPq5Wk",
+      "pool_address": "Dz45yrgDpAA6DiAiuRyMGCxBhp5ULKrFTJ9L5g2UVwva",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456815687,
+      "timestamp": 1791975966,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 1,
+        "S+1": 2,
+        "S+2": 3,
+        "S+3": 2
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 6890,
+      "min_slot_reached": 456815687
+    },
+    {
+      "index": 27,
+      "mint": "B4PCg4YwK4hHw9BPMcqhaWA18vtVzZYo2VQMo699pump",
+      "migration_signature": "3bQbhjH1sYRPweG3n8Si7bFyQJm9N52HATrXxdvJgVxTvbfnaBEjk8hLUmXGqWnwVve7PiHz1YgpeSvmoe5hM83s",
+      "solscan_url": "https://solscan.io/tx/3bQbhjH1sYRPweG3n8Si7bFyQJm9N52HATrXxdvJgVxTvbfnaBEjk8hLUmXGqWnwVve7PiHz1YgpeSvmoe5hM83s",
+      "pool_address": "CgH1Ez3aLcPtxNdWou5Pso8vqzjFujjMhh9snLXAEW9Z",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456816371,
+      "timestamp": 1791976113,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 0,
+        "S+2": 3,
+        "S+3": 4
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 3760,
+      "min_slot_reached": 456816371
+    },
+    {
+      "index": 28,
+      "mint": "ENHMXYb5jxbaxrVZeut24pcuZoib4Z4RJhZMr6F1pump",
+      "migration_signature": "FEny8CScxnGw8xZdidFUhtarR146AaAnTzzdaBB2jodcMZtvB17eR1YqUj5zdRmU6TwyNjZ6CGq1wx5f6BkkpaF",
+      "solscan_url": "https://solscan.io/tx/FEny8CScxnGw8xZdidFUhtarR146AaAnTzzdaBB2jodcMZtvB17eR1YqUj5zdRmU6TwyNjZ6CGq1wx5f6BkkpaF",
+      "pool_address": "ggJFRhgKu5Nx7XCNf5r8XwJUJGbjbcho7yPxUT951Q5",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456816891,
+      "timestamp": 1791976225,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 3,
+        "S+2": 2,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 6779,
+      "min_slot_reached": 456816891
+    },
+    {
+      "index": 29,
+      "mint": "HrTWqoiceJUN7MuD8uRySUqewtJfMXYxRnJxtQmRpump",
+      "migration_signature": "5eFfvyDgYiqxnBGx1KZw36Z51jX58hEkuW2jZdKWQtdZwtt4K1bFN8sCVj3acWgjvg8cBwcqDYyEL9ycSBmkyKoe",
+      "solscan_url": "https://solscan.io/tx/5eFfvyDgYiqxnBGx1KZw36Z51jX58hEkuW2jZdKWQtdZwtt4K1bFN8sCVj3acWgjvg8cBwcqDYyEL9ycSBmkyKoe",
+      "pool_address": "5MRJt1fAKAUwA5FSs9sP5ptDK72ahHKQ6rt3tU8AhAE6",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456818579,
+      "timestamp": 1791976591,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 1,
+        "S+2": 7,
+        "S+3": 1
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 627,
+      "min_slot_reached": 456818579
+    },
+    {
+      "index": 30,
+      "mint": "36WSjjsiubbNVGpxdjGz4eXJoJ5T1ebu8HHmRtfWpump",
+      "migration_signature": "qW2CqMfiymuzPDEaUhYiVwiAczu7XvBGonog5UtL2Dqiu3uPwQPZMHnfVV8Sx3jc7zN8yhKrtBvX1AF88gcocEj",
+      "solscan_url": "https://solscan.io/tx/qW2CqMfiymuzPDEaUhYiVwiAczu7XvBGonog5UtL2Dqiu3uPwQPZMHnfVV8Sx3jc7zN8yhKrtBvX1AF88gcocEj",
+      "pool_address": "9e4pWcbnjpkRzX3L7BraWXea5teAa7TGtbamgtHm1md9",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456819104,
+      "timestamp": 1791976705,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 5,
+        "S+1": 12,
+        "S+2": 3,
+        "S+3": 11
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 9660,
+      "min_slot_reached": 456817001
+    },
+    {
+      "index": 31,
+      "mint": "G5dNCQ4uKwa3XAJwfUGDBFKf9yPYsU5vvrYsXzviQyaj",
+      "migration_signature": "DL6wcfa6GsuMoPM3VPvJpteSZ5jX9X6gGMYZP6LBFuhpRak59GrqjYaP9ZHZwg1oxQEMYTBZ7DDCzML9cTyn2s4",
+      "solscan_url": "https://solscan.io/tx/DL6wcfa6GsuMoPM3VPvJpteSZ5jX9X6gGMYZP6LBFuhpRak59GrqjYaP9ZHZwg1oxQEMYTBZ7DDCzML9cTyn2s4",
+      "pool_address": "DW4rxYY97bzF3PZGx4vaaJ1B1zMp9pZWaTAbJM4hFnEr",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456820356,
+      "timestamp": 1791976976,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 2,
+        "S+1": 2,
+        "S+2": 0,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 26433,
+      "min_slot_reached": 456820356
+    },
+    {
+      "index": 32,
+      "mint": "2U7VPTBmykw3CKtMSFqtdPTMybyrTi177sr1HqyNpump",
+      "migration_signature": "Bb6r4muyUKtGWCrs7vE3ZtQvRjfRA7zPD5LFD8ZGc1aM7yaprwRZtFa6YYZHhfTnFh9UqxFbMRfDQ7DShwB9qKN",
+      "solscan_url": "https://solscan.io/tx/Bb6r4muyUKtGWCrs7vE3ZtQvRjfRA7zPD5LFD8ZGc1aM7yaprwRZtFa6YYZHhfTnFh9UqxFbMRfDQ7DShwB9qKN",
+      "pool_address": "B5a8bNhhQbCHcs1Rx6vaDQdjiJpZztAqByY88pyuw1UF",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456820390,
+      "timestamp": 1791976983,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 0,
+        "S+2": 0,
+        "S+3": 5
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 14410,
+      "min_slot_reached": 456820390
+    },
+    {
+      "index": 33,
+      "mint": "gnY2NR1xhMsZvTAAskehKzjoDe3eCsS2vxaWRM6pump",
+      "migration_signature": "3Mxw5xJstzEq8vHLMLhvA6cBzGa78DbJPcyNMgNg4Qf1zx3qCHaPjhCQ7WL9qzpkQ6hWbLKNvxULEA5MP2ohtyjd",
+      "solscan_url": "https://solscan.io/tx/3Mxw5xJstzEq8vHLMLhvA6cBzGa78DbJPcyNMgNg4Qf1zx3qCHaPjhCQ7WL9qzpkQ6hWbLKNvxULEA5MP2ohtyjd",
+      "pool_address": "9vkcTBhsX7TGXpUU28L9bk173McSto48mYEvMScL27Py",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456820446,
+      "timestamp": 1791976995,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 0,
+        "S+1": 8,
+        "S+2": 2,
+        "S+3": 3
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 785,
+      "min_slot_reached": 456820446
+    },
+    {
+      "index": 34,
+      "mint": "59EUZJvqNi9uiw5UjGHus4V3r8ddtZ67Di6DwWzpump",
+      "migration_signature": "bd7Y7Bc6wRKF5St2PJ9ttn6mPYPdZJth8b7CK6YEfByEqRuW7YvcfxxdRE61UFX2PjpK7sUTQmdXshWaGTvi2fD",
+      "solscan_url": "https://solscan.io/tx/bd7Y7Bc6wRKF5St2PJ9ttn6mPYPdZJth8b7CK6YEfByEqRuW7YvcfxxdRE61UFX2PjpK7sUTQmdXshWaGTvi2fD",
+      "pool_address": "GmJLPgGa878DBWKHNNN1DGjzUg6YkePJoCn9gLnKEwAF",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456821536,
+      "timestamp": 1791977231,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 2,
+        "S+1": 0,
+        "S+2": 1,
+        "S+3": 0
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 6051,
+      "min_slot_reached": 456821536
+    },
+    {
+      "index": 35,
+      "mint": "3ZwtfBdRkHb3gVMmDo2iMtJztjZ7TyeLzVrTYr7J9jsj",
+      "migration_signature": "4KNVjhcGR2uMUpgZ9PpfSu5mFe1DjhnsXpQKSkVi7utMq4RaxmS5etY22CuohZFJCgwkTxtnuCviRFovqTECL6Jw",
+      "solscan_url": "https://solscan.io/tx/4KNVjhcGR2uMUpgZ9PpfSu5mFe1DjhnsXpQKSkVi7utMq4RaxmS5etY22CuohZFJCgwkTxtnuCviRFovqTECL6Jw",
+      "pool_address": "9QGNVkyNmKwJ428QLASX2fBcK3ScNcGRcNhHxZiHrYaC",
+      "pool_status": "NOT_OBTAINED",
+      "creation_slot": 456821632,
+      "timestamp": 1791977251,
+      "reached_creation_slot": true,
+      "swaps_found_s0_to_s3": {
+        "S+0": 1,
+        "S+1": 1,
+        "S+2": 2,
+        "S+3": 1
+      },
+      "pagination_status": "PAGINATED_TO_CREATION",
+      "signatures_paginated_count": 8599,
+      "min_slot_reached": 456821632
+    }
+  ]
+}

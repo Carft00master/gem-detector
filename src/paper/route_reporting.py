@@ -47,10 +47,14 @@ class RouteMetricsReport:
     avg_position_size_usd: float
     fixed_cost_pct_of_size: float
     is_latency_upper_bound: bool = False
+    provider_tier: str = "FREE"
+    detection_mode: str = "polled, not streamed"
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "route": self.route,
+            "provider_tier": self.provider_tier,
+            "detection_mode": self.detection_mode,
             "total_trades": self.total_trades,
             "winning_trades": self.winning_trades,
             "losing_trades": self.losing_trades,
@@ -80,6 +84,8 @@ class RoutePerformanceReporter:
         route: str,
         trades: Optional[List[Dict[str, Any]]] = None,
         is_latency_upper_bound: bool = False,
+        provider_tier: str = "FREE",
+        detection_mode: str = "polled, not streamed",
     ) -> RouteMetricsReport:
         """
         Generate statistical performance report for a specific route.
@@ -88,6 +94,10 @@ class RoutePerformanceReporter:
             trades = self.ledger.load_all_trades()
         
         route_trades = [t for t in trades if str(t.get("route", "ROUTE_A")).upper() == route.upper()]
+        if route_trades:
+            provider_tier = str(route_trades[0].get("provider_tier") or provider_tier)
+            detection_mode = str(route_trades[0].get("detection_mode") or detection_mode)
+
         # Filter to closed trades with valid P&L
         closed_trades = [t for t in route_trades if t.get("status") == "CLOSED"]
         n_trades = len(closed_trades)
@@ -108,6 +118,8 @@ class RoutePerformanceReporter:
                 avg_position_size_usd=0.0,
                 fixed_cost_pct_of_size=0.0,
                 is_latency_upper_bound=is_latency_upper_bound,
+                provider_tier=provider_tier,
+                detection_mode=detection_mode,
             )
 
         pnls = np.array([float(t.get("net_realized_pnl_usd", 0.0) or 0.0) for t in closed_trades])
@@ -182,6 +194,8 @@ class RoutePerformanceReporter:
             avg_position_size_usd=round(avg_size, 2),
             fixed_cost_pct_of_size=round(fixed_cost_pct, 2),
             is_latency_upper_bound=is_latency_upper_bound,
+            provider_tier=provider_tier,
+            detection_mode=detection_mode,
         )
 
     def generate_full_comparison_report(self) -> Dict[str, Any]:

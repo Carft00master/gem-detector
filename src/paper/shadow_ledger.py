@@ -52,6 +52,24 @@ class ShadowLedgerManager:
                 )
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_path_trade ON position_price_paths(trade_id, slot)")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS shadow_trade_ledger (
+                    shadow_id TEXT PRIMARY KEY,
+                    token_address TEXT NOT NULL,
+                    symbol TEXT,
+                    chain TEXT DEFAULT 'solana',
+                    rejection_reason TEXT NOT NULL,
+                    failed_gates_json TEXT,
+                    rejection_timestamp TEXT NOT NULL,
+                    market_cap_at_rejection REAL,
+                    liquidity_at_rejection REAL,
+                    p_reach_3m_at_rejection REAL,
+                    max_future_mc_usd REAL DEFAULT 0.0,
+                    target_reached_3m INTEGER DEFAULT 0,
+                    outcome_label TEXT DEFAULT 'REJECTED'
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_shadow_token ON shadow_trade_ledger(token_address)")
             conn.commit()
 
     def record_rejected_candidate(
