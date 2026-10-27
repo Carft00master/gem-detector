@@ -114,11 +114,40 @@ def main():
                         failing_program = m.group(1)
                         break
 
+                # Extract error name directly from logs / Anchor Error Code / SPL Token error
+                error_name = "Unknown"
+                for l in logs:
+                    m_code = re.search(r"Error Code:\s*([A-Za-z0-9_]+)", l)
+                    if m_code:
+                        error_name = m_code.group(1)
+                        break
+                    if "Error: insufficient funds" in l:
+                        error_name = "InsufficientFunds"
+                        break
+                    if "invalid account data for instruction" in l:
+                        error_name = "InvalidAccountData"
+                        break
+
+                if error_name == "Unknown":
+                    if err_code == "Custom 7312":
+                        error_name = "BotExecutionFailed_0x1c90"
+                    elif err_code == "Custom 9003":
+                        error_name = "BotExecutionFailed_0x232b"
+                    elif err_code == "Custom 9002":
+                        error_name = "BotExecutionFailed_0x232a"
+                    elif err_code == "Custom 12":
+                        error_name = "BotExecutionFailed_0xc"
+                    elif err_code == "InvalidAccountData":
+                        error_name = "InvalidAccountData"
+                    else:
+                        error_name = err_code
+
                 failed_rows.append({
                     "signature": sig,
                     "slot": slot,
                     "offset": offset,
                     "error_code": err_code,
+                    "error_name": error_name,
                     "instruction_index": inst_idx,
                     "program_invoked": failing_program,
                 })
@@ -128,7 +157,7 @@ def main():
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=[
-            "signature", "slot", "offset", "error_code", "instruction_index", "program_invoked"
+            "signature", "slot", "offset", "error_code", "error_name", "instruction_index", "program_invoked"
         ])
         writer.writeheader()
         writer.writerows(failed_rows)

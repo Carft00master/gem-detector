@@ -57,8 +57,8 @@ walkthrough.md
 agent_report.txt
 draft_reply.txt
 retro_summary.txt
-check_text.py
-check_text_identifiers.py
+/check_text.py
+/check_text_identifiers.py
 pytest_run*.txt
 
 # Local configuration & credentials (DO NOT COMMIT SECRETS)

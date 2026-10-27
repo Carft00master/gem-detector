@@ -96,12 +96,21 @@ def main():
                 timeout=15.0,
             )
             tx_data = res.get("result")
+            if not tx_data:
+                # Retry with maxSupportedTransactionVersion: 1
+                res = provider.execute_rpc(
+                    "getTransaction",
+                    [sig, {"encoding": "json", "maxSupportedTransactionVersion": 1}],
+                    timeout=15.0,
+                )
+                tx_data = res.get("result")
+
             if tx_data and tx_data.get("meta"):
                 with open(target_path, "w", encoding="utf-8") as out_f:
                     json.dump(tx_data, out_f)
                 fetched_count += 1
                 if i % 10 == 0 or i == len(missing):
-                    print(f"[{i}/{len(missing)}] Fetched {sig[:12]}... ({assoc_str}) | slot={tx_data.get('slot')}")
+                    print(f"[{i}/{len(missing)}] Fetched {sig[:12]}... ({assoc_str}) | slot={tx_data.get('slot')} | ver={tx_data.get('version')}")
             else:
                 print(f"[{i}/{len(missing)}] WARN: Null/invalid tx for {sig[:12]}... ({assoc_str}) -> result={res.get('result')}")
                 failed_count += 1
