@@ -135,6 +135,7 @@ class CurveTradeCollector:
         self._ws: Optional[Any] = None
         self._reconnect_attempts = 0
         self._force_disconnect_requested = False
+        self.active_provider_name = "Helius"
 
     def _init_db(self, reset_db: bool = False) -> None:
         """Create WAL-mode SQLite schema and recover active <30m mints if resuming."""
@@ -550,6 +551,32 @@ class CurveTradeCollector:
         if self._ws:
             asyncio.create_task(self._ws.close(code=1000, reason="Forced test disconnect"))
 
+    @staticmethod
+    def _get_candidate_ws_urls() -> List[str]:
+        """
+        Build ordered list of Solana WebSocket endpoints supporting logsSubscribe.
+        Prioritizes Helius (from SOLANA_RPC_URLS) and QuickNode (from SOLANA_WS_URL / SOLANA_RPC_URLS),
+        excluding Alchemy (which does not support logsSubscribe).
+        """
+        candidates: List[str] = []
+        raw_rpc_urls = [u.strip() for u in os.environ.get("SOLANA_RPC_URLS", "").split(",") if u.strip()]
+        ws_env = os.environ.get("SOLANA_WS_URL", "").strip()
+        single_rpc = os.environ.get("SOLANA_RPC_URL", "").strip()
+
+        for u in raw_rpc_urls + ([ws_env] if ws_env else []) + ([single_rpc] if single_rpc else []):
+            ws_u = u.replace("https://", "wss://").replace("http://", "ws://")
+            if not ws_u.startswith("wss://") and not ws_u.startswith("ws://"):
+                continue
+            if "alchemy.com" in ws_u.lower():
+                continue
+            if ws_u not in candidates:
+                candidates.append(ws_u)
+
+        # Put Helius first if available, then QuickNode, so a QuickNode trial request-limit cap
+        # (-32003 "request limit reached") never blocks collection.
+        candidates.sort(key=lambda u: 0 if "helius" in u.lower() else (1 if "quiknode" in u.lower() or "quicknode" in u.lower() else 2))
+        return candidates
+
     async def _subscribe_bonding_curve(self, ws: Any, bonding_curve: str) -> None:
         if bonding_curve in self._subscribed_curves:
             return
@@ -572,19 +599,22 @@ class CurveTradeCollector:
         target_trade_count: Optional[int] = None,
         force_disconnect_after_trades: Optional[int] = None,
     ) -> Dict[str, Any]:
-        """Main trade collection loop with confirmed commitment and exponential backoff."""
+        """Main trade collection loop with confirmed commitment, multi-provider WS failover, and exponential backoff."""
         self._running = True
         ssl_ctx = get_verified_ssl_context()
         start_time = time.time()
 
-        ws_url = os.environ.get("SOLANA_WS_URL") or os.environ.get("SOLANA_RPC_URL", "").replace("https://", "wss://")
-        if not ws_url:
-            raise ValueError("No SOLANA_WS_URL configured in environment.")
+        ws_urls = self._get_candidate_ws_urls()
+        if not ws_urls:
+            raise ValueError("No valid SOLANA_WS_URL or SOLANA_RPC_URLS configured in environment.")
 
-        provider_name = identify_ws_provider_name(ws_url)
+        ws_idx = 0
+        provider_names = [identify_ws_provider_name(u) for u in ws_urls]
+        provider_name = provider_names[ws_idx]
+        self.active_provider_name = provider_name
         logger.info(
-            f"CurveTradeCollector starting | Provider: {provider_name} | Mode: {self.subscription_mode} | "
-            f"Commitment: confirmed | DB: {self.db_path}"
+            f"CurveTradeCollector starting | Providers: {provider_names} | Active: {provider_name} | "
+            f"Mode: {self.subscription_mode} | Commitment: confirmed | DB: {self.db_path}"
         )
 
         while self._running:
@@ -595,6 +625,10 @@ class CurveTradeCollector:
             if target_trade_count and self.total_trades_collected >= target_trade_count:
                 logger.info(f"Target trade count ({target_trade_count}) reached. Stopping collector.")
                 break
+
+            ws_url = ws_urls[ws_idx % len(ws_urls)]
+            provider_name = identify_ws_provider_name(ws_url)
+            self.active_provider_name = provider_name
 
             try:
                 logger.info(f"Connecting to {provider_name} WebSocket log stream (confirmed, mode={self.subscription_mode})...")
@@ -627,7 +661,7 @@ class CurveTradeCollector:
                     self.total_ws_messages_received += 1
                     resp_data = json.loads(resp)
                     if "error" in resp_data:
-                        raise RuntimeError(f"logsSubscribe error: {resp_data['error']}")
+                        raise RuntimeError(f"logsSubscribe error on {provider_name}: {resp_data['error']}")
                     self._reconnect_attempts = 0
                     logger.info(f"Subscription confirmed on {provider_name}: {resp}")
 
@@ -683,16 +717,18 @@ class CurveTradeCollector:
             except Exception as e:
                 if max_duration_seconds and (time.time() - start_time) >= max_duration_seconds:
                     break
+                ws_idx += 1
+                next_provider = identify_ws_provider_name(ws_urls[ws_idx % len(ws_urls)])
                 self._reconnect_attempts += 1
                 delay = min(
                     self.max_backoff,
-                    self.initial_backoff * (self.backoff_multiplier ** (self._reconnect_attempts - 1)),
+                    self.initial_backoff * (self.backoff_multiplier ** (max(0, (self._reconnect_attempts - 1) // len(ws_urls)))),
                 )
                 jitter = random.uniform(0, 0.5 * delay)
-                sleep_time = delay + jitter
+                sleep_time = 0.25 if self._reconnect_attempts < len(ws_urls) else (delay + jitter)
                 logger.warning(
-                    f"WebSocket disconnected ({type(e).__name__}). Reconnecting in {sleep_time:.2f}s "
-                    f"(attempt {self._reconnect_attempts}, base={delay:.2f}s, jitter={jitter:.2f}s)..."
+                    f"WebSocket disconnected on {provider_name} ({type(e).__name__}: {e}). "
+                    f"Failing over to {next_provider} in {sleep_time:.2f}s (attempt {self._reconnect_attempts})..."
                 )
                 await asyncio.sleep(sleep_time)
 
@@ -702,7 +738,7 @@ class CurveTradeCollector:
             self._conn.commit()
 
         return {
-            "provider_name": provider_name,
+            "provider_name": self.active_provider_name,
             "subscription_mode": self.subscription_mode,
             "commitment": "confirmed",
             "elapsed_seconds": round(elapsed_total, 2),

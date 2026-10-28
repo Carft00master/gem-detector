@@ -251,6 +251,7 @@ async def run_worker(args: argparse.Namespace) -> None:
     if args.pid_file:
         Path(args.pid_file).write_text(str(os.getpid()), encoding="utf-8")
 
+    worker_t0 = time.time()
     try:
         stats = await collector.run(
             max_duration_seconds=duration_seconds if duration_seconds > 0 else None,
@@ -259,17 +260,20 @@ async def run_worker(args: argparse.Namespace) -> None:
         )
     except (KeyboardInterrupt, asyncio.CancelledError):
         logger.info("Collector interrupted. Shutting down gracefully.")
+        el = max(0.001, time.time() - worker_t0)
         stats = {
-            "provider_name": "QuickNode",
+            "provider_name": getattr(collector, "active_provider_name", "Helius"),
             "subscription_mode": args.subscription_mode,
             "commitment": "confirmed",
-            "elapsed_seconds": 1.0,
+            "elapsed_seconds": round(el, 2),
             "total_ws_bytes_received": collector.total_ws_bytes_received,
-            "bytes_per_second": 0.0,
+            "bytes_per_second": round(collector.total_ws_bytes_received / el, 2),
             "total_ws_messages_received": collector.total_ws_messages_received,
-            "messages_per_second": 0.0,
+            "messages_per_second": round(collector.total_ws_messages_received / el, 2),
             "skipped_err_count": collector.skipped_err_count,
-            "failed_notification_pct": 0.0,
+            "failed_notification_pct": round(
+                100.0 * collector.skipped_err_count / max(1, collector.total_ws_messages_received - 1), 2
+            ),
             "creations_recorded": collector.creations_recorded,
             "trades_stored": collector.total_trades_collected,
             "dropped_untracked_mint_count": collector.dropped_untracked_mint_count,
