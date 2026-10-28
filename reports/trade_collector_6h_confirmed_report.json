@@ -1,0 +1,938 @@
+{
+  "stats": {
+    "provider_name": "Helius",
+    "subscription_mode": "full",
+    "commitment": "confirmed",
+    "elapsed_seconds": 21609.12,
+    "total_ws_bytes_received": 5978590043,
+    "bytes_per_second": 276669.76,
+    "total_ws_messages_received": 3827441,
+    "messages_per_second": 177.12,
+    "skipped_err_count": 3006670,
+    "failed_notification_pct": 78.56,
+    "creations_recorded": 11780,
+    "trades_stored": 534466,
+    "dropped_untracked_mint_count": 69626,
+    "dropped_expired_mint_count": 27808,
+    "dropped_trades_total": 97434,
+    "duplicate_trades_ignored": 0
+  },
+  "db_metrics": {
+    "db_path": "data/curve_trades.db",
+    "total_db_bytes_on_disk": 326729728,
+    "creations_in_db": 11780,
+    "trades_in_db": 534466,
+    "distinct_mints_with_trades": 6530,
+    "distinct_wallets": 30427,
+    "sol_quoted_trades": 490772,
+    "sol_quoted_trades_pct": 91.82,
+    "sol_quoted_mints": 5878,
+    "sol_quoted_mints_pct": 90.02,
+    "usdc_quoted_trades": 5139,
+    "usdc_quoted_trades_pct": 0.96,
+    "usdc_quoted_mints": 58,
+    "usdc_quoted_mints_pct": 0.89,
+    "non_sol_quoted_trades": 43694,
+    "non_sol_quoted_trades_pct": 8.18,
+    "non_sol_quoted_mints": 652,
+    "non_sol_quoted_mints_pct": 9.98,
+    "quote_mint_breakdown": [
+      {
+        "quote_mint": "So11111111111111111111111111111111111111112",
+        "trades": 490772,
+        "trades_share_pct": 91.82,
+        "distinct_mints": 5878,
+        "mints_share_pct": 90.02
+      },
+      {
+        "quote_mint": "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN",
+        "trades": 7237,
+        "trades_share_pct": 1.35,
+        "distinct_mints": 47,
+        "mints_share_pct": 0.72
+      },
+      {
+        "quote_mint": "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn",
+        "trades": 7228,
+        "trades_share_pct": 1.35,
+        "distinct_mints": 124,
+        "mints_share_pct": 1.9
+      },
+      {
+        "quote_mint": "6UpQcMAb5xMzxc7ZfPaVMgx3KqsvKZdT5U718BzD5We2",
+        "trades": 6850,
+        "trades_share_pct": 1.28,
+        "distinct_mints": 27,
+        "mints_share_pct": 0.41
+      },
+      {
+        "quote_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "trades": 5139,
+        "trades_share_pct": 0.96,
+        "distinct_mints": 58,
+        "mints_share_pct": 0.89
+      },
+      {
+        "quote_mint": "SPCXxcqXj6e5dJDVNovHN8744zkbhM2bYudU45BimGb",
+        "trades": 3479,
+        "trades_share_pct": 0.65,
+        "distinct_mints": 47,
+        "mints_share_pct": 0.72
+      },
+      {
+        "quote_mint": "J3NKxxXZcnNiMjKw9hYb2K4LUxgwB6t1FtPtQVsv3KFr",
+        "trades": 2499,
+        "trades_share_pct": 0.47,
+        "distinct_mints": 31,
+        "mints_share_pct": 0.47
+      },
+      {
+        "quote_mint": "GRNDYDpqwpCm6jVxpbh4xT5AM4r3p391qYsKTHqgaET2",
+        "trades": 1734,
+        "trades_share_pct": 0.32,
+        "distinct_mints": 7,
+        "mints_share_pct": 0.11
+      },
+      {
+        "quote_mint": "PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF",
+        "trades": 1301,
+        "trades_share_pct": 0.24,
+        "distinct_mints": 14,
+        "mints_share_pct": 0.21
+      },
+      {
+        "quote_mint": "DoGEV7LASBkQbibMc5k5vKnTZoMg423GpJ5QtJEGfm7R",
+        "trades": 1279,
+        "trades_share_pct": 0.24,
+        "distinct_mints": 17,
+        "mints_share_pct": 0.26
+      },
+      {
+        "quote_mint": "SQQQAa3gUxgnqcEsdjPA4RQNQBgB97TnG2hJhk2WaGE",
+        "trades": 844,
+        "trades_share_pct": 0.16,
+        "distinct_mints": 8,
+        "mints_share_pct": 0.12
+      },
+      {
+        "quote_mint": "C5xph2yL6gMdxmuLGxJBkGpmuDFfyi5fqkBNhvL6pump",
+        "trades": 788,
+        "trades_share_pct": 0.15,
+        "distinct_mints": 8,
+        "mints_share_pct": 0.12
+      },
+      {
+        "quote_mint": "PEPEqnuuCDbBC89p1u9vpnP1KQ2oj1xTcQBsjt9X55m",
+        "trades": 786,
+        "trades_share_pct": 0.15,
+        "distinct_mints": 16,
+        "mints_share_pct": 0.25
+      },
+      {
+        "quote_mint": "TTWofwAge91oFhZs7kpQdyrVRkmevgM88xijGvQFbKo",
+        "trades": 455,
+        "trades_share_pct": 0.09,
+        "distinct_mints": 7,
+        "mints_share_pct": 0.11
+      },
+      {
+        "quote_mint": "MzUxrgP4k6huTD415pA9bKzBA8BvCgyu15TfbEnpump",
+        "trades": 377,
+        "trades_share_pct": 0.07,
+        "distinct_mints": 14,
+        "mints_share_pct": 0.21
+      },
+      {
+        "quote_mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "trades": 315,
+        "trades_share_pct": 0.06,
+        "distinct_mints": 15,
+        "mints_share_pct": 0.23
+      },
+      {
+        "quote_mint": "DJTu7vi8norVzdVAffgvb39VP7wjKeTsgaMBJrzfxvoF",
+        "trades": 246,
+        "trades_share_pct": 0.05,
+        "distinct_mints": 11,
+        "mints_share_pct": 0.17
+      },
+      {
+        "quote_mint": "6NaM98xdfCkTTjqTvjq4t8TdSQ2374VGkGEXCzCPpump",
+        "trades": 240,
+        "trades_share_pct": 0.04,
+        "distinct_mints": 14,
+        "mints_share_pct": 0.21
+      },
+      {
+        "quote_mint": "9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump",
+        "trades": 240,
+        "trades_share_pct": 0.04,
+        "distinct_mints": 6,
+        "mints_share_pct": 0.09
+      },
+      {
+        "quote_mint": "poNSfquKq512ApeYjVghwViSun4x1MhCqHVH2Paq4jN",
+        "trades": 200,
+        "trades_share_pct": 0.04,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx",
+        "trades": 183,
+        "trades_share_pct": 0.03,
+        "distinct_mints": 15,
+        "mints_share_pct": 0.23
+      },
+      {
+        "quote_mint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+        "trades": 176,
+        "trades_share_pct": 0.03,
+        "distinct_mints": 9,
+        "mints_share_pct": 0.14
+      },
+      {
+        "quote_mint": "Pren1FvFX6J3E4kXhJuCiAD5aDmGEb7qJRncwA8Lkhw",
+        "trades": 171,
+        "trades_share_pct": 0.03,
+        "distinct_mints": 10,
+        "mints_share_pct": 0.15
+      },
+      {
+        "quote_mint": "pSo1f9nQXWgXibFtKf7NWYxb5enAM4qfP6UJSiXRQfL",
+        "trades": 169,
+        "trades_share_pct": 0.03,
+        "distinct_mints": 10,
+        "mints_share_pct": 0.15
+      },
+      {
+        "quote_mint": "XsqE9cRRpzxcGKDXj1BJ7Xmg4GRhZoyY1KpmGSxAWT2",
+        "trades": 160,
+        "trades_share_pct": 0.03,
+        "distinct_mints": 4,
+        "mints_share_pct": 0.06
+      },
+      {
+        "quote_mint": "Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu",
+        "trades": 126,
+        "trades_share_pct": 0.02,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "NTRNDMqQSiwEC2jJs3wJiZS6bpGYQJtMNQJgiX3WyV6",
+        "trades": 125,
+        "trades_share_pct": 0.02,
+        "distinct_mints": 7,
+        "mints_share_pct": 0.11
+      },
+      {
+        "quote_mint": "A7bdiYdS5GjqGFtxf17ppRHtDKPkkRqbKtR27dxvQXaS",
+        "trades": 102,
+        "trades_share_pct": 0.02,
+        "distinct_mints": 8,
+        "mints_share_pct": 0.12
+      },
+      {
+        "quote_mint": "XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX",
+        "trades": 101,
+        "trades_share_pct": 0.02,
+        "distinct_mints": 3,
+        "mints_share_pct": 0.05
+      },
+      {
+        "quote_mint": "APYhnVUJLgTyWWVtBhJ6sAHzymD7FyrrnKBd3TaSpump",
+        "trades": 77,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 3,
+        "mints_share_pct": 0.05
+      },
+      {
+        "quote_mint": "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump",
+        "trades": 73,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "BABANGA4JE7Kkam4nTrALAwAVgsNJUuFJnnkF7S16BZp",
+        "trades": 66,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "AavE1kKKnesPw4MuRJmJ9jZs9QzEE8CPxQ3ViczUDfc1",
+        "trades": 61,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 3,
+        "mints_share_pct": 0.05
+      },
+      {
+        "quote_mint": "Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu",
+        "trades": 53,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "2c1KjiyQow66QfsnCtoyuqfo3AuxgpBMEoAq5oiiXqdu",
+        "trades": 49,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "CbcyNo7m1amFWqEQm2m4PLv1UNvpcL3C1Ujm6AkzpKoU",
+        "trades": 45,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ",
+        "trades": 44,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+        "trades": 42,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 3,
+        "mints_share_pct": 0.05
+      },
+      {
+        "quote_mint": "XsvNBAYkrDRNhA7wPHQfX3ZUXZyZLdnCQDfHZ56bzpg",
+        "trades": 41,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 3,
+        "mints_share_pct": 0.05
+      },
+      {
+        "quote_mint": "Ai66LHZG9MCzg1WKdawwqduVAXpNDUuV8M3uyq5ppump",
+        "trades": 40,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump",
+        "trades": 40,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "NKEda5nHhNGgjrE9nDdMvaEmkmJ96qqxzBVZEcKmjSg",
+        "trades": 36,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 3,
+        "mints_share_pct": 0.05
+      },
+      {
+        "quote_mint": "DqrupVXA3WSKCAasVioTtiUHrKGdhybRub6JNaPjpump",
+        "trades": 34,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "NVDAVuiB7hwd3m5Wa1JuHNovPaPG6BH1QNztbKFxNjv",
+        "trades": 34,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "BArimz1PcKZr8PcPh3tcZ2dg4S7FJLk3cw6R5F8GsHKg",
+        "trades": 28,
+        "trades_share_pct": 0.01,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "RACEyWiM2ztEZcJx2AHXU2eWjhxU57x3vXn92b39dLD",
+        "trades": 25,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "6onu5YwrVVDLyBRaqgppGep36bjYaBAR2gQkJe5Jpump",
+        "trades": 24,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 7,
+        "mints_share_pct": 0.11
+      },
+      {
+        "quote_mint": "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg",
+        "trades": 24,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "5tCju6YNxHq5zrA6tGndr6F7TK42mpUFmeE31cSFpump",
+        "trades": 22,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 3,
+        "mints_share_pct": 0.05
+      },
+      {
+        "quote_mint": "AAPLEDt8RpzPgXyhvFzkMBofvFSQw9gpeMCoUdPdLnB8",
+        "trades": 21,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "HDwZkNNh8Bt9oPP51xrPwGyKxDUR2YorHiAHGuiypump",
+        "trades": 19,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 5,
+        "mints_share_pct": 0.08
+      },
+      {
+        "quote_mint": "Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re",
+        "trades": 17,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "shib5gSoVKPjwkXrxRk7SbQFzb2R9rQB3TgQWYX4RwW",
+        "trades": 17,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+        "trades": 13,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "26RsPKnoUNU8ejytaKTxMLDDosS5DJZD5BQ8YYgwpump",
+        "trades": 12,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "CARDSccUMFKoPRZxt5vt3ksUbxEFEcnZ3H2pd3dKxYjp",
+        "trades": 12,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "4bjMPgeJYCUD1A44RJ4DHFY188SCd9vrMd6u71PDpump",
+        "trades": 11,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "CSRRgTwf9o5KLgguS2M16aEAhV5PUUzfshrAAQ8opump",
+        "trades": 11,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "HfPVTUsSd55Aab6BACWCy6dXo5pQgTUFnyGzgspFpump",
+        "trades": 11,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 3,
+        "mints_share_pct": 0.05
+      },
+      {
+        "quote_mint": "SKHYhSjuRWHgikq8eRKbtBbpABgJSkd7ytQV14i9EQ3",
+        "trades": 11,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "6TpzaXZTnhtQUFkB8evq67J1Yk1DbnrGjp32xJQSpump",
+        "trades": 10,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "HruKkLrLJ7t1kL8E6HBccSpWdUpnhGmi3SVrB9Jjpump",
+        "trades": 10,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "nxPqZ4F7ux8Vph5NFu25rEP6Kx9Gr1U6Fmj36Rjpump",
+        "trades": 8,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "2z1s9nrjhTdr26kpNYJrM29h3tyjAp6aKNofbkV9pump",
+        "trades": 7,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "DffdPtAKvnP91k9Ct6QvZ8TwVvWbJ6CxRtGNGNh9pump",
+        "trades": 7,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "CashcatZMRn4Jv8sPQZUSsbTLi2PcPe1ssqbHcnaJqSS",
+        "trades": 6,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "24EX9CQqEpR9mNUDTjkooKqRTf2pkY2mgbDqwNDwpump",
+        "trades": 5,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "5PpmA7qRNSCDBG1UoA8wx3NP7RLXHXNMDZ7ewcYEpump",
+        "trades": 5,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "6czNG3n8Fs5VZrFR6A4hsTr3Rm8dQiDHMNVyyCRWpump",
+        "trades": 5,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ",
+        "trades": 5,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "2xm2WZ9krE2YAArRC6S6ZzJAYgN813K6hh2dawKjpump",
+        "trades": 4,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump",
+        "trades": 4,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "GgUPRmD1KhxHbDfnEjYqyKXofb1HViTkgSDwiqkCpump",
+        "trades": 4,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "w16qoALFz66AEdRJM56jAAionWb5FhVyjGjznrYpump",
+        "trades": 4,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 3,
+        "mints_share_pct": 0.05
+      },
+      {
+        "quote_mint": "69LjZUUzxj3Cb3Fxeo1X4QpYEQTboApkhXTysPpbpump",
+        "trades": 3,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "7vKHN8HCmQdyViCK3mueNZbqJxrdiVkMZG3f44hppump",
+        "trades": 3,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "9fpMjtrTD7aYZ5GVjtMS2bi2LsucoSmEqsCMyB8dpump",
+        "trades": 3,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "9rdw2ukP4gW5rQFS1RZrFdmpmB9tBFdngsYXP5NLpump",
+        "trades": 3,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "A9E2AopuG56LWYiXsvGLLTcLjUjQ539PY6k5Fhfepump",
+        "trades": 3,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
+        "trades": 3,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "FEFEVFRRU3RzSaRhmgv9txwspMWpxvnx4QKhVxQLpump",
+        "trades": 3,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 3,
+        "mints_share_pct": 0.05
+      },
+      {
+        "quote_mint": "QUBTAD8C9bMU9LvmMNgKPhrmBGbHvxpu6vfWQtThxxw",
+        "trades": 3,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "241WxqTr6J67q7YP3xsJ3vNmrSm8YeAfGJjTdJpRBauN",
+        "trades": 2,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "489jhyzn5SejxSFGungp3dmLntfUDCdvLKnxyzNDpump",
+        "trades": 2,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "7F968EUuLBzUcCzhD6FZpXaTWAybKZDkWFmwoVArcAc",
+        "trades": 2,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "J4BcBzEN6xybbLftX1nXxXVhVBdeoocDhLVoweVo6Wgk",
+        "trades": 2,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "UR9gqF12TiaUU9JxcprTuuZdvbSuvDyPtCoFVDzVksZ",
+        "trades": 2,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 2,
+        "mints_share_pct": 0.03
+      },
+      {
+        "quote_mint": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",
+        "trades": 2,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "cbLTC4T5NpzSUtQ7ekgEMZGaUPVJY1ko6BUikqa4gGf",
+        "trades": 2,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "35fWL6pdJqpconRZPrawUAQegw1QF3p2tgN7mzhTpump",
+        "trades": 1,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "5yC9BM8KUsJTPbWPLfA2N8qH1s9V8DQ3Vcw1G6Jdpump",
+        "trades": 1,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "7DkuRHTQ9qs4WhXSNbVSRcvVDc6AE67wBKeAuuKjpump",
+        "trades": 1,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "EZYmWw5ZhNAAsm3RVrPUQJZkJu6W31YZFjV5LvW4pump",
+        "trades": 1,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "HTZsLG4zqaNvWMwXSLHH3GG5KyJpKwpBRsKVdMG6hvzP",
+        "trades": 1,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "Hg5Ja55T5wESq4vyFoiVCMeHXtGyVA69X2UHq8hgpump",
+        "trades": 1,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "HjVGL4kuW2H6eeY2sTxwp5VCUhCJChzZBHc3aQ3EMKRS",
+        "trades": 1,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL",
+        "trades": 1,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      },
+      {
+        "quote_mint": "WXMRyRZhsa19ety5erZhHg4N3xj3EVN92u94422teJp",
+        "trades": 1,
+        "trades_share_pct": 0.0,
+        "distinct_mints": 1,
+        "mints_share_pct": 0.02
+      }
+    ],
+    "min_slot": 462394542,
+    "max_slot": 462495977,
+    "slot_span": 101436,
+    "distinct_slots": 96564,
+    "min_block_time": 1793173086,
+    "max_block_time": 1793194684,
+    "block_time_span_seconds": 21598,
+    "observed_slots_per_second": 4.7,
+    "measured_trades_per_sec": 24.73,
+    "measured_creations_per_sec": 0.55,
+    "bytes_per_stored_record": 598.1
+  },
+  "sample_rows": [
+    {
+      "signature": "SiyTXdaGP1vYbySYag8uY7P4Kb6SyZV8MtPWYxLDRYbSEqPMFv5QYuCF3P2j3qdyEwN9oXVnY3rwMssr6hftQCq",
+      "log_index": 86,
+      "mint": "Af5wPFLtPQsCpCCRJ9kd9fBrbsk1UTN74J1NfcrKpump",
+      "tx_type": "buy",
+      "wallet": "7J3kkSAMdfZa2LzDZV3vSS3d8TJHKTYiejbKW3RZmhm1",
+      "quote_mint": "So11111111111111111111111111111111111111112",
+      "quote_amount": 1000000000,
+      "sol_lamports": 1000000000,
+      "token_base_units": 34612903225806,
+      "slot": 462394542,
+      "block_time": 1793173086
+    },
+    {
+      "signature": "4W5QWH2TLo8S6amamJEat15faFp9VvxV6ZhAGK99DZxe8AcdEcbaX95xinuVoJwXV7vitfW1ALmiGr776hwUoJei",
+      "log_index": 43,
+      "mint": "Af5wPFLtPQsCpCCRJ9kd9fBrbsk1UTN74J1NfcrKpump",
+      "tx_type": "buy",
+      "wallet": "4mDEwd9svQ9zMSue4FAVeg4KE8qPbeR6WUUPMkez8wWM",
+      "quote_mint": "So11111111111111111111111111111111111111112",
+      "quote_amount": 96307,
+      "sol_lamports": 96307,
+      "token_base_units": 3225891853,
+      "slot": 462394542,
+      "block_time": 1793173086
+    },
+    {
+      "signature": "3qxYd4YthV59HSdr9DKj6yYYDVG53icEiisLSNJPN3czHtYWKQNwf7zoULG2VPxDBTGzzUfiv71eJtuVVDXpidSy",
+      "log_index": 15,
+      "mint": "Af5wPFLtPQsCpCCRJ9kd9fBrbsk1UTN74J1NfcrKpump",
+      "tx_type": "sell",
+      "wallet": "7J3kkSAMdfZa2LzDZV3vSS3d8TJHKTYiejbKW3RZmhm1",
+      "quote_mint": "So11111111111111111111111111111111111111112",
+      "quote_amount": 1000006113,
+      "sol_lamports": 1000006113,
+      "token_base_units": 34612903225806,
+      "slot": 462394551,
+      "block_time": 1793173088
+    },
+    {
+      "signature": "U1ocH1GcwVgBE7MmS3hi9kw66sbwcx8t2o1G37sjScURG9Cb51GxrXChByM9VfSqXTuANH5GAMWPZcKk3QLQy9m",
+      "log_index": 15,
+      "mint": "Af5wPFLtPQsCpCCRJ9kd9fBrbsk1UTN74J1NfcrKpump",
+      "tx_type": "sell",
+      "wallet": "4mDEwd9svQ9zMSue4FAVeg4KE8qPbeR6WUUPMkez8wWM",
+      "quote_mint": "So11111111111111111111111111111111111111112",
+      "quote_amount": 90192,
+      "sol_lamports": 90192,
+      "token_base_units": 3225891853,
+      "slot": 462394552,
+      "block_time": 1793173088
+    },
+    {
+      "signature": "4V2Wg3Cr8WmNrm3dw57cE2hoDUUNUyXuYJhWCa974a97Xku8SzVsfW3GWHzHyCTbT8NXfrYk9YfjvB56fzbYmLcP",
+      "log_index": 127,
+      "mint": "5HFjK1ogcXSWfQX3Ba54PnX7kopnmAVvEmoN1sKapump",
+      "tx_type": "buy",
+      "wallet": "K6Eh9fwKkrhVNq6SpRtJn7F4Myi3HUst5QP8x5BKHnR",
+      "quote_mint": "So11111111111111111111111111111111111111112",
+      "quote_amount": 284880346,
+      "sol_lamports": 284880346,
+      "token_base_units": 10093373567971,
+      "slot": 462394564,
+      "block_time": 1793173091
+    },
+    {
+      "signature": "4F5417ypkCQd1M8mtcif2nxBEiQGm89NcKGV6rnRv3Bk1A4ty34w9aQTjfykBwtS5mjrswZVBeaoeCDTPuBrczKc",
+      "log_index": 127,
+      "mint": "8qjD65hpruXKfBJSAGnMVVwBSQj3Y8W6rQ5Pr346pump",
+      "tx_type": "buy",
+      "wallet": "EFRrYBTb83mYAAtNfeT3jMAceCbksyWLWUH17RLoc2F3",
+      "quote_mint": "So11111111111111111111111111111111111111112",
+      "quote_amount": 58430849,
+      "sol_lamports": 58430849,
+      "token_base_units": 2085814141940,
+      "slot": 462394565,
+      "block_time": 1793173091
+    },
+    {
+      "signature": "5LqoRbSvMDja6uhGtLvMeNd8phksJFHPmq5X947A1Gx25Hq3VTAPcygUbiEckNnCHaNfueaezTf9RbKGr9FeY13h",
+      "log_index": 27,
+      "mint": "8qjD65hpruXKfBJSAGnMVVwBSQj3Y8W6rQ5Pr346pump",
+      "tx_type": "buy",
+      "wallet": "BkaSenWxpReej8MitWGXsGZBQz844f8vh4NyPVN8RAy3",
+      "quote_mint": "So11111111111111111111111111111111111111112",
+      "quote_amount": 49783900,
+      "sol_lamports": 49783900,
+      "token_base_units": 1770755393923,
+      "slot": 462394565,
+      "block_time": 1793173091
+    },
+    {
+      "signature": "4XK7dqUvecuTfGDHXFaP7mUPppih46g3dFEdJrUo63pbfHwzitUzAhYAHDcRoDhQZkEZWJW21WjX541ARB5DngkC",
+      "log_index": 17,
+      "mint": "5HFjK1ogcXSWfQX3Ba54PnX7kopnmAVvEmoN1sKapump",
+      "tx_type": "sell",
+      "wallet": "BwWK17cbHxwWBKZkUYvzxLcNQ1YVyaFezduWbtm2de6s",
+      "quote_mint": "So11111111111111111111111111111111111111112",
+      "quote_amount": 57317924,
+      "sol_lamports": 57317924,
+      "token_base_units": 2015498353698,
+      "slot": 462394566,
+      "block_time": 1793173092
+    },
+    {
+      "signature": "4LCHuJRrHt6TSv4AAqC4m4QkDK1Urie1H6K2fWYwGvSeB1am1HYtJfipCCgkMXzRcSRGSFDjruAo1XK5GvxQi57j",
+      "log_index": 17,
+      "mint": "5HFjK1ogcXSWfQX3Ba54PnX7kopnmAVvEmoN1sKapump",
+      "tx_type": "sell",
+      "wallet": "BwWK17cbHxwWBKZkUYvzxLcNQ1YVyaFezduWbtm2de6s",
+      "quote_mint": "So11111111111111111111111111111111111111112",
+      "quote_amount": 37274723,
+      "sol_lamports": 37274723,
+      "token_base_units": 1640294345938,
+      "slot": 462394572,
+      "block_time": 1793173093
+    },
+    {
+      "signature": "4anfFwqhL9R8MqKoaTrhVh9oWu8t5u39sMhonVECBpxaQeoTdZ1EZYp6eUC9o7bE8j1Z4tk1x3WfaNpQFwTVydHK",
+      "log_index": 17,
+      "mint": "8qjD65hpruXKfBJSAGnMVVwBSQj3Y8W6rQ5Pr346pump",
+      "tx_type": "sell",
+      "wallet": "BwWK17cbHxwWBKZkUYvzxLcNQ1YVyaFezduWbtm2de6s",
+      "quote_mint": "So11111111111111111111111111111111111111112",
+      "quote_amount": 3690121,
+      "sol_lamports": 3690121,
+      "token_base_units": 131052383081,
+      "slot": 462394575,
+      "block_time": 1793173094
+    }
+  ],
+  "non_sol_sample_rows": [
+    {
+      "signature": "4pQRehPcXgNbupTNvCXY1RFQgPaP9FXgYberAriQVEDiVpjHkZiJZpTFzdB7gWP72Siz4twTpvnEQFqHuEnaEX2Q",
+      "log_index": 57,
+      "mint": "8LtoxYauKuhB1eTmtC4YSbHKC6zhvXZdK66LDu2gpump",
+      "tx_type": "buy",
+      "wallet": "8ptvshQRZPRaRQBSCRxhHwbJFr6ktyUQ1SATDCLijkBW",
+      "quote_mint": "SPCXxcqXj6e5dJDVNovHN8744zkbhM2bYudU45BimGb",
+      "quote_amount": 897408,
+      "sol_lamports": null,
+      "token_base_units": 41755043136173,
+      "slot": 462394772,
+      "block_time": 1793173136
+    },
+    {
+      "signature": "3BUmhtc94BYQvfKWhUtG3oqFKPRefmGBETUZpTPKMDH6jKn7A3ebFuEfb7CxVtUAScXnk7XiEiJokuw3a9B1HHoQ",
+      "log_index": 20,
+      "mint": "8LtoxYauKuhB1eTmtC4YSbHKC6zhvXZdK66LDu2gpump",
+      "tx_type": "sell",
+      "wallet": "8ptvshQRZPRaRQBSCRxhHwbJFr6ktyUQ1SATDCLijkBW",
+      "quote_mint": "SPCXxcqXj6e5dJDVNovHN8744zkbhM2bYudU45BimGb",
+      "quote_amount": 897407,
+      "sol_lamports": null,
+      "token_base_units": 41755043136173,
+      "slot": 462394792,
+      "block_time": 1793173140
+    },
+    {
+      "signature": "2kYvSnUD3jFhCoJLhKYjDL1tjabhdjj89F9YCvii5mEWbxUQURncPhFJgCVGQQgs9XMpBweULmr4caEt5AykS8F1",
+      "log_index": 41,
+      "mint": "8LtoxYauKuhB1eTmtC4YSbHKC6zhvXZdK66LDu2gpump",
+      "tx_type": "sell",
+      "wallet": "8NDsJWz8hqqDV7o1PoYZMFuU2JCpPb8dAY3UjojySTXq",
+      "quote_mint": "SPCXxcqXj6e5dJDVNovHN8744zkbhM2bYudU45BimGb",
+      "quote_amount": 15384,
+      "sol_lamports": null,
+      "token_base_units": 745394673507,
+      "slot": 462394806,
+      "block_time": 1793173144
+    },
+    {
+      "signature": "5ovVRSKaRCrPHx7ptiQkxz2Lz6qgFfZCDZkqVAwpJduwXuc25J9PYuDUsRes9SuSUigJFMr9i8EVoTLeu3hmKTQP",
+      "log_index": 41,
+      "mint": "8LtoxYauKuhB1eTmtC4YSbHKC6zhvXZdK66LDu2gpump",
+      "tx_type": "sell",
+      "wallet": "8NDsJWz8hqqDV7o1PoYZMFuU2JCpPb8dAY3UjojySTXq",
+      "quote_mint": "SPCXxcqXj6e5dJDVNovHN8744zkbhM2bYudU45BimGb",
+      "quote_amount": 11524,
+      "sol_lamports": null,
+      "token_base_units": 559046005131,
+      "slot": 462394819,
+      "block_time": 1793173146
+    },
+    {
+      "signature": "3om6xuHa54iuxeHeqJT3VPAzjCQGMxuzy56Li3xYGBkKhjj3oWYx1B7mn1i4KRTYqKbfJg8hktsn6hgvauqGgiju",
+      "log_index": 41,
+      "mint": "8LtoxYauKuhB1eTmtC4YSbHKC6zhvXZdK66LDu2gpump",
+      "tx_type": "sell",
+      "wallet": "8NDsJWz8hqqDV7o1PoYZMFuU2JCpPb8dAY3UjojySTXq",
+      "quote_mint": "SPCXxcqXj6e5dJDVNovHN8744zkbhM2bYudU45BimGb",
+      "quote_amount": 8635,
+      "sol_lamports": null,
+      "token_base_units": 419284503848,
+      "slot": 462394826,
+      "block_time": 1793173148
+    }
+  ]
+}

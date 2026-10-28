@@ -1,0 +1,1343 @@
+{
+  "total_creations_6h": 11780,
+  "total_trades_6h": 534466,
+  "distinct_traded_mints_6h": 6530,
+  "distinct_wallets_6h": 30427,
+  "sol_quoted_mints": 5878,
+  "mature_sol_quoted_mints_30m": 5276,
+  "funnel_all_sol_mints": {
+    "5.0": 1446,
+    "10.0": 827,
+    "15.0": 516,
+    "25.0": 258,
+    "40.0": 143,
+    "60.0": 89,
+    "80.0": 61,
+    "84.0": 57
+  },
+  "funnel_mature_sol_mints": {
+    "5.0": 1272,
+    "10.0": 715,
+    "15.0": 429,
+    "25.0": 210,
+    "40.0": 119,
+    "60.0": 77,
+    "80.0": 57,
+    "84.0": 53
+  },
+  "graduated_mints_breakdown": {
+    "total_graduated": 57,
+    "instant_bundled_0_to_2_slots": 38,
+    "fast_3_to_25_slots": 5,
+    "organic_over_25_slots": 14,
+    "graduated_mints": [
+      {
+        "mint": "5LMyiFBjSRVdMYngdAEiGWzEZMTDMUftpZ5J2Erdpump",
+        "is_mature": true,
+        "trade_count": 6,
+        "unique_buyers": 6,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462397810,
+        "last_slot": 462397811,
+        "duration_slots": 1,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "iwPkJ45T2JegPCrzq1hECwiB9oJow5PYm7xJ28Mpump",
+        "is_mature": true,
+        "trade_count": 1,
+        "unique_buyers": 1,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462402692,
+        "last_slot": 462402692,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "6fncU6zvWW7By81H4xkZxmyB4kr417emXVBAqytGpump",
+        "is_mature": true,
+        "trade_count": 1,
+        "unique_buyers": 1,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462405640,
+        "last_slot": 462405640,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "APYhnVUJLgTyWWVtBhJ6sAHzymD7FyrrnKBd3TaSpump",
+        "is_mature": true,
+        "trade_count": 2454,
+        "unique_buyers": 613,
+        "peak_net_sol": 84.933742,
+        "final_net_sol": 84.933742,
+        "first_slot": 462405648,
+        "last_slot": 462412861,
+        "duration_slots": 7213,
+        "duration_seconds": 1541,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      },
+      {
+        "mint": "HfPVTUsSd55Aab6BACWCy6dXo5pQgTUFnyGzgspFpump",
+        "is_mature": true,
+        "trade_count": 2276,
+        "unique_buyers": 710,
+        "peak_net_sol": 85.005361,
+        "final_net_sol": 85.005361,
+        "first_slot": 462412913,
+        "last_slot": 462416608,
+        "duration_slots": 3695,
+        "duration_seconds": 788,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      },
+      {
+        "mint": "BoE8kzCqnX4BnEUYdWh9A9tWfjbFKhnMrA5cWPvNpump",
+        "is_mature": true,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462413047,
+        "last_slot": 462413047,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "9fpMjtrTD7aYZ5GVjtMS2bi2LsucoSmEqsCMyB8dpump",
+        "is_mature": true,
+        "trade_count": 1651,
+        "unique_buyers": 535,
+        "peak_net_sol": 85.005361,
+        "final_net_sol": 85.005361,
+        "first_slot": 462420374,
+        "last_slot": 462422282,
+        "duration_slots": 1908,
+        "duration_seconds": 406,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      },
+      {
+        "mint": "durYPhWoCs2UJErA8zMR5CA43RacaB2CaeMYvSjpump",
+        "is_mature": true,
+        "trade_count": 12,
+        "unique_buyers": 11,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462420995,
+        "last_slot": 462420996,
+        "duration_slots": 1,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "DroyhEy29yiM23WVG8Fr77MmYDLVfG9Aq2R4aj5pump",
+        "is_mature": true,
+        "trade_count": 1,
+        "unique_buyers": 1,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462423200,
+        "last_slot": 462423200,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "3sJPRBQjBFtxt3GUbHFcBrNnfFkuBDHSx1mJjjtqpump",
+        "is_mature": true,
+        "trade_count": 43,
+        "unique_buyers": 33,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462426043,
+        "last_slot": 462426063,
+        "duration_slots": 20,
+        "duration_seconds": 5,
+        "graduation_class": "FAST_3_TO_25_SLOTS"
+      },
+      {
+        "mint": "73CpbqfwmZB3HWPao26wgFGiEPD3AARve9JFmUiBpump",
+        "is_mature": true,
+        "trade_count": 1,
+        "unique_buyers": 1,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462426125,
+        "last_slot": 462426125,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "FR9jRicht5LPysNXjG4Zu3RGB7dMnpX8p6oaKG6gpump",
+        "is_mature": true,
+        "trade_count": 6,
+        "unique_buyers": 6,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462427242,
+        "last_slot": 462427243,
+        "duration_slots": 1,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "GfAu3sXRZXBEcgt26uSpT82cRyoMiMocuBwcFT8Mpump",
+        "is_mature": true,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462429469,
+        "last_slot": 462429469,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "J93NtjcBup2UYibA7q1tQtw47egMda2Vc3V6RsJhpump",
+        "is_mature": true,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462430978,
+        "last_slot": 462430978,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "241WxqTr6J67q7YP3xsJ3vNmrSm8YeAfGJjTdJpRBauN",
+        "is_mature": true,
+        "trade_count": 4105,
+        "unique_buyers": 1050,
+        "peak_net_sol": 84.795459,
+        "final_net_sol": 84.795459,
+        "first_slot": 462433019,
+        "last_slot": 462438905,
+        "duration_slots": 5886,
+        "duration_seconds": 1255,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      },
+      {
+        "mint": "HJRD7UfseyJMqHEkqPqkpng1rcUfvwqWsJywQsJ8pump",
+        "is_mature": true,
+        "trade_count": 6,
+        "unique_buyers": 6,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462433304,
+        "last_slot": 462433304,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "AoEgEq3SaXc7KbSJPGYbByppBVaKVdgFEBPX94vNpump",
+        "is_mature": true,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462433677,
+        "last_slot": 462433677,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "9JBi8yYZvmpqpw46PQGbrk5iNcsZ18SWAqvTtVNApump",
+        "is_mature": true,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462436145,
+        "last_slot": 462436145,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "RKKAaKrzzVozYiQ2xFqEUEfcyDwEEbihh6fBzQ2pump",
+        "is_mature": true,
+        "trade_count": 1,
+        "unique_buyers": 1,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462436197,
+        "last_slot": 462436197,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "sMb8xNPajbVVXua3d13SCSPGPSpYnLwaBqrijZVpump",
+        "is_mature": true,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462437028,
+        "last_slot": 462437028,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "A1wbf3tW1gR5Fo9a93NQZXJUTW6fLZpQRaCJMuTmpump",
+        "is_mature": true,
+        "trade_count": 6,
+        "unique_buyers": 6,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462437262,
+        "last_slot": 462437262,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "8RtR4Wx9W9g1LUmJ8q63HFmm2x6nna1zFvhR4C1dpump",
+        "is_mature": true,
+        "trade_count": 13,
+        "unique_buyers": 12,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462438687,
+        "last_slot": 462438689,
+        "duration_slots": 2,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "Fw9xg6scsHKa3iuwUGyfrhjgxNaXKFNW6kvngVz6pump",
+        "is_mature": true,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462440286,
+        "last_slot": 462440286,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "BkFbtSgJSwudwPV25MXpcBf2zn1B7HGAUPGQuLD8pump",
+        "is_mature": true,
+        "trade_count": 6,
+        "unique_buyers": 6,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462441051,
+        "last_slot": 462441051,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "B57iR2kZanf9TrVkhJpTVF5NgcRK4TKBXkZsTSBupump",
+        "is_mature": true,
+        "trade_count": 6,
+        "unique_buyers": 6,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462442123,
+        "last_slot": 462442123,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "GMF6M1h1352SbZzrytbPbiWoRwu8Wu5J1bD7McXBpump",
+        "is_mature": true,
+        "trade_count": 6,
+        "unique_buyers": 6,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462443281,
+        "last_slot": 462443281,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "Gowm6Je6EzGMto4bBDV7ScbHTVDYNBiMhX8nFv3qpump",
+        "is_mature": true,
+        "trade_count": 42,
+        "unique_buyers": 34,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462444091,
+        "last_slot": 462444112,
+        "duration_slots": 21,
+        "duration_seconds": 4,
+        "graduation_class": "FAST_3_TO_25_SLOTS"
+      },
+      {
+        "mint": "7bb4cG4AAiMyaFPdka4zXtaFEpAyMU256aXJUgjbpump",
+        "is_mature": true,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462444929,
+        "last_slot": 462444929,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "CMvLh1iLTcnMC6fQv6LBFfY4e3TdGyuzqW1h9HGwpump",
+        "is_mature": true,
+        "trade_count": 6,
+        "unique_buyers": 6,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462445999,
+        "last_slot": 462446000,
+        "duration_slots": 1,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "3L2yoyLCC1k2TFEvC9kqVDA1moHW6XWhrYdhzqQDpump",
+        "is_mature": true,
+        "trade_count": 6,
+        "unique_buyers": 6,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462446155,
+        "last_slot": 462446155,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "4PbwMXsEH7okiWgSQg6taoXCwqronr11Bx5PB7Fbpump",
+        "is_mature": true,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462448773,
+        "last_slot": 462448773,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "5dYmn27zDj6E9NY2nXkXgFgFvkvmtqg8j6rWxo6upump",
+        "is_mature": true,
+        "trade_count": 8,
+        "unique_buyers": 8,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462451424,
+        "last_slot": 462451426,
+        "duration_slots": 2,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "AHKcbfroL4aYLcmK6iPwYJieGYUZZmeB917FZYjbg6Xb",
+        "is_mature": true,
+        "trade_count": 12,
+        "unique_buyers": 12,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462452926,
+        "last_slot": 462452926,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "36JbTmmuhbnkoGEaAc1v8GWcfz19e4NRm8Y1MDySpump",
+        "is_mature": true,
+        "trade_count": 26,
+        "unique_buyers": 25,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462453162,
+        "last_slot": 462453272,
+        "duration_slots": 110,
+        "duration_seconds": 23,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      },
+      {
+        "mint": "DS6ybm9YttPRWBQF1voxhMgDCsqLk7e8mkFNTmrCpump",
+        "is_mature": true,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462456335,
+        "last_slot": 462456336,
+        "duration_slots": 1,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "FwY1zPT2JxMA6a9oD6SsVUKK62p8XUQWyZwGQSDqpump",
+        "is_mature": true,
+        "trade_count": 48,
+        "unique_buyers": 34,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462459920,
+        "last_slot": 462459941,
+        "duration_slots": 21,
+        "duration_seconds": 4,
+        "graduation_class": "FAST_3_TO_25_SLOTS"
+      },
+      {
+        "mint": "ELCVM9Tj2xEEX6HaLcvidZPjjE6cwRkq6gfKY3FBpump",
+        "is_mature": true,
+        "trade_count": 234,
+        "unique_buyers": 161,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462461212,
+        "last_slot": 462462143,
+        "duration_slots": 931,
+        "duration_seconds": 198,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      },
+      {
+        "mint": "EFLwx1cVeLoFx15eRzfei3yCYBHXFZefuzwi4R7Cpump",
+        "is_mature": true,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462461744,
+        "last_slot": 462461744,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "5LNrYzNGUs9j6JXH397jTqAUMV8ayZC62zC3hedDpump",
+        "is_mature": true,
+        "trade_count": 1,
+        "unique_buyers": 1,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462465585,
+        "last_slot": 462465585,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "9rdw2ukP4gW5rQFS1RZrFdmpmB9tBFdngsYXP5NLpump",
+        "is_mature": true,
+        "trade_count": 2449,
+        "unique_buyers": 860,
+        "peak_net_sol": 85.005362,
+        "final_net_sol": 85.005362,
+        "first_slot": 462466202,
+        "last_slot": 462469721,
+        "duration_slots": 3519,
+        "duration_seconds": 748,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      },
+      {
+        "mint": "4f9PFK2wHB1LkYKWrGK67GBfypZ6APdi67xKfexwpump",
+        "is_mature": true,
+        "trade_count": 14,
+        "unique_buyers": 12,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462466741,
+        "last_slot": 462466744,
+        "duration_slots": 3,
+        "duration_seconds": 1,
+        "graduation_class": "FAST_3_TO_25_SLOTS"
+      },
+      {
+        "mint": "rxf5EHdhmXJEbvunVvGLo2avkFzTFGoWRVHDe5Ppump",
+        "is_mature": true,
+        "trade_count": 1,
+        "unique_buyers": 1,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462468849,
+        "last_slot": 462468849,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "2jyaoNq68dx6VCx8Wu1SvFhPad5ik6WuMvS4htR8pump",
+        "is_mature": true,
+        "trade_count": 1608,
+        "unique_buyers": 255,
+        "peak_net_sol": 85.00536,
+        "final_net_sol": 85.00536,
+        "first_slot": 462469094,
+        "last_slot": 462471854,
+        "duration_slots": 2760,
+        "duration_seconds": 587,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      },
+      {
+        "mint": "8K1zd4a7N5fnz3ZdtV6WFmdyE3FohkF1FYyfstqopump",
+        "is_mature": true,
+        "trade_count": 592,
+        "unique_buyers": 322,
+        "peak_net_sol": 85.00536,
+        "final_net_sol": 85.00536,
+        "first_slot": 462471046,
+        "last_slot": 462471715,
+        "duration_slots": 669,
+        "duration_seconds": 144,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      },
+      {
+        "mint": "EAnnxAo767c3sh7sSubCEAYeUkHLKiBvN5s76bPUpump",
+        "is_mature": true,
+        "trade_count": 1026,
+        "unique_buyers": 485,
+        "peak_net_sol": 85.00536,
+        "final_net_sol": 85.00536,
+        "first_slot": 462473730,
+        "last_slot": 462474782,
+        "duration_slots": 1052,
+        "duration_seconds": 224,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      },
+      {
+        "mint": "8J8QrjeXCuRPEQbB6SUdXsXGGDZPizCqhJRSPMKCpump",
+        "is_mature": true,
+        "trade_count": 208,
+        "unique_buyers": 127,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462474365,
+        "last_slot": 462474949,
+        "duration_slots": 584,
+        "duration_seconds": 124,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      },
+      {
+        "mint": "8g6grwr9D1q3Ry99m62nkWo6mPfFaSSDRFmzDhf4pump",
+        "is_mature": true,
+        "trade_count": 1,
+        "unique_buyers": 1,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462474629,
+        "last_slot": 462474629,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "EgN1z5Jkky8c7uo7wQdpVoP5PyHHckdihpvWyR5npump",
+        "is_mature": true,
+        "trade_count": 10,
+        "unique_buyers": 10,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462474835,
+        "last_slot": 462474835,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "AKrvXfC9Z45wzwTLNhk36Nt7BnE4qjruxXUxTDbmpump",
+        "is_mature": true,
+        "trade_count": 3125,
+        "unique_buyers": 1057,
+        "peak_net_sol": 96.346422,
+        "final_net_sol": 96.346422,
+        "first_slot": 462475463,
+        "last_slot": 462480699,
+        "duration_slots": 5236,
+        "duration_seconds": 1110,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      },
+      {
+        "mint": "DGzVXr8F358x4XXtX9bHwSd4zsJuRzgdw2GFotDUpump",
+        "is_mature": true,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462476811,
+        "last_slot": 462476811,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "6QSX8PJ2iU83gvepoCsaUoC6HHPb9vaTbz9JfT4Kpump",
+        "is_mature": true,
+        "trade_count": 6,
+        "unique_buyers": 6,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462482313,
+        "last_slot": 462482313,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "9DJpC8SiGGaMom9uUYQGrwtYyQtejFkRsFhFkCTPpump",
+        "is_mature": true,
+        "trade_count": 174,
+        "unique_buyers": 101,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462483030,
+        "last_slot": 462483902,
+        "duration_slots": 872,
+        "duration_seconds": 186,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      },
+      {
+        "mint": "6czNG3n8Fs5VZrFR6A4hsTr3Rm8dQiDHMNVyyCRWpump",
+        "is_mature": true,
+        "trade_count": 35,
+        "unique_buyers": 30,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462483076,
+        "last_slot": 462483095,
+        "duration_slots": 19,
+        "duration_seconds": 4,
+        "graduation_class": "FAST_3_TO_25_SLOTS"
+      },
+      {
+        "mint": "8qkvro83yaJGuhz1joK5beN6pPypS4LBFkx8ghLrpump",
+        "is_mature": false,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462488745,
+        "last_slot": 462488745,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "gX4FiMrSTyBgS6ERX3byuWqJ2JHq7vq8hJNyEewpump",
+        "is_mature": false,
+        "trade_count": 1,
+        "unique_buyers": 1,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462489471,
+        "last_slot": 462489471,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "6igRi89tQdNDH2qaLi6gUk6NVXudrTeF7vU39YrMpump",
+        "is_mature": false,
+        "trade_count": 7,
+        "unique_buyers": 7,
+        "peak_net_sol": 85.005359,
+        "final_net_sol": 85.005359,
+        "first_slot": 462491138,
+        "last_slot": 462491138,
+        "duration_slots": 0,
+        "duration_seconds": 0,
+        "graduation_class": "INSTANT_BUNDLED_0_TO_2_SLOTS"
+      },
+      {
+        "mint": "HjVGL4kuW2H6eeY2sTxwp5VCUhCJChzZBHc3aQ3EMKRS",
+        "is_mature": false,
+        "trade_count": 1752,
+        "unique_buyers": 694,
+        "peak_net_sol": 85.005361,
+        "final_net_sol": 85.005361,
+        "first_slot": 462491606,
+        "last_slot": 462492727,
+        "duration_slots": 1121,
+        "duration_seconds": 237,
+        "graduation_class": "ORGANIC_OVER_25_SLOTS"
+      }
+    ]
+  },
+  "route_a_simulations": {
+    "trig_5sol_S+2": {
+      "+30s": {
+        "n": 1068,
+        "median_pct": -20.77,
+        "mean_pct": -20.87,
+        "mean_ex_top1_pct": -21.23,
+        "win_rate_pct": 22.57,
+        "below_minus_50_pct": 17.51,
+        "graduated_count": 8
+      },
+      "+60s": {
+        "n": 1068,
+        "median_pct": -30.64,
+        "mean_pct": -28.39,
+        "mean_ex_top1_pct": -28.72,
+        "win_rate_pct": 20.22,
+        "below_minus_50_pct": 26.12,
+        "graduated_count": 8
+      },
+      "+120s": {
+        "n": 1068,
+        "median_pct": -37.64,
+        "mean_pct": -36.09,
+        "mean_ex_top1_pct": -36.58,
+        "win_rate_pct": 15.64,
+        "below_minus_50_pct": 35.39,
+        "graduated_count": 8
+      },
+      "+300s": {
+        "n": 1068,
+        "median_pct": -75.82,
+        "mean_pct": -53.74,
+        "mean_ex_top1_pct": -54.29,
+        "win_rate_pct": 10.58,
+        "below_minus_50_pct": 59.27,
+        "graduated_count": 13
+      },
+      "+900s": {
+        "n": 1068,
+        "median_pct": -99.08,
+        "mean_pct": -69.05,
+        "mean_ex_top1_pct": -69.85,
+        "win_rate_pct": 6.09,
+        "below_minus_50_pct": 76.03,
+        "graduated_count": 17
+      }
+    },
+    "trig_5sol_S+5": {
+      "+30s": {
+        "n": 1064,
+        "median_pct": -19.18,
+        "mean_pct": -21.04,
+        "mean_ex_top1_pct": -21.38,
+        "win_rate_pct": 21.62,
+        "below_minus_50_pct": 17.58,
+        "graduated_count": 5
+      },
+      "+60s": {
+        "n": 1064,
+        "median_pct": -29.68,
+        "mean_pct": -28.12,
+        "mean_ex_top1_pct": -28.54,
+        "win_rate_pct": 20.96,
+        "below_minus_50_pct": 25.85,
+        "graduated_count": 5
+      },
+      "+120s": {
+        "n": 1064,
+        "median_pct": -37.26,
+        "mean_pct": -36.45,
+        "mean_ex_top1_pct": -36.88,
+        "win_rate_pct": 15.98,
+        "below_minus_50_pct": 35.53,
+        "graduated_count": 5
+      },
+      "+300s": {
+        "n": 1064,
+        "median_pct": -75.98,
+        "mean_pct": -54.26,
+        "mean_ex_top1_pct": -54.81,
+        "win_rate_pct": 10.53,
+        "below_minus_50_pct": 59.4,
+        "graduated_count": 10
+      },
+      "+900s": {
+        "n": 1064,
+        "median_pct": -99.12,
+        "mean_pct": -69.6,
+        "mean_ex_top1_pct": -70.3,
+        "win_rate_pct": 5.64,
+        "below_minus_50_pct": 75.94,
+        "graduated_count": 14
+      }
+    },
+    "trig_5sol_S+10": {
+      "+30s": {
+        "n": 1062,
+        "median_pct": -17.84,
+        "mean_pct": -21.13,
+        "mean_ex_top1_pct": -21.35,
+        "win_rate_pct": 23.26,
+        "below_minus_50_pct": 18.08,
+        "graduated_count": 5
+      },
+      "+60s": {
+        "n": 1062,
+        "median_pct": -28.7,
+        "mean_pct": -27.82,
+        "mean_ex_top1_pct": -28.12,
+        "win_rate_pct": 21.85,
+        "below_minus_50_pct": 26.74,
+        "graduated_count": 5
+      },
+      "+120s": {
+        "n": 1062,
+        "median_pct": -36.26,
+        "mean_pct": -36.26,
+        "mean_ex_top1_pct": -36.56,
+        "win_rate_pct": 15.91,
+        "below_minus_50_pct": 36.25,
+        "graduated_count": 6
+      },
+      "+300s": {
+        "n": 1062,
+        "median_pct": -76.49,
+        "mean_pct": -54.65,
+        "mean_ex_top1_pct": -55.14,
+        "win_rate_pct": 10.26,
+        "below_minus_50_pct": 60.17,
+        "graduated_count": 10
+      },
+      "+900s": {
+        "n": 1062,
+        "median_pct": -99.08,
+        "mean_pct": -70.06,
+        "mean_ex_top1_pct": -70.78,
+        "win_rate_pct": 5.84,
+        "below_minus_50_pct": 76.65,
+        "graduated_count": 14
+      }
+    },
+    "trig_10sol_S+2": {
+      "+30s": {
+        "n": 642,
+        "median_pct": -17.99,
+        "mean_pct": -17.33,
+        "mean_ex_top1_pct": -17.88,
+        "win_rate_pct": 26.32,
+        "below_minus_50_pct": 15.73,
+        "graduated_count": 8
+      },
+      "+60s": {
+        "n": 642,
+        "median_pct": -36.67,
+        "mean_pct": -23.28,
+        "mean_ex_top1_pct": -23.96,
+        "win_rate_pct": 23.99,
+        "below_minus_50_pct": 21.34,
+        "graduated_count": 8
+      },
+      "+120s": {
+        "n": 642,
+        "median_pct": -41.96,
+        "mean_pct": -30.71,
+        "mean_ex_top1_pct": -31.43,
+        "win_rate_pct": 18.07,
+        "below_minus_50_pct": 31.0,
+        "graduated_count": 8
+      },
+      "+300s": {
+        "n": 642,
+        "median_pct": -53.04,
+        "mean_pct": -46.42,
+        "mean_ex_top1_pct": -47.33,
+        "win_rate_pct": 13.24,
+        "below_minus_50_pct": 54.21,
+        "graduated_count": 13
+      },
+      "+900s": {
+        "n": 642,
+        "median_pct": -94.33,
+        "mean_pct": -61.4,
+        "mean_ex_top1_pct": -62.49,
+        "win_rate_pct": 7.48,
+        "below_minus_50_pct": 70.72,
+        "graduated_count": 17
+      }
+    },
+    "trig_10sol_S+5": {
+      "+30s": {
+        "n": 639,
+        "median_pct": -17.16,
+        "mean_pct": -17.3,
+        "mean_ex_top1_pct": -17.79,
+        "win_rate_pct": 26.6,
+        "below_minus_50_pct": 14.87,
+        "graduated_count": 5
+      },
+      "+60s": {
+        "n": 639,
+        "median_pct": -34.6,
+        "mean_pct": -23.26,
+        "mean_ex_top1_pct": -23.86,
+        "win_rate_pct": 24.26,
+        "below_minus_50_pct": 21.28,
+        "graduated_count": 5
+      },
+      "+120s": {
+        "n": 639,
+        "median_pct": -41.62,
+        "mean_pct": -31.05,
+        "mean_ex_top1_pct": -31.68,
+        "win_rate_pct": 18.15,
+        "below_minus_50_pct": 31.61,
+        "graduated_count": 5
+      },
+      "+300s": {
+        "n": 639,
+        "median_pct": -54.81,
+        "mean_pct": -47.22,
+        "mean_ex_top1_pct": -48.14,
+        "win_rate_pct": 12.68,
+        "below_minus_50_pct": 55.09,
+        "graduated_count": 10
+      },
+      "+900s": {
+        "n": 639,
+        "median_pct": -94.39,
+        "mean_pct": -62.33,
+        "mean_ex_top1_pct": -63.42,
+        "win_rate_pct": 7.36,
+        "below_minus_50_pct": 71.52,
+        "graduated_count": 14
+      }
+    },
+    "trig_10sol_S+10": {
+      "+30s": {
+        "n": 639,
+        "median_pct": -15.3,
+        "mean_pct": -16.09,
+        "mean_ex_top1_pct": -16.48,
+        "win_rate_pct": 28.33,
+        "below_minus_50_pct": 14.87,
+        "graduated_count": 5
+      },
+      "+60s": {
+        "n": 639,
+        "median_pct": -33.07,
+        "mean_pct": -22.1,
+        "mean_ex_top1_pct": -22.59,
+        "win_rate_pct": 25.2,
+        "below_minus_50_pct": 22.22,
+        "graduated_count": 5
+      },
+      "+120s": {
+        "n": 639,
+        "median_pct": -38.87,
+        "mean_pct": -29.56,
+        "mean_ex_top1_pct": -30.08,
+        "win_rate_pct": 18.0,
+        "below_minus_50_pct": 31.3,
+        "graduated_count": 6
+      },
+      "+300s": {
+        "n": 639,
+        "median_pct": -55.04,
+        "mean_pct": -47.36,
+        "mean_ex_top1_pct": -48.16,
+        "win_rate_pct": 12.68,
+        "below_minus_50_pct": 55.87,
+        "graduated_count": 10
+      },
+      "+900s": {
+        "n": 639,
+        "median_pct": -94.39,
+        "mean_pct": -62.54,
+        "mean_ex_top1_pct": -63.66,
+        "win_rate_pct": 7.04,
+        "below_minus_50_pct": 72.3,
+        "graduated_count": 14
+      }
+    },
+    "trig_15sol_S+2": {
+      "+30s": {
+        "n": 381,
+        "median_pct": -14.63,
+        "mean_pct": -14.8,
+        "mean_ex_top1_pct": -15.62,
+        "win_rate_pct": 31.76,
+        "below_minus_50_pct": 23.1,
+        "graduated_count": 8
+      },
+      "+60s": {
+        "n": 381,
+        "median_pct": -33.87,
+        "mean_pct": -18.61,
+        "mean_ex_top1_pct": -19.62,
+        "win_rate_pct": 29.66,
+        "below_minus_50_pct": 33.07,
+        "graduated_count": 8
+      },
+      "+120s": {
+        "n": 381,
+        "median_pct": -46.94,
+        "mean_pct": -25.31,
+        "mean_ex_top1_pct": -26.36,
+        "win_rate_pct": 23.88,
+        "below_minus_50_pct": 45.14,
+        "graduated_count": 8
+      },
+      "+300s": {
+        "n": 381,
+        "median_pct": -55.05,
+        "mean_pct": -35.49,
+        "mean_ex_top1_pct": -36.69,
+        "win_rate_pct": 18.37,
+        "below_minus_50_pct": 58.01,
+        "graduated_count": 13
+      },
+      "+900s": {
+        "n": 381,
+        "median_pct": -69.21,
+        "mean_pct": -50.65,
+        "mean_ex_top1_pct": -52.22,
+        "win_rate_pct": 10.24,
+        "below_minus_50_pct": 71.13,
+        "graduated_count": 17
+      }
+    },
+    "trig_15sol_S+5": {
+      "+30s": {
+        "n": 378,
+        "median_pct": -13.31,
+        "mean_pct": -14.0,
+        "mean_ex_top1_pct": -14.6,
+        "win_rate_pct": 31.48,
+        "below_minus_50_pct": 20.37,
+        "graduated_count": 5
+      },
+      "+60s": {
+        "n": 378,
+        "median_pct": -31.13,
+        "mean_pct": -18.38,
+        "mean_ex_top1_pct": -19.13,
+        "win_rate_pct": 29.89,
+        "below_minus_50_pct": 29.1,
+        "graduated_count": 5
+      },
+      "+120s": {
+        "n": 378,
+        "median_pct": -45.6,
+        "mean_pct": -25.04,
+        "mean_ex_top1_pct": -25.88,
+        "win_rate_pct": 23.81,
+        "below_minus_50_pct": 42.59,
+        "graduated_count": 5
+      },
+      "+300s": {
+        "n": 378,
+        "median_pct": -54.93,
+        "mean_pct": -36.27,
+        "mean_ex_top1_pct": -37.53,
+        "win_rate_pct": 16.67,
+        "below_minus_50_pct": 57.14,
+        "graduated_count": 10
+      },
+      "+900s": {
+        "n": 378,
+        "median_pct": -70.68,
+        "mean_pct": -51.67,
+        "mean_ex_top1_pct": -53.22,
+        "win_rate_pct": 10.58,
+        "below_minus_50_pct": 71.16,
+        "graduated_count": 14
+      }
+    },
+    "trig_15sol_S+10": {
+      "+30s": {
+        "n": 378,
+        "median_pct": -10.78,
+        "mean_pct": -13.07,
+        "mean_ex_top1_pct": -13.7,
+        "win_rate_pct": 34.39,
+        "below_minus_50_pct": 18.25,
+        "graduated_count": 5
+      },
+      "+60s": {
+        "n": 378,
+        "median_pct": -26.3,
+        "mean_pct": -17.24,
+        "mean_ex_top1_pct": -18.07,
+        "win_rate_pct": 31.22,
+        "below_minus_50_pct": 26.72,
+        "graduated_count": 5
+      },
+      "+120s": {
+        "n": 378,
+        "median_pct": -43.54,
+        "mean_pct": -23.83,
+        "mean_ex_top1_pct": -24.74,
+        "win_rate_pct": 23.02,
+        "below_minus_50_pct": 38.36,
+        "graduated_count": 6
+      },
+      "+300s": {
+        "n": 378,
+        "median_pct": -53.99,
+        "mean_pct": -36.25,
+        "mean_ex_top1_pct": -37.36,
+        "win_rate_pct": 17.72,
+        "below_minus_50_pct": 56.61,
+        "graduated_count": 10
+      },
+      "+900s": {
+        "n": 378,
+        "median_pct": -70.68,
+        "mean_pct": -51.75,
+        "mean_ex_top1_pct": -53.21,
+        "win_rate_pct": 9.79,
+        "below_minus_50_pct": 70.37,
+        "graduated_count": 14
+      }
+    },
+    "trig_25sol_S+2": {
+      "+30s": {
+        "n": 159,
+        "median_pct": -7.68,
+        "mean_pct": -12.2,
+        "mean_ex_top1_pct": -12.86,
+        "win_rate_pct": 38.99,
+        "below_minus_50_pct": 19.5,
+        "graduated_count": 8
+      },
+      "+60s": {
+        "n": 159,
+        "median_pct": -7.45,
+        "mean_pct": -12.47,
+        "mean_ex_top1_pct": -13.47,
+        "win_rate_pct": 38.99,
+        "below_minus_50_pct": 27.67,
+        "graduated_count": 8
+      },
+      "+120s": {
+        "n": 159,
+        "median_pct": -29.99,
+        "mean_pct": -17.25,
+        "mean_ex_top1_pct": -19.21,
+        "win_rate_pct": 34.59,
+        "below_minus_50_pct": 37.74,
+        "graduated_count": 9
+      },
+      "+300s": {
+        "n": 159,
+        "median_pct": -54.01,
+        "mean_pct": -22.42,
+        "mean_ex_top1_pct": -24.42,
+        "win_rate_pct": 27.04,
+        "below_minus_50_pct": 53.46,
+        "graduated_count": 13
+      },
+      "+900s": {
+        "n": 159,
+        "median_pct": -67.17,
+        "mean_pct": -35.51,
+        "mean_ex_top1_pct": -37.91,
+        "win_rate_pct": 17.61,
+        "below_minus_50_pct": 68.55,
+        "graduated_count": 17
+      }
+    },
+    "trig_25sol_S+5": {
+      "+30s": {
+        "n": 156,
+        "median_pct": -7.33,
+        "mean_pct": -10.34,
+        "mean_ex_top1_pct": -11.02,
+        "win_rate_pct": 37.82,
+        "below_minus_50_pct": 17.31,
+        "graduated_count": 5
+      },
+      "+60s": {
+        "n": 156,
+        "median_pct": -8.18,
+        "mean_pct": -11.1,
+        "mean_ex_top1_pct": -12.36,
+        "win_rate_pct": 39.1,
+        "below_minus_50_pct": 26.28,
+        "graduated_count": 5
+      },
+      "+120s": {
+        "n": 156,
+        "median_pct": -30.6,
+        "mean_pct": -16.57,
+        "mean_ex_top1_pct": -18.57,
+        "win_rate_pct": 33.97,
+        "below_minus_50_pct": 37.82,
+        "graduated_count": 6
+      },
+      "+300s": {
+        "n": 156,
+        "median_pct": -53.35,
+        "mean_pct": -21.49,
+        "mean_ex_top1_pct": -23.78,
+        "win_rate_pct": 26.92,
+        "below_minus_50_pct": 53.85,
+        "graduated_count": 10
+      },
+      "+900s": {
+        "n": 156,
+        "median_pct": -67.07,
+        "mean_pct": -35.64,
+        "mean_ex_top1_pct": -38.09,
+        "win_rate_pct": 17.95,
+        "below_minus_50_pct": 69.87,
+        "graduated_count": 14
+      }
+    },
+    "trig_25sol_S+10": {
+      "+30s": {
+        "n": 156,
+        "median_pct": -5.32,
+        "mean_pct": -10.98,
+        "mean_ex_top1_pct": -11.58,
+        "win_rate_pct": 39.74,
+        "below_minus_50_pct": 17.95,
+        "graduated_count": 5
+      },
+      "+60s": {
+        "n": 156,
+        "median_pct": -8.25,
+        "mean_pct": -11.23,
+        "mean_ex_top1_pct": -12.45,
+        "win_rate_pct": 40.38,
+        "below_minus_50_pct": 24.36,
+        "graduated_count": 5
+      },
+      "+120s": {
+        "n": 156,
+        "median_pct": -25.6,
+        "mean_pct": -16.99,
+        "mean_ex_top1_pct": -18.8,
+        "win_rate_pct": 32.69,
+        "below_minus_50_pct": 38.46,
+        "graduated_count": 7
+      },
+      "+300s": {
+        "n": 156,
+        "median_pct": -53.0,
+        "mean_pct": -20.83,
+        "mean_ex_top1_pct": -22.77,
+        "win_rate_pct": 28.85,
+        "below_minus_50_pct": 53.85,
+        "graduated_count": 10
+      },
+      "+900s": {
+        "n": 156,
+        "median_pct": -66.84,
+        "mean_pct": -34.74,
+        "mean_ex_top1_pct": -37.2,
+        "win_rate_pct": 19.23,
+        "below_minus_50_pct": 69.23,
+        "graduated_count": 14
+      }
+    }
+  }
+}
