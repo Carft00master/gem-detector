@@ -187,3 +187,43 @@ async def test_adaptive_polling_intervals_and_stability_backoff(tmp_path):
     poller.latest_reserves["pool_X"].spot_price_sol = 0.0001020
     assert poller.compute_adaptive_interval() == 2.5  # Speeds up to fast (2.5s)
 
+
+def test_all_34_pools_effective_sol_implied_by_price_matches_vault_plus_boost_within_2pct():
+    """
+    Review Item 1: Verify across all 34 reached pools that the effective SOL reserve implied
+    by the swap execution price (dw_curve * tok_post / dt) matches (vault_sol + boost_sol)
+    within 2%, where vault_sol is the pool's WSOL token account (owner == pool, mint == WSOL,
+    largest balance) and boost_sol is extracted from the migration transaction's InitBoostEvent.
+    """
+    import json
+    from scripts.generate_route_b_price_paths import (
+        extract_init_boost_sol,
+        get_pool_wsol_vault_address,
+        load_fixture,
+        verify_swap_price_matches_vault_plus_boost,
+    )
+
+    with open("reports/retrospective_report.json", encoding="utf-8") as f:
+        retro = json.load(f)
+
+    reached_pools = [r for r in retro["per_migration_table"] if r.get("reached_creation_slot")]
+    assert len(reached_pools) == 34
+
+    for r in reached_pools:
+        pool = r["pool_address"]
+        mint = r["mint"]
+        mig_sig = r["migration_signature"]
+        mig_tx = load_fixture(mig_sig)
+        assert mig_tx is not None
+        wsol_vault_addr = get_pool_wsol_vault_address(mig_tx, pool)
+        assert len(wsol_vault_addr) >= 32
+        boost_sol = extract_init_boost_sol(mig_tx)
+        sigs = json.load(open(f"data/retrospective_cache/pool_sigs/{pool}.json", encoding="utf-8"))
+        res = verify_swap_price_matches_vault_plus_boost(
+            pool, mint, mig_sig, boost_sol, wsol_vault_addr, sigs
+        )
+        assert res["relative_error_pct"] <= 2.0, (
+            f"Pool {pool} exceeded 2% error: {res['relative_error_pct']}%"
+        )
+
+

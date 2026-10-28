@@ -1,0 +1,55 @@
+{
+  "full_program_stream": {
+    "mode": "full_program_logsSubscribe (6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P)",
+    "elapsed_sec": 40.02,
+    "msgs_rx": 8159,
+    "msgs_per_sec": 203.86,
+    "bytes_rx": 9202634,
+    "bytes_per_sec": 229932.15,
+    "failed_msgs": 7237,
+    "failed_pct": 88.7,
+    "creations_captured": 10,
+    "new_mint_trades_captured": 182,
+    "old_mint_trades_discarded": 667,
+    "created_mints": [
+      "3gtgRwzzJcx6sbs8guE2JzU6RMrp28QEvHxvdLmvpump",
+      "7c9fe1PzCbBd5w2FErBSVr7zQMaeb3sCPj6ZKJfpump",
+      "7zDv9BoujjAxRNT7reabJrAedKgTuka4wZ7a2eycpump",
+      "8iW3rg1sf4XNMsjF9QzgGDf3cAC8zR36pozEsEsmpump",
+      "8upvBpjgk3GqvvEHxvotvKx4EatJsDagvDtmR6L9pump",
+      "9Nz37a5wsXmwBKaugnoRMe1FMHp1mb5jnYTuMSe6pump",
+      "B77NNThekj9n9ZrwgbtYGgcbgTU47B8XHtU4T31Gpump",
+      "BXpj9xwQMihKSvCgnoA8DuY8bfrDGCiAbDuKdndrpump",
+      "En2GgJB334TzNZXeNkwcb5iHCAsNFYJWWaKKW3dBpump",
+      "HS8eVKm3VTFGFsdKiZR1Brt353TKwewKzPCLq2Uvpump"
+    ]
+  },
+  "smaller_subscription_stream": {
+    "mode": "smaller_subscription (MintAuthority TSLvdd1pWpHVjahSpsvCXUbgwsL3JAcvokwaKt1eokM + active bonding_curve logsSubscribe)",
+    "elapsed_sec": 40.03,
+    "msgs_rx": 2116,
+    "msgs_per_sec": 52.87,
+    "bytes_rx": 2258106,
+    "bytes_per_sec": 56417.22,
+    "failed_msgs": 1926,
+    "failed_pct": 91.02,
+    "creations_captured": 10,
+    "new_mint_trades_captured": 171,
+    "sub_errors": 0,
+    "created_mints": [
+      "3gtgRwzzJcx6sbs8guE2JzU6RMrp28QEvHxvdLmvpump",
+      "7c9fe1PzCbBd5w2FErBSVr7zQMaeb3sCPj6ZKJfpump",
+      "7zDv9BoujjAxRNT7reabJrAedKgTuka4wZ7a2eycpump",
+      "8iW3rg1sf4XNMsjF9QzgGDf3cAC8zR36pozEsEsmpump",
+      "8upvBpjgk3GqvvEHxvotvKx4EatJsDagvDtmR6L9pump",
+      "9Nz37a5wsXmwBKaugnoRMe1FMHp1mb5jnYTuMSe6pump",
+      "B77NNThekj9n9ZrwgbtYGgcbgTU47B8XHtU4T31Gpump",
+      "BXpj9xwQMihKSvCgnoA8DuY8bfrDGCiAbDuKdndrpump",
+      "En2GgJB334TzNZXeNkwcb5iHCAsNFYJWWaKKW3dBpump",
+      "HS8eVKm3VTFGFsdKiZR1Brt353TKwewKzPCLq2Uvpump"
+    ]
+  },
+  "bandwidth_reduction_pct": 75.46,
+  "message_reduction_pct": 74.07,
+  "creations_match_exact": true
+}

@@ -9,7 +9,6 @@ or be a filename in those directories.
 Fails otherwise.
 """
 
-import glob
 import json
 import os
 import re
@@ -25,51 +24,75 @@ HEX_PATTERN = re.compile(r"^[0-9a-f]{32,64}$")  # Exempt git commit hashes and s
 
 
 def build_known_identifiers_set() -> Set[str]:
+    """
+    Build the set of known Base58 identifiers directly from:
+    - reports/*.json
+    - tests/fixtures/**/*.json
+    - data/retrospective_cache/**/*.json
+    and filenames in those directories.
+    Uses a cache file for data/retrospective_cache and tests/fixtures, and always scans reports/*.json fresh.
+    """
     cache_path = os.path.join(REPO_ROOT, "data", "retrospective_cache", "known_identifiers_cache.json")
+    b58_regex = re.compile(r"[1-9A-HJ-NP-Za-km-z]{32,88}")
+    known: Set[str] = set()
+
     if os.path.exists(cache_path):
         try:
             with open(cache_path, "r", encoding="utf-8") as f:
                 cached = set(json.load(f))
                 if len(cached) > 1000:
-                    return cached
+                    known.update(cached)
         except Exception:
             pass
 
-    known = set()
-    b58_regex = re.compile(r"[1-9A-HJ-NP-Za-km-z]{32,88}")
+    if not known:
+        static_dirs = [
+            os.path.join(REPO_ROOT, "tests", "fixtures"),
+            os.path.join(REPO_ROOT, "data", "retrospective_cache"),
+        ]
+        for s_dir in static_dirs:
+            for root, _, files in os.walk(s_dir):
+                for fname in files:
+                    if fname == "known_identifiers_cache.json":
+                        continue
+                    bname = os.path.splitext(fname)[0]
+                    if 32 <= len(fname) <= 88:
+                        known.add(fname)
+                    if 32 <= len(bname) <= 88:
+                        known.add(bname)
+                    if fname.endswith(".json"):
+                        fpath = os.path.join(root, fname)
+                        try:
+                            with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                                for m in b58_regex.findall(f.read()):
+                                    known.add(m)
+                        except Exception:
+                            pass
+        try:
+            os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+            with open(cache_path, "w", encoding="utf-8") as f:
+                json.dump(list(known), f)
+        except Exception:
+            pass
 
-    search_dirs = [
-        os.path.join(REPO_ROOT, "reports"),
-        os.path.join(REPO_ROOT, "tests", "fixtures"),
-        os.path.join(REPO_ROOT, "data", "retrospective_cache"),
-    ]
-
-    for s_dir in search_dirs:
-        for root, _, files in os.walk(s_dir):
+    # Always scan reports/*.json fresh (written by scripts)
+    reports_dir = os.path.join(REPO_ROOT, "reports")
+    if os.path.exists(reports_dir):
+        for root, _, files in os.walk(reports_dir):
             for fname in files:
                 bname = os.path.splitext(fname)[0]
                 if 32 <= len(fname) <= 88:
                     known.add(fname)
                 if 32 <= len(bname) <= 88:
                     known.add(bname)
-
                 if fname.endswith(".json"):
                     fpath = os.path.join(root, fname)
                     try:
                         with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
-                            text = f.read()
-                            for m in b58_regex.findall(text):
+                            for m in b58_regex.findall(f.read()):
                                 known.add(m)
                     except Exception:
                         pass
-
-    # Save to cache for fast recurring audits
-    try:
-        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-        with open(cache_path, "w", encoding="utf-8") as f:
-            json.dump(list(known), f)
-    except Exception:
-        pass
 
     return known
 
@@ -82,20 +105,21 @@ def check_text(text: str) -> bool:
     known_set = build_known_identifiers_set()
     print(f"Loaded {len(known_set)} verified repository identifiers from JSON files and fixtures.")
 
-    # Find all base58-like tokens in draft text (32 to 88 alphanumeric chars)
-    candidates = re.findall(r"\b[A-Za-z0-9]{32,88}\b", text)
-    print(f"Total candidate strings (32-88 chars) found in draft: {len(candidates)}")
+    # Find all alphanumeric tokens (32 to 88 chars) in draft text
+    all_alnum = re.findall(r"\b[A-Za-z0-9]{32,88}\b", text)
 
-    unrecognized = []
+    non_base58_skipped = []
+    hex_skipped = []
     recognized = []
+    unrecognized = []
 
-    for c in candidates:
-        # Ignore sha256 checksums / git hashes (lowercase hex)
+    for c in all_alnum:
         if HEX_PATTERN.match(c):
+            hex_skipped.append(c)
             continue
 
-        # Ignore if contains invalid base58 characters
         if not set(c).issubset(B58_CHARS):
+            non_base58_skipped.append(c)
             continue
 
         if c in known_set:
@@ -103,12 +127,19 @@ def check_text(text: str) -> bool:
         else:
             unrecognized.append(c)
 
-    print(f"Recognized repository identifiers: {len(recognized)}")
-    print(f"Unrecognized base58 strings: {len(unrecognized)}")
+    b58_candidates_count = len(recognized) + len(unrecognized)
+    assert len(all_alnum) == b58_candidates_count + len(non_base58_skipped) + len(hex_skipped)
+
+    print(f"Total alphanumeric strings (32-88 chars) scanned : {len(all_alnum)}")
+    print(f"  |-- Non-Base58 identifiers skipped (0/O/I/l)   : {len(non_base58_skipped)} {non_base58_skipped}")
+    print(f"  |-- Hex hashes skipped                         : {len(hex_skipped)} {hex_skipped}")
+    print(f"  |-- Valid Base58 candidate strings evaluated   : {b58_candidates_count}")
+    print(f"        |-- Recognized repository identifiers    : {len(recognized)}")
+    print(f"        |-- Unrecognized Base58 strings          : {len(unrecognized)} {unrecognized}")
 
     if unrecognized:
         print("\nVIOLATION: Found base58-like strings not present in reports, fixtures, or cache:")
-        for u in set(unrecognized):
+        for u in sorted(set(unrecognized)):
             print(f"  FAILED: '{u}' (len={len(u)})")
         print("\nOVERALL IDENTIFIER AUDIT: FAIL")
         print("=" * 80)

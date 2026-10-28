@@ -1,0 +1,70 @@
+{
+  "supervisor_pid": 21272,
+  "worker_pid_before_kill": 22672,
+  "worker_pid_after_restart": 35596,
+  "taskkill_output": "SUCCESS: The process with PID 22672 has been terminated.",
+  "creations_before_kill": 2,
+  "trades_before_kill": 3,
+  "post_kill_progression": [
+    {
+      "seconds_after_kill": 3,
+      "worker_pid": 35596,
+      "creations_in_db": 2,
+      "trades_in_db": 3,
+      "delta_trades_since_kill": 0
+    },
+    {
+      "seconds_after_kill": 6,
+      "worker_pid": 35596,
+      "creations_in_db": 3,
+      "trades_in_db": 9,
+      "delta_trades_since_kill": 6
+    },
+    {
+      "seconds_after_kill": 9,
+      "worker_pid": 35596,
+      "creations_in_db": 3,
+      "trades_in_db": 17,
+      "delta_trades_since_kill": 14
+    },
+    {
+      "seconds_after_kill": 12,
+      "worker_pid": 35596,
+      "creations_in_db": 8,
+      "trades_in_db": 45,
+      "delta_trades_since_kill": 42
+    },
+    {
+      "seconds_after_kill": 15,
+      "worker_pid": 35596,
+      "creations_in_db": 8,
+      "trades_in_db": 87,
+      "delta_trades_since_kill": 84
+    },
+    {
+      "seconds_after_kill": 18,
+      "worker_pid": 35596,
+      "creations_in_db": 9,
+      "trades_in_db": 101,
+      "delta_trades_since_kill": 98
+    },
+    {
+      "seconds_after_kill": 21,
+      "worker_pid": 35596,
+      "creations_in_db": 10,
+      "trades_in_db": 127,
+      "delta_trades_since_kill": 124
+    },
+    {
+      "seconds_after_kill": 24,
+      "worker_pid": 35596,
+      "creations_in_db": 11,
+      "trades_in_db": 153,
+      "delta_trades_since_kill": 150
+    }
+  ],
+  "creations_final": 11,
+  "trades_final": 168,
+  "net_trades_added_after_restart": 165,
+  "trade_count_increased_after_restart": true
+}

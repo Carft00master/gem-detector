@@ -1,29 +1,12 @@
 """
-Print per-pool table for the $91 entry at S+10 (Review Item 3):
-- p(S+10), p(S+20), p(S+40) (both effective SOL price and ratio to open)
-- Simulated $91 entry return at S+20 and S+40
-- Mathematical reconciliation of "32.4% (11/34) below -50% at S+20" with the
-  nearly flat cross-sectional mean ratio (3.95x at S+10, 3.92x at S+20).
+Print per-pool table for the $91 entry at S+10 after fixing the Route B Vault & Boost bug (Review Item 1):
+- Prints wsol_open, true boost_sol (17.584505 SOL for 19 InitBoost pools, 0.0 for 15 unboosted pools),
+  p(S+10), p(S+20), p(S+40), v(S+20), E-model returns, price-ratio returns, and classification.
+- Reports the genuine price crash count (Rows 7, 14, 26, 28 at S+20 = 4/34 [11.76%]; 0/19 [0.0%] in boosted pools)
+  and corrects earlier statements ("32% below -50% at S+20", "-41% at 2 min").
 """
 
 import json
-
-SOL_USD_PRICE = 150.0
-PRIORITY_FEE_SOL = 0.002
-TIER_0_FEE_RATE = 0.0125
-
-
-def simulate_uncapped(entry_usd, entry_vault, entry_tok, boost_sol, exit_vault, exit_tok):
-    entry_sol = entry_usd / SOL_USD_PRICE
-    net_entry_sol = entry_sol * (1.0 - TIER_0_FEE_RATE)
-    s_eff_entry = entry_vault + boost_sol
-    trader_tokens = (entry_tok * net_entry_sol) / (s_eff_entry + net_entry_sol)
-
-    s_eff_exit = exit_vault + boost_sol
-    gross_sol_exit = (s_eff_exit * trader_tokens) / (exit_tok + trader_tokens)
-    net_sol_exit = gross_sol_exit * (1.0 - TIER_0_FEE_RATE) - PRIORITY_FEE_SOL
-    total_outlay_sol = entry_sol + PRIORITY_FEE_SOL
-    return round(((net_sol_exit - total_outlay_sol) / total_outlay_sol) * 100.0, 2)
 
 
 def main():
@@ -31,25 +14,28 @@ def main():
         data = json.load(f)
 
     pools = data["per_pool_data"]
-    print("=" * 145)
-    print("PER-POOL TABLE FOR $91 ENTRY AT S+10: p(S+10), p(S+20), p(S+40) AND RETURNS (Review Item 3)")
-    print("=" * 145)
+    summary = data["summary"]
+
+    print("=" * 165)
+    print("PER-POOL TABLE FOR $91 ENTRY AT S+10 (AFTER FIXING BOOST_SOL & VERIFYING SWAP-IMPLIED S_eff < 2%)")
+    print("=" * 165)
     header = (
-        f"{'ROW':<3} | {'POOL':<44} | {'p(S+10) SOL (Rel)':<21} | {'p(S+20) SOL (Rel)':<21} | "
-        f"{'p(S+40) SOL (Rel)':<21} | {'v(S+20)':<8} | {'RET S+20':<9} | {'RET S+40':<9} | {'CAUSE IF <-50%'}"
+        f"{'ROW':<3} | {'POOL':<44} | {'BOOST':<7} | {'p(S+10) SOL (Rel)':<21} | "
+        f"{'p(S+20) SOL (Rel)':<21} | {'p20/p10':<7} | {'v(S+20)':<8} | {'E-MOD S20':<9} | {'PR-RET S20':<10} | {'CLASSIFICATION'}"
     )
     print(header)
-    print("-" * 145)
+    print("-" * 165)
 
-    vault_capped_lt50 = []
-    price_crash_lt50 = []
-    pumped_cluster = []
-    normal_cluster = []
+    genuine_crashes_s20 = []
+    micro_pool_self_impact_s20 = []
+    boosted_pools = []
+    unboosted_pools = []
 
     for p in pools:
         idx = p["index"]
         addr = p["pool_address"]
         boost = p["opening_balances"]["boost_sol"]
+        is_boosted = p["is_boosted_pool"]
 
         s10 = p["horizon_samples"]["S+10"]
         s20 = p["horizon_samples"]["S+20"]
@@ -57,55 +43,59 @@ def main():
 
         p10_sol, p10_rel = s10["effective_price_sol"], s10["price_rel_open"]
         p20_sol, p20_rel = s20["effective_price_sol"], s20["price_rel_open"]
-        p40_sol, p40_rel = s40["effective_price_sol"], s40["price_rel_open"]
+        p20_p10 = p20_sol / p10_sol if p10_sol > 0 else 0.0
 
-        v10, t10 = s10["vault_sol"], s10["token_reserve"]
-        v20, t20 = s20["vault_sol"], s20["token_reserve"]
+        v10 = s10["vault_sol"]
+        v20 = s20["vault_sol"]
 
         ret20 = s20["sim_from_s10_91_pct"]
-        ret40 = s40["sim_from_s10_91_pct"]
+        pr_ret20 = s20["price_ratio_ret_from_s10_91_pct"]
 
-        uncapped20 = simulate_uncapped(91.0, v10, t10, boost, v20, t20)
-
-        cause = ""
-        if ret20 < -50.0:
-            if uncapped20 >= -50.0:
-                cause = f"VAULT_CAP (v20={v20:.3f} SOL < 0.304 SOL; uncapped={uncapped20:+.2f}%)"
-                vault_capped_lt50.append(idx)
-            else:
-                cause = f"PRICE_CRASH (p20/p10={p20_rel/p10_rel:.2f}x; uncapped={uncapped20:+.2f}%)"
-                price_crash_lt50.append(idx)
-
-        if p10_rel > 1.5 and v10 > 100.0:
-            pumped_cluster.append((idx, p10_rel, p20_rel, ret20))
+        if is_boosted:
+            boosted_pools.append(idx)
         else:
-            normal_cluster.append((idx, p10_rel, p20_rel, ret20))
+            unboosted_pools.append(idx)
+
+        cls_str = "STANDARD_BOOSTED_OK" if is_boosted else "UNBOOSTED_OK"
+        if pr_ret20 < -50.0:
+            cls_str = f"GENUINE_CRASH (p20/p10={p20_p10:.3f}x)"
+            genuine_crashes_s20.append(idx)
+        elif ret20 < -50.0:
+            cls_str = f"MICRO_POOL_UNPERTURBED_EXIT (v10={v10:.3f} SOL < $91 entry; p20/p10={p20_p10:.3f}x)"
+            micro_pool_self_impact_s20.append(idx)
 
         print(
-            f"{idx:<3d} | {addr:<44} | {p10_sol:.4e} ({p10_rel:5.3f}x) | "
-            f"{p20_sol:.4e} ({p20_rel:5.3f}x) | {p40_sol:.4e} ({p40_rel:5.3f}x) | "
-            f"{v20:8.3f} | {ret20:+8.2f}% | {ret40:+8.2f}% | {cause}"
+            f"{idx:<3d} | {addr:<44} | {boost:7.4f} | {p10_sol:.4e} ({p10_rel:5.3f}x) | "
+            f"{p20_sol:.4e} ({p20_rel:5.3f}x) | {p20_p10:6.3f}x | {v20:8.3f} | {ret20:+8.2f}% | {pr_ret20:+9.2f}% | {cls_str}"
         )
 
-    print("=" * 145)
-    print("RECONCILIATION: 32.35% (11/34) BELOW -50% AT S+20 vs FLAT MEAN RATIO (3.95x -> 3.92x)")
-    print("=" * 145)
-    print(f"1. Total pools with S+10 -> S+20 return < -50%: {len(vault_capped_lt50) + len(price_crash_lt50)} / 34 ({(len(vault_capped_lt50) + len(price_crash_lt50))/34*100:.2f}%)")
-    print(f"   - Mechanism A (Vault Cap on Low-Real-SOL Boosted Pools): {len(vault_capped_lt50)} pools (Rows {vault_capped_lt50})")
-    print("     A $91 entry costs 0.6067 SOL + 0.002 SOL priority = 0.6087 SOL total outlay.")
-    print("     To avoid a -50% loss, exit payout must be >= 0.3043 SOL. However, these 8 boosted pools have")
-    print("     historical real WSOL vault balances of only 0.041 to 0.159 SOL at S+20 (while boost_sol is ~84.8 SOL).")
-    print("     Because simulate_trade caps exit proceeds at historical exit_vault (min(net_sol_exit, exit_vault)),")
-    print("     the payout is capped at 0.041..0.159 SOL (-73.94% to -93.26% return) even when price p(S+20) >= p(S+10).")
-    print(f"   - Mechanism B (Genuine Price Dump > 50% between S+10 and S+20): {len(price_crash_lt50)} pools (Rows {price_crash_lt50})")
-    print("     Row 7 (0.879x -> 0.342x, -62.86%), Row 14 (0.996x -> 0.517x, -50.38%), Row 26 (0.480x -> 0.099x, -80.57%).")
-    print("2. Why the cross-sectional mean ratio (ex-top1) stays nearly flat (3.95x at S+10 vs 3.92x at S+20):")
-    print(f"   - The 34-pool distribution is strongly bimodal: {len(pumped_cluster)} S+0 bot-pumped pools sit at 7.55x..9.00x open")
-    print("     with ~216-237 SOL in the vault and remain virtually stationary between S+10 and S+20 (returns -3.02% to -3.63%,")
-    print("     reflecting the 2x 125 bps swap fee + priority fees). Their sum of ratios is 119.38 at S+10 and 119.65 at S+20.")
-    print(f"   - Across the 33 ex-top1 pools, the 13 ex-top1 bot-pumped pools alone contribute 110.44 / 33 = 3.35x to the mean")
-    print("     at S+10 and 110.66 / 33 = 3.35x at S+20. The 20 non-pumped pools have small ratios (~0.10x..1.85x), so")
-    print("     a -50% crash in a ~0.9x pool reduces the cross-sectional mean ratio by only ~0.015x while adding to the <-50% count.")
+    print("=" * 165)
+    print("SUMMARY OF CORRECTIONS AFTER FIXING THE VAULT/BOOST BUG:")
+    print("=" * 165)
+    print(f"1. Cohort Composition (34 Reached Pools):")
+    print(f"   - Standard Boosted Pools (InitBoost called, boost=17.584505 SOL, wsol_open=67.41..116.80 SOL): {len(boosted_pools)} pools {boosted_pools}")
+    print(f"   - Unboosted Micro-Pools (InitBoost NOT called, boost=0.000000 SOL, wsol_open=0.033..21.67 SOL): {len(unboosted_pools)} pools {unboosted_pools}")
+    print(f"2. Genuine Price Crashes (<-50% price return) between S+10 and S+20:")
+    print(f"   - Count: {len(genuine_crashes_s20)} / 34 pools ({len(genuine_crashes_s20)/34*100:.2f}%): Rows {genuine_crashes_s20}")
+    print("     (Row 7: 0.156x [-84.93%], Row 14: 0.273x [-73.68%], Row 26: 0.057x [-94.75%], Row 28: 0.415x [-60.05%];")
+    print("      Row 28's real vault drop from 0.1888 to 0.1227 SOL was previously masked by the fake 84.8 SOL boost.)")
+    print(f"   - Among the 19 Standard Boosted Pools: 0 / 19 (0.00%) crash >50% at S+20 (median return -3.51%, mean ex-top1 -3.05%).")
+    print(f"3. Correction to Earlier Statements ('32% below -50% at S+20' and '-41% median at 2 min'):")
+    s20_b19 = summary["headline_simulated_entry_s10"]["version_a_available_only"]["boosted_19_pools_sim_91_usd"]["S+20"]
+    s20_pr = summary["headline_simulated_entry_s10"]["version_a_available_only"]["price_ratio_91_usd_genuine_crashes"]["S+20"]
+    s20_em = summary["headline_simulated_entry_s10"]["version_a_available_only"]["sim_91_usd"]["S+20"]
+    m2_b19 = summary["headline_simulated_entry_s10"]["version_a_available_only"]["boosted_19_pools_sim_91_usd"]["+2m"]
+    m2_pr = summary["headline_simulated_entry_s10"]["version_a_available_only"]["price_ratio_91_usd_genuine_crashes"]["+2m"]
+    m2_em = summary["headline_simulated_entry_s10"]["version_a_available_only"]["sim_91_usd"]["+2m"]
+    print(f"   - At S+20 (from S+10 $91 entry):")
+    print(f"     * Genuine price crash rate (<-50%): {s20_pr['frac_below_neg50_pct']}% ({s20_pr['count_below_neg50']}/34, Rows {genuine_crashes_s20}), NOT 32.4%.")
+    print(f"     * 19 Standard Boosted Pools: 0.0% (0/19) below -50%, median {s20_b19['median']:+.2f}%, mean(ex1) {s20_b19['mean_ex_top1']:+.2f}%.")
+    print(f"     * All-34 Unperturbed E-Model: median {s20_em['median']:+.2f}%, mean(ex1) {s20_em['mean_ex_top1']:+.2f}%, {s20_em['frac_below_neg50_pct']}% ({s20_em['count_below_neg50']}/34) <-50%")
+    print(f"       (because 9 unboosted micro-pools {micro_pool_self_impact_s20} have total vault 0.036..0.539 SOL < $91 [0.607 SOL] entry).")
+    print(f"   - At +2m (from S+10 $91 entry):")
+    print(f"     * 19 Standard Boosted Pools: median {m2_b19['median']:+.2f}% (was -41.48% when diluted by micro-pools), mean(ex1) {m2_b19['mean_ex_top1']:+.2f}%, 0.0% (0/19) <-50%.")
+    print(f"     * Genuine Price-Ratio Return (all 34 pools): median {m2_pr['median']:+.2f}%, mean(ex1) {m2_pr['mean_ex_top1']:+.2f}%, {m2_pr['frac_below_neg50_pct']}% ({m2_pr['count_below_neg50']}/34) <-50%.")
+    print(f"     * All-34 Unperturbed E-Model: median {m2_em['median']:+.2f}%, mean(ex1) {m2_em['mean_ex_top1']:+.2f}%, {m2_em['frac_below_neg50_pct']}% ({m2_em['count_below_neg50']}/34) <-50%.")
 
 
 if __name__ == "__main__":

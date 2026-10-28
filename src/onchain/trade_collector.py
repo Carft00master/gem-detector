@@ -1,15 +1,19 @@
 """
 On-Chain Curve Trade Collector (Phase 2A Foundation).
 Connects to Solana WebSocket log stream for pump.fun bonding curve program (6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P),
-decoding native Anchor CreateEvent and TradeEvent records into data/curve_trades.db.
+decoding native Anchor CreateEvent and TradeEvent (V1 & V2 BuyV2/SellV2) records into data/curve_trades.db.
 
 Features:
 - Uses "confirmed" commitment level
-- Skips notifications where value.err is not null (tracks skipped_err_count)
+- Skips notifications where value.err is not null (tracks skipped_err_count with fast pre-JSON check)
 - Takes slot strictly from notification context.slot
 - Decodes CreateEvent (1b72a94ddeeb6376) to record mint creation time
 - Keeps only trades for mints created since collector start and younger than 30 minutes (1800s)
-- Stores raw integer sol_lamports and token_base_units with UNIQUE(signature, log_index)
+- Full V1 + V2 (BuyV2/SellV2) TradeEvent decode:
+  - Stores quote_mint (Pubkey) and quote_amount (raw integer base units) for all trades
+  - Populates sol_lamports and sol_amount ONLY for SOL-quoted trades (NULL for USDC/SPL-quoted V2 trades)
+  - Stores token_base_units (raw integer) and UNIQUE(signature, log_index)
+- Supports both full-program subscription and smaller subscription (MintAuthority PDA + active <30m bonding curves)
 - Tracks WebSocket ingress bytes and messages per second and identifies provider name (without exposing keys)
 - Uses SQLite WAL mode and persists state across forced kills/restarts
 """
@@ -26,7 +30,7 @@ import random
 import sqlite3
 import struct
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import websockets
 
@@ -37,6 +41,10 @@ load_env_file()
 logger = logging.getLogger("trade_collector")
 
 PUMP_FUN_PROGRAM = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
+MINT_AUTHORITY_PDA = "TSLvdd1pWpHVjahSpsvCXUbgwsL3JAcvokwaKt1eokM"
+WSOL_MINT = "So11111111111111111111111111111111111111112"
+USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+
 CREATE_EVENT_DISCRIMINATOR = hashlib.sha256(b"event:CreateEvent").digest()[:8]  # 1b72a94ddeeb6376
 TRADE_EVENT_DISCRIMINATOR = hashlib.sha256(b"event:TradeEvent").digest()[:8]    # bddb7fd34ee661ee
 
@@ -90,6 +98,7 @@ class CurveTradeCollector:
         max_backoff: float = 30.0,
         backoff_multiplier: float = 2.0,
         reset_db: bool = False,
+        subscription_mode: str = "full",
     ):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -97,6 +106,7 @@ class CurveTradeCollector:
         self.max_samples = max_samples
         self.max_mint_age_seconds = max_mint_age_seconds
         self.raw_samples: List[Dict[str, Any]] = []
+        self.subscription_mode = subscription_mode
 
         self.initial_backoff = initial_backoff
         self.max_backoff = max_backoff
@@ -112,8 +122,11 @@ class CurveTradeCollector:
         self.total_ws_bytes_received = 0
         self.total_ws_messages_received = 0
 
-        # Active cohort: mint -> creation block_time (unix seconds)
+        # Active cohort: mint -> creation block_time (unix seconds) and mint -> bonding_curve
         self._mint_creation_times: Dict[str, int] = {}
+        self._mint_bonding_curves: Dict[str, str] = {}
+        self._subscribed_curves: Set[str] = set()
+        self._next_rpc_id = 10
 
         self._conn: Optional[sqlite3.Connection] = None
         self._init_db(reset_db=reset_db)
@@ -130,10 +143,21 @@ class CurveTradeCollector:
         self._conn.execute("PRAGMA synchronous=NORMAL")
         cur = self._conn.cursor()
 
-        # Check if old schema lacks sol_lamports / log_index
+        # Check if old schema lacks quote_mint / quote_amount / sol_lamports / log_index
         cur.execute("PRAGMA table_info(curve_trades)")
-        cols = {row[1] for row in cur.fetchall()}
-        if reset_db or (cols and ("sol_lamports" not in cols or "log_index" not in cols)):
+        cols_info = cur.fetchall()
+        cols = {row[1] for row in cols_info}
+        sol_lamports_notnull = any(row[1] == "sol_lamports" and row[3] == 1 for row in cols_info)
+        if reset_db or (
+            cols
+            and (
+                "quote_mint" not in cols
+                or "quote_amount" not in cols
+                or "sol_lamports" not in cols
+                or "log_index" not in cols
+                or sol_lamports_notnull
+            )
+        ):
             cur.execute("DROP TABLE IF EXISTS curve_trades")
             cur.execute("DROP TABLE IF EXISTS curve_creations")
             cur.execute("DROP TABLE IF EXISTS collector_state")
@@ -161,9 +185,11 @@ class CurveTradeCollector:
                 mint TEXT NOT NULL,
                 tx_type TEXT NOT NULL,
                 wallet TEXT NOT NULL,
-                sol_lamports INTEGER NOT NULL,
+                quote_mint TEXT NOT NULL,
+                quote_amount INTEGER NOT NULL,
+                sol_lamports INTEGER,
                 token_base_units INTEGER NOT NULL,
-                sol_amount REAL NOT NULL,
+                sol_amount REAL,
                 token_amount REAL NOT NULL,
                 slot INTEGER NOT NULL,
                 block_time INTEGER NOT NULL,
@@ -172,6 +198,7 @@ class CurveTradeCollector:
             )
         """)
         cur.execute("CREATE INDEX IF NOT EXISTS idx_curve_trades_mint ON curve_trades(mint)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_curve_trades_quote_mint ON curve_trades(quote_mint)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_curve_trades_slot ON curve_trades(slot)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_curve_trades_time ON curve_trades(block_time)")
 
@@ -186,12 +213,13 @@ class CurveTradeCollector:
         # Recover mints created within the last 30 minutes on restart/resume
         cutoff_ts = int(time.time()) - self.max_mint_age_seconds
         cur.execute(
-            "SELECT mint, created_block_time FROM curve_creations WHERE created_block_time >= ?",
+            "SELECT mint, bonding_curve, created_block_time FROM curve_creations WHERE created_block_time >= ?",
             (cutoff_ts,),
         )
         recovered = cur.fetchall()
-        for m_addr, c_ts in recovered:
+        for m_addr, b_curve, c_ts in recovered:
             self._mint_creation_times[m_addr] = int(c_ts)
+            self._mint_bonding_curves[m_addr] = b_curve
 
         cur.execute("SELECT COUNT(*) FROM curve_trades")
         existing_trades = cur.fetchone()[0]
@@ -232,6 +260,7 @@ class CurveTradeCollector:
             self.creations_recorded += 1
         self._conn.commit()
         self._mint_creation_times[mint] = created_block_time
+        self._mint_bonding_curves[mint] = bonding_curve
 
     def record_trade(
         self,
@@ -240,26 +269,31 @@ class CurveTradeCollector:
         mint: str,
         tx_type: str,
         wallet: str,
-        sol_lamports: int,
+        quote_mint: str,
+        quote_amount: int,
+        sol_lamports: Optional[int],
         token_base_units: int,
         slot: int,
         block_time: int,
     ) -> bool:
-        """Insert trade event into curve_trades.db with UNIQUE(signature, log_index)."""
+        """
+        Insert trade event into curve_trades.db with UNIQUE(signature, log_index).
+        sol_lamports and sol_amount are populated ONLY for SOL-quoted trades (NULL otherwise).
+        """
         now_utc = datetime.now(timezone.utc).isoformat()
-        sol_amount = sol_lamports / 1e9
+        sol_amount = (sol_lamports / 1e9) if sol_lamports is not None else None
         token_amount = token_base_units / 1e6
         cur = self._conn.cursor()
         cur.execute("""
             INSERT OR IGNORE INTO curve_trades (
                 signature, log_index, mint, tx_type, wallet,
-                sol_lamports, token_base_units, sol_amount, token_amount,
-                slot, block_time, created_at_utc
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                quote_mint, quote_amount, sol_lamports, token_base_units,
+                sol_amount, token_amount, slot, block_time, created_at_utc
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             signature, log_index, mint, tx_type.lower(), wallet,
-            sol_lamports, token_base_units, sol_amount, token_amount,
-            slot, block_time, now_utc
+            quote_mint, quote_amount, sol_lamports, token_base_units,
+            sol_amount, token_amount, slot, block_time, now_utc
         ))
         inserted = cur.rowcount > 0
         self._conn.commit()
@@ -316,18 +350,60 @@ class CurveTradeCollector:
 
     @staticmethod
     def _decode_trade_event(raw: bytes) -> Optional[Dict[str, Any]]:
-        """Decode Anchor TradeEvent binary payload."""
+        """
+        Decode Anchor TradeEvent binary payload (V1 and V2 BuyV2/SellV2).
+        Layout:
+          [0..8]     discriminator (bddb7fd34ee661ee)
+          [8..40]    mint (Pubkey)
+          [40..48]   sol_amount (u64, 0 for non-SOL V2 curves)
+          [48..56]   token_amount (u64, base units)
+          [56]       is_buy (bool, u8)
+          [57..89]   user (Pubkey)
+          [89..97]   timestamp (i64)
+          ...
+          For V2 events (len(raw) >= 350, last 88 bytes raw[-88:]):
+          [-88..-56] quote_mint (Pubkey, 32B)
+          [-56..-48] quote_amount (u64, raw base units of quote_mint)
+          [-48..-40] virtual_quote_reserves (u64)
+          [-40..-32] real_quote_reserves (u64)
+          [-32..-24] quote_fee_basis_points (u64)
+          [-24..-16] quote_fee (u64)
+          [-16..-8]  quote_creator_fee (u64)
+          [-8..0]    quote_extra (u64)
+        """
         if len(raw) < 97 or raw[:8] != TRADE_EVENT_DISCRIMINATOR:
             return None
         try:
             mint = b58encode(raw[8:40])
-            sol_lamports = struct.unpack("<Q", raw[40:48])[0]
+            raw_sol_amount = struct.unpack("<Q", raw[40:48])[0]
             token_base_units = struct.unpack("<Q", raw[48:56])[0]
             is_buy = raw[56] == 1
             user = b58encode(raw[57:89])
             ts = struct.unpack("<q", raw[89:97])[0]
+
+            if raw_sol_amount > 0:
+                quote_mint = WSOL_MINT
+                quote_amount = raw_sol_amount
+                sol_lamports: Optional[int] = raw_sol_amount
+            elif len(raw) >= 350:
+                v2_quote_mint = b58encode(raw[-88:-56])
+                v2_quote_amount = struct.unpack("<Q", raw[-56:-48])[0]
+                if v2_quote_mint and v2_quote_mint != "11111111111111111111111111111111":
+                    quote_mint = v2_quote_mint
+                    quote_amount = v2_quote_amount
+                else:
+                    quote_mint = WSOL_MINT
+                    quote_amount = 0
+                sol_lamports = quote_amount if quote_mint == WSOL_MINT else None
+            else:
+                quote_mint = WSOL_MINT
+                quote_amount = 0
+                sol_lamports = 0
+
             return {
                 "mint": mint,
+                "quote_mint": quote_mint,
+                "quote_amount": quote_amount,
                 "sol_lamports": sol_lamports,
                 "token_base_units": token_base_units,
                 "is_buy": is_buy,
@@ -337,35 +413,37 @@ class CurveTradeCollector:
         except Exception:
             return None
 
-    def _parse_and_store_notification(self, raw_msg: Dict[str, Any]) -> bool:
+    def _parse_and_store_notification(self, raw_msg: Dict[str, Any]) -> Tuple[bool, List[str]]:
         """
         Process a logsNotification message:
         1. Skip if value.err is not None (increment skipped_err_count).
         2. Read slot strictly from context.slot.
         3. Decode CreateEvent and TradeEvent logs with their log_index.
         4. Keep only TradeEvents for mints created since start and younger than 30 minutes.
+        Returns (stored_any_trade, newly_created_bonding_curves).
         """
         result_obj = raw_msg.get("params", {}).get("result", {})
         if not result_obj:
-            return False
+            return False, []
 
         val = result_obj.get("value", {})
         if val.get("err") is not None:
             self.skipped_err_count += 1
-            return False
+            return False, []
 
         context = result_obj.get("context", {})
         slot = context.get("slot")
         if slot is None:
-            return False
+            return False, []
         slot = int(slot)
 
         sig = val.get("signature")
         if not sig:
-            return False
+            return False, []
 
         logs = val.get("logs") or []
         stored_any = False
+        new_curves: List[str] = []
 
         for log_idx, l in enumerate(logs):
             if "Program data: " not in l:
@@ -394,6 +472,7 @@ class CurveTradeCollector:
                         name=cev["name"],
                         symbol=cev["symbol"],
                     )
+                    new_curves.append(cev["bonding_curve"])
             elif disc == TRADE_EVENT_DISCRIMINATOR:
                 tev = self._decode_trade_event(raw)
                 if not tev:
@@ -415,13 +494,16 @@ class CurveTradeCollector:
                     continue
 
                 tx_type = "buy" if tev["is_buy"] else "sell"
+                sol_lamports = tev["sol_lamports"]
                 inserted = self.record_trade(
                     signature=sig,
                     log_index=log_idx,
                     mint=mint,
                     tx_type=tx_type,
                     wallet=tev["wallet"],
-                    sol_lamports=tev["sol_lamports"],
+                    quote_mint=tev["quote_mint"],
+                    quote_amount=tev["quote_amount"],
+                    sol_lamports=sol_lamports,
                     token_base_units=tev["token_base_units"],
                     slot=slot,
                     block_time=trade_ts,
@@ -437,9 +519,11 @@ class CurveTradeCollector:
                             "mint": mint,
                             "wallet": tev["wallet"],
                             "tx_type": tx_type,
-                            "sol_lamports": tev["sol_lamports"],
+                            "quote_mint": tev["quote_mint"],
+                            "quote_amount": tev["quote_amount"],
+                            "sol_lamports": sol_lamports,
                             "token_base_units": tev["token_base_units"],
-                            "sol_amount": tev["sol_lamports"] / 1e9,
+                            "sol_amount": (sol_lamports / 1e9) if sol_lamports is not None else None,
                             "token_amount": tev["token_base_units"] / 1e6,
                             "mint_age_seconds": age_sec,
                             "raw_log": l,
@@ -447,7 +531,7 @@ class CurveTradeCollector:
                         if len(self.raw_samples) == self.max_samples:
                             self._save_raw_samples()
 
-        return stored_any
+        return stored_any, new_curves
 
     def _save_raw_samples(self) -> None:
         if not self.raw_samples:
@@ -466,6 +550,22 @@ class CurveTradeCollector:
         if self._ws:
             asyncio.create_task(self._ws.close(code=1000, reason="Forced test disconnect"))
 
+    async def _subscribe_bonding_curve(self, ws: Any, bonding_curve: str) -> None:
+        if bonding_curve in self._subscribed_curves:
+            return
+        self._subscribed_curves.add(bonding_curve)
+        self._next_rpc_id += 1
+        sub_payload = {
+            "jsonrpc": "2.0",
+            "id": self._next_rpc_id,
+            "method": "logsSubscribe",
+            "params": [
+                {"mentions": [bonding_curve]},
+                {"commitment": "confirmed"},
+            ],
+        }
+        await ws.send(json.dumps(sub_payload))
+
     async def run(
         self,
         max_duration_seconds: Optional[int] = None,
@@ -483,7 +583,8 @@ class CurveTradeCollector:
 
         provider_name = identify_ws_provider_name(ws_url)
         logger.info(
-            f"CurveTradeCollector starting | Provider: {provider_name} | Commitment: confirmed | DB: {self.db_path}"
+            f"CurveTradeCollector starting | Provider: {provider_name} | Mode: {self.subscription_mode} | "
+            f"Commitment: confirmed | DB: {self.db_path}"
         )
 
         while self._running:
@@ -496,7 +597,7 @@ class CurveTradeCollector:
                 break
 
             try:
-                logger.info(f"Connecting to {provider_name} WebSocket log stream (confirmed)...")
+                logger.info(f"Connecting to {provider_name} WebSocket log stream (confirmed, mode={self.subscription_mode})...")
                 async with websockets.connect(
                     ws_url,
                     ssl=ssl_ctx,
@@ -506,12 +607,14 @@ class CurveTradeCollector:
                     max_size=4 * 1024 * 1024,
                 ) as ws:
                     self._ws = ws
+                    self._subscribed_curves.clear()
+                    target_pubkey = MINT_AUTHORITY_PDA if self.subscription_mode == "smaller" else PUMP_FUN_PROGRAM
                     sub_payload = {
                         "jsonrpc": "2.0",
                         "id": 1,
                         "method": "logsSubscribe",
                         "params": [
-                            {"mentions": [PUMP_FUN_PROGRAM]},
+                            {"mentions": [target_pubkey]},
                             {"commitment": "confirmed"},
                         ],
                     }
@@ -527,6 +630,15 @@ class CurveTradeCollector:
                         raise RuntimeError(f"logsSubscribe error: {resp_data['error']}")
                     self._reconnect_attempts = 0
                     logger.info(f"Subscription confirmed on {provider_name}: {resp}")
+
+                    # If in smaller subscription mode, subscribe to any recovered active <30m bonding curves
+                    if self.subscription_mode == "smaller":
+                        now_ts = int(time.time())
+                        for m_addr, c_ts in list(self._mint_creation_times.items()):
+                            if now_ts - c_ts <= self.max_mint_age_seconds:
+                                bc = self._mint_bonding_curves.get(m_addr)
+                                if bc:
+                                    await self._subscribe_bonding_curve(ws, bc)
 
                     while self._running:
                         elapsed = time.time() - start_time
@@ -554,9 +666,17 @@ class CurveTradeCollector:
                             self.total_ws_bytes_received += len(msg)
                         self.total_ws_messages_received += 1
 
+                        # Fast pre-JSON check for failed transaction notifications
+                        if isinstance(msg, str) and '"logsNotification"' in msg and '"err":null' not in msg:
+                            self.skipped_err_count += 1
+                            continue
+
                         try:
                             data = json.loads(msg)
-                            self._parse_and_store_notification(data)
+                            _, new_curves = self._parse_and_store_notification(data)
+                            if self.subscription_mode == "smaller" and new_curves:
+                                for bc in new_curves:
+                                    await self._subscribe_bonding_curve(ws, bc)
                         except Exception:
                             pass
 
@@ -583,6 +703,7 @@ class CurveTradeCollector:
 
         return {
             "provider_name": provider_name,
+            "subscription_mode": self.subscription_mode,
             "commitment": "confirmed",
             "elapsed_seconds": round(elapsed_total, 2),
             "total_ws_bytes_received": self.total_ws_bytes_received,
@@ -590,6 +711,9 @@ class CurveTradeCollector:
             "total_ws_messages_received": self.total_ws_messages_received,
             "messages_per_second": round(self.total_ws_messages_received / elapsed_total, 2),
             "skipped_err_count": self.skipped_err_count,
+            "failed_notification_pct": round(
+                100.0 * self.skipped_err_count / max(1, self.total_ws_messages_received - 1), 2
+            ),
             "creations_recorded": self.creations_recorded,
             "trades_stored": self.total_trades_collected,
             "dropped_untracked_mint_count": self.dropped_untracked_mint_count,

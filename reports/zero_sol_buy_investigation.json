@@ -1,14 +1,1078 @@
 {
-  "signature": "5p58kQ1QXCgbpQSmjiDH8SKu3Vcwfrahu8Zi9WuDECsqHQSUWcM2UjXGRAaG3S1Vt1iuMvx3V9a92Pe5r7VscXSE",
-  "slot": 462000125,
-  "err": null,
-  "mint": "3XLdvSS6iEXm7eZqMauQim9uBdsPnPSEuc7Pguojpump",
-  "wallet": "BwWK17cbHxwWBKZkUYvzxLcNQ1YVyaFezduWbtm2de6s",
-  "bonding_curve_pda": "CYUvJgUZxnHJiPXHH8Gm9RkrHf58uMDz98EbUaJwdDTo",
-  "quote_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-  "sol_lamports_offset_40_48": 0,
-  "token_base_units_offset_48_56": 18852485192738,
-  "quote_amount_usdc_base_units_offset_334_342": 401559,
-  "anchor_6040_fixture": "2ARW8LrnpoZzFx2ijiBPtDAqqyimvW8bQj8X7wP6tZdxtXosHtVVVkucT9ScFsEAuBYAGmJjL8W97LQiWL9e972j",
-  "anchor_6004_fixture": "21bZHvGTYuX7yPEh66GEJhKUBNPGUJHTirNeZL5ziKdxjmoXrLa4B2uuFjBotzF4ThHUGYyJZ3ribQEZZrexoUKp"
+  "db_summary": {
+    "total_trades_in_db": 3920,
+    "total_mints_in_db": 87,
+    "sol_quoted_trades": 2414,
+    "sol_quoted_trades_pct": 61.58,
+    "sol_quoted_mints": 73,
+    "sol_quoted_mints_pct": 83.91,
+    "non_sol_quoted_trades": 1506,
+    "non_sol_quoted_trades_pct": 38.42,
+    "non_sol_quoted_mints": 14,
+    "non_sol_quoted_mints_pct": 16.09
+  },
+  "non_sol_quote_mint_breakdown": [
+    {
+      "quote_mint": "2xm2WZ9krE2YAArRC6S6ZzJAYgN813K6hh2dawKjpump",
+      "label": "SPL_QUOTE_TOKEN",
+      "decoded_events_count": 1261,
+      "base_mints_count": 1,
+      "base_mints": [
+        "74rzGLfYnijq4M8XSWi4iE911GfsLHMwUSxc4PtkU42r"
+      ]
+    },
+    {
+      "quote_mint": "2BJDwUdMbnJhRRfhacFDjrDNhxUWdzE9H6LEND89pump",
+      "label": "SPL_QUOTE_TOKEN",
+      "decoded_events_count": 180,
+      "base_mints_count": 5,
+      "base_mints": [
+        "35fd8HxW3XyhNSATvNiUxuznnPaPv1cJYCe3SGPGpump",
+        "3AVDXobVoZw42yC6faTvKBhGw6FG83BT7Xo7erA5pump",
+        "4je6wmkEbqRur3F6dgx6Mx6drP7Lze9Y1bkdw5b4pump",
+        "DohAAwuiNSs873xKNgnrZdqz9FfXZWHjaSEaKKF9pump",
+        "J4hTTFAo2UHPfYAybwBehAFwDA1ey2X4q4Y7sxjUpump"
+      ]
+    },
+    {
+      "quote_mint": "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn",
+      "label": "SPL_QUOTE_TOKEN",
+      "decoded_events_count": 36,
+      "base_mints_count": 4,
+      "base_mints": [
+        "7FpMjEqi8RxgxUmooZCGnPTRbqihDQq7RVTuF7cupump",
+        "DaSoqVSmuzBdG4DVTbTbKhkuQYdv7TsGdy8HcQLMpump",
+        "DdagXAnTnRpLLGM2QQtfKPxHuqxiG5sNmJuTzmwQpump",
+        "EEX3N6kDzjDJZiU6LPytC5AeZqRAZESDvUpyegA2pump"
+      ]
+    },
+    {
+      "quote_mint": "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
+      "label": "SPL_QUOTE_TOKEN",
+      "decoded_events_count": 6,
+      "base_mints_count": 1,
+      "base_mints": [
+        "2RWW3Mh3ouJik3bfXcLZiWM7W25SVQMQ2v7evGmRpump"
+      ]
+    },
+    {
+      "quote_mint": "CA8q2mkYWZnUNqYmf6pxyxAPZsmSe2EG9P7hHMW5pump",
+      "label": "SPL_QUOTE_TOKEN",
+      "decoded_events_count": 3,
+      "base_mints_count": 1,
+      "base_mints": [
+        "Gn9CGafPeia4vgNvLoLTrQezXcLKAU7nV31CDvThpump"
+      ]
+    },
+    {
+      "quote_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "label": "USDC",
+      "decoded_events_count": 1,
+      "base_mints_count": 1,
+      "base_mints": [
+        "3XLdvSS6iEXm7eZqMauQim9uBdsPnPSEuc7Pguojpump"
+      ]
+    },
+    {
+      "quote_mint": "EVcoZp3PwQmrFTijE1iGaAtBnTxb3a2ZYDeErQ1rpump",
+      "label": "SPL_QUOTE_TOKEN",
+      "decoded_events_count": 1,
+      "base_mints_count": 1,
+      "base_mints": [
+        "B3BzYD66s4XaXsuUvxKjLccZmZbyCTgZ3mAGW1YQbizg"
+      ]
+    },
+    {
+      "quote_mint": "6y9aDagFD9RXVpJidYqmDozC3Qn2uRdtwPeoxT8pump",
+      "label": "SPL_QUOTE_TOKEN",
+      "decoded_events_count": 1,
+      "base_mints_count": 1,
+      "base_mints": [
+        "2y7aTmAqNPjULDFjqdtoRLC1aJnMdgaYKpxjzZpQpump"
+      ]
+    }
+  ],
+  "usdc_trades_verified": [
+    {
+      "signature": "33w4xV5TiCKWhpjWnoMgfnBHyPP2M1q4YLuPKtSmP5xFMrvH2P6x1uTUwZ7uKG4qPr6K2kENbJr6uUZ8b6GhTjDu",
+      "slot": 462160883,
+      "log_index": 28,
+      "decoded_trade_event": {
+        "len": 391,
+        "mint": "3XLdvSS6iEXm7eZqMauQim9uBdsPnPSEuc7Pguojpump",
+        "sol_amount": 0,
+        "token_amount": 4104123561109,
+        "is_buy": false,
+        "user": "4bj1bYeUibeBh4F5c8NBpRcvhFYugTvveTVkvc6H7HSD",
+        "timestamp": 1793123321,
+        "v_sol": 0,
+        "v_tok": 1110838968468978,
+        "r_sol": 0,
+        "r_tok": 830938968468978,
+        "quote_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "quote_amount": 13814,
+        "virtual_quote_reserves": 3725266,
+        "real_quote_reserves": 70014,
+        "quote_fee_bps": 0,
+        "quote_fee": 0,
+        "quote_creator_fee": 42,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 8,
+          "owner": "8ekCy2jHHUbW2yeNGFWYJT9Hm9FW7SvZcZK66dSZCDiF",
+          "pre_raw": 4680242119025,
+          "post_raw": 4680242132665,
+          "delta_raw": 13640,
+          "decimals": 6,
+          "delta_ui": 0.01364
+        },
+        {
+          "accountIndex": 12,
+          "owner": "CYUvJgUZxnHJiPXHH8Gm9RkrHf58uMDz98EbUaJwdDTo",
+          "pre_raw": 83828,
+          "post_raw": 70188,
+          "delta_raw": -13640,
+          "decimals": 6,
+          "delta_ui": -0.01364
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 2,
+          "owner": "CYUvJgUZxnHJiPXHH8Gm9RkrHf58uMDz98EbUaJwdDTo",
+          "pre_raw": 1033734844907869,
+          "post_raw": 1037838968468978,
+          "delta_raw": 4104123561109,
+          "decimals": 6,
+          "delta_ui": 4104123.561109
+        },
+        {
+          "accountIndex": 13,
+          "owner": "4bj1bYeUibeBh4F5c8NBpRcvhFYugTvveTVkvc6H7HSD",
+          "pre_raw": 4104123561109,
+          "post_raw": 0,
+          "delta_raw": -4104123561109,
+          "decimals": 6,
+          "delta_ui": -4104123.561109
+        }
+      ]
+    },
+    {
+      "signature": "5aXgwhdxH9gyLQzTqSFShuSgQzHhkeD8ABKJBBqfiZkqPmcjmvegP6ZdKum38EJ3RXTDrTyzgzsiR99hkJahCERr",
+      "slot": 462000914,
+      "log_index": 38,
+      "decoded_trade_event": {
+        "len": 391,
+        "mint": "3XLdvSS6iEXm7eZqMauQim9uBdsPnPSEuc7Pguojpump",
+        "sol_amount": 0,
+        "token_amount": 54579777832984,
+        "is_buy": false,
+        "user": "AnwmSn8duYmzRsqfUHq5XQidm7ay8soYKLQVbvXPiFCk",
+        "timestamp": 1793089296,
+        "v_sol": 0,
+        "v_tok": 1106734844907869,
+        "r_sol": 0,
+        "r_tok": 826834844907869,
+        "quote_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "quote_amount": 193962,
+        "virtual_quote_reserves": 3739080,
+        "real_quote_reserves": 83828,
+        "quote_fee_bps": 0,
+        "quote_fee": 0,
+        "quote_creator_fee": 713923,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 11,
+          "owner": "CYUvJgUZxnHJiPXHH8Gm9RkrHf58uMDz98EbUaJwdDTo",
+          "pre_raw": 3250005,
+          "post_raw": 3058468,
+          "delta_raw": -191537,
+          "decimals": 6,
+          "delta_ui": -0.191537
+        },
+        {
+          "accountIndex": 12,
+          "owner": "2LAYGGSiF3QfyQEG1Gb3UGAsuzvD21zjHEW88v2XZ7cW",
+          "pre_raw": 254787389649,
+          "post_raw": 254787581186,
+          "delta_raw": 191537,
+          "decimals": 6,
+          "delta_ui": 0.191537
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 1,
+          "owner": "CYUvJgUZxnHJiPXHH8Gm9RkrHf58uMDz98EbUaJwdDTo",
+          "pre_raw": 979155067074885,
+          "post_raw": 1033734844907869,
+          "delta_raw": 54579777832984,
+          "decimals": 6,
+          "delta_ui": 54579777.832984
+        },
+        {
+          "accountIndex": 13,
+          "owner": "AnwmSn8duYmzRsqfUHq5XQidm7ay8soYKLQVbvXPiFCk",
+          "pre_raw": 54579777832984,
+          "post_raw": 0,
+          "delta_raw": -54579777832984,
+          "decimals": 6,
+          "delta_ui": -54579777.832984
+        }
+      ]
+    },
+    {
+      "signature": "LVqEBZ9P136szVPvBdfHw57mn9C6uZunPefY7b7fVjGCsVWvuDCUh35VhY779t5V4mx9eDqd1RFZEfeD6mg5FQ8",
+      "slot": 462000333,
+      "log_index": 30,
+      "decoded_trade_event": {
+        "len": 405,
+        "mint": "3XLdvSS6iEXm7eZqMauQim9uBdsPnPSEuc7Pguojpump",
+        "sol_amount": 0,
+        "token_amount": 54579777832984,
+        "is_buy": true,
+        "user": "AnwmSn8duYmzRsqfUHq5XQidm7ay8soYKLQVbvXPiFCk",
+        "timestamp": 1793089173,
+        "v_sol": 0,
+        "v_tok": 1052155067074885,
+        "r_sol": 0,
+        "r_tok": 772255067074885,
+        "quote_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "quote_amount": 193963,
+        "virtual_quote_reserves": 3933042,
+        "real_quote_reserves": 277790,
+        "quote_fee_bps": 0,
+        "quote_fee": 0,
+        "quote_creator_fee": 713341,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 11,
+          "owner": "CYUvJgUZxnHJiPXHH8Gm9RkrHf58uMDz98EbUaJwdDTo",
+          "pre_raw": 3053617,
+          "post_raw": 3250005,
+          "delta_raw": 196388,
+          "decimals": 6,
+          "delta_ui": 0.196388
+        },
+        {
+          "accountIndex": 12,
+          "owner": "2LAYGGSiF3QfyQEG1Gb3UGAsuzvD21zjHEW88v2XZ7cW",
+          "pre_raw": 254557517444,
+          "post_raw": 254557321056,
+          "delta_raw": -196388,
+          "decimals": 6,
+          "delta_ui": -0.196388
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 1,
+          "owner": "CYUvJgUZxnHJiPXHH8Gm9RkrHf58uMDz98EbUaJwdDTo",
+          "pre_raw": 1033734844907869,
+          "post_raw": 979155067074885,
+          "delta_raw": -54579777832984,
+          "decimals": 6,
+          "delta_ui": -54579777.832984
+        },
+        {
+          "accountIndex": 13,
+          "owner": "AnwmSn8duYmzRsqfUHq5XQidm7ay8soYKLQVbvXPiFCk",
+          "pre_raw": 0,
+          "post_raw": 54579777832984,
+          "delta_raw": 54579777832984,
+          "decimals": 6,
+          "delta_ui": 54579777.832984
+        }
+      ]
+    },
+    {
+      "signature": "41bQjA4m3rtdQfSgXkTuNTPouDEGiUC7boZM3uKHUJXMb2tS2GfZjkZcFHb6QG2Lxp2RZVTgeGuSVADkWScFLvmk",
+      "slot": 462000324,
+      "log_index": 26,
+      "decoded_trade_event": {
+        "len": 391,
+        "mint": "3XLdvSS6iEXm7eZqMauQim9uBdsPnPSEuc7Pguojpump",
+        "sol_amount": 0,
+        "token_amount": 64961397520174,
+        "is_buy": false,
+        "user": "E1mfCCNzZnBXU6rZPngFe5yGe8hosC7rBsZi3kYAH3vA",
+        "timestamp": 1793089171,
+        "v_sol": 0,
+        "v_tok": 1106734844907869,
+        "r_sol": 0,
+        "r_tok": 826834844907869,
+        "quote_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "quote_amount": 233156,
+        "virtual_quote_reserves": 3739079,
+        "real_quote_reserves": 83827,
+        "quote_fee_bps": 0,
+        "quote_fee": 0,
+        "quote_creator_fee": 712759,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 5,
+          "owner": "GesfTA3X2arioaHp8bbKdjG9vJtskViWACZoYvxp4twS",
+          "pre_raw": 13276801,
+          "post_raw": 13279016,
+          "delta_raw": 2215,
+          "decimals": 6,
+          "delta_ui": 0.002215
+        },
+        {
+          "accountIndex": 6,
+          "owner": "E1mfCCNzZnBXU6rZPngFe5yGe8hosC7rBsZi3kYAH3vA",
+          "pre_raw": 108564183,
+          "post_raw": 108794424,
+          "delta_raw": 230241,
+          "decimals": 6,
+          "delta_ui": 0.230241
+        },
+        {
+          "accountIndex": 11,
+          "owner": "CYUvJgUZxnHJiPXHH8Gm9RkrHf58uMDz98EbUaJwdDTo",
+          "pre_raw": 3286773,
+          "post_raw": 3053617,
+          "delta_raw": -233156,
+          "decimals": 6,
+          "delta_ui": -0.233156
+        },
+        {
+          "accountIndex": 12,
+          "owner": "3spdGPJNMgFNqbBdPQaRYGfYDu36rS36o9o4k8XyU7RN",
+          "pre_raw": 1554452,
+          "post_raw": 1555152,
+          "delta_raw": 700,
+          "decimals": 6,
+          "delta_ui": 0.0007
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 2,
+          "owner": "CYUvJgUZxnHJiPXHH8Gm9RkrHf58uMDz98EbUaJwdDTo",
+          "pre_raw": 968773447387695,
+          "post_raw": 1033734844907869,
+          "delta_raw": 64961397520174,
+          "decimals": 6,
+          "delta_ui": 64961397.520174
+        },
+        {
+          "accountIndex": 8,
+          "owner": "E1mfCCNzZnBXU6rZPngFe5yGe8hosC7rBsZi3kYAH3vA",
+          "pre_raw": 64961397520174,
+          "post_raw": 0,
+          "delta_raw": -64961397520174,
+          "decimals": 6,
+          "delta_ui": -64961397.520174
+        }
+      ]
+    }
+  ],
+  "other_non_sol_trades_verified": [
+    {
+      "signature": "4LTonjxgG8DPRQBGUvxpxzR7EJKs7qRMmQdV6jMDS8bEJv8LgtDGxsBSWd8LaDMtTgNxvP2jDM4wh1sKpjBUcfKr",
+      "slot": 462183717,
+      "err": null,
+      "log_index": 70,
+      "decoded_trade_event": {
+        "len": 401,
+        "mint": "DohAAwuiNSs873xKNgnrZdqz9FfXZWHjaSEaKKF9pump",
+        "sol_amount": 0,
+        "token_amount": 45504411660746,
+        "is_buy": true,
+        "user": "53DnQU1dJZNHfKBpv2Lhsd4EBGNpwsF4tS13Egc1m6Tv",
+        "timestamp": 1793128175,
+        "v_sol": 0,
+        "v_tok": 842200718731113,
+        "r_sol": 0,
+        "r_tok": 562300718731113,
+        "quote_mint": "2BJDwUdMbnJhRRfhacFDjrDNhxUWdzE9H6LEND89pump",
+        "quote_amount": 417720857204,
+        "virtual_quote_reserves": 8148945002858,
+        "real_quote_reserves": 1752815144233,
+        "quote_fee_bps": 30,
+        "quote_fee": 1253162572,
+        "quote_creator_fee": 3731840849,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 7,
+          "owner": "Deb7ybe2LHf242BxqWD4hBQXKgfAoLSWFWXpgeHeNseq",
+          "pre_raw": 73215620977299,
+          "post_raw": 72796646957523,
+          "delta_raw": -418974019776,
+          "decimals": 6,
+          "delta_ui": -418974.019776
+        },
+        {
+          "accountIndex": 11,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 1337572965306,
+          "post_raw": 1756546985082,
+          "delta_raw": 418974019776,
+          "decimals": 6,
+          "delta_ui": 418974.019776
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 3,
+          "owner": "53DnQU1dJZNHfKBpv2Lhsd4EBGNpwsF4tS13Egc1m6Tv",
+          "pre_raw": 0,
+          "post_raw": 45504411660746,
+          "delta_raw": 45504411660746,
+          "decimals": 6,
+          "delta_ui": 45504411.660746
+        },
+        {
+          "accountIndex": 10,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 814705130391859,
+          "post_raw": 769200718731113,
+          "delta_raw": -45504411660746,
+          "decimals": 6,
+          "delta_ui": -45504411.660746
+        }
+      ]
+    },
+    {
+      "signature": "2dDUi2D7UFrm5aM3hRhN2oWRjqg1hGCWdkKH3H6aFo34xJZqciHjF8DkQt9zeJUgWBVoX1Cc4uM3jKxHsEHZsv7k",
+      "slot": 462183717,
+      "err": null,
+      "log_index": 41,
+      "decoded_trade_event": {
+        "len": 401,
+        "mint": "DohAAwuiNSs873xKNgnrZdqz9FfXZWHjaSEaKKF9pump",
+        "sol_amount": 0,
+        "token_amount": 106219456559665,
+        "is_buy": true,
+        "user": "Fhbh1DTUDKt6qu9zVg8Q5VgnZa1WWWbxBxG6pCoJoggA",
+        "timestamp": 1793128175,
+        "v_sol": 0,
+        "v_tok": 887705130391859,
+        "r_sol": 0,
+        "r_tok": 607805130391859,
+        "quote_mint": "2BJDwUdMbnJhRRfhacFDjrDNhxUWdzE9H6LEND89pump",
+        "quote_amount": 826226092074,
+        "virtual_quote_reserves": 7731224145654,
+        "real_quote_reserves": 1335094287029,
+        "quote_fee_bps": 30,
+        "quote_fee": 2478678277,
+        "quote_creator_fee": 2478678277,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 4,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 508868194955,
+          "post_raw": 1337572965306,
+          "delta_raw": 828704770351,
+          "decimals": 6,
+          "delta_ui": 828704.770351
+        },
+        {
+          "accountIndex": 7,
+          "owner": "Deb7ybe2LHf242BxqWD4hBQXKgfAoLSWFWXpgeHeNseq",
+          "pre_raw": 73469361931664,
+          "post_raw": 72640657161313,
+          "delta_raw": -828704770351,
+          "decimals": 6,
+          "delta_ui": -828704.770351
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 2,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 920924586951524,
+          "post_raw": 814705130391859,
+          "delta_raw": -106219456559665,
+          "decimals": 6,
+          "delta_ui": -106219456.559665
+        },
+        {
+          "accountIndex": 10,
+          "owner": "Fhbh1DTUDKt6qu9zVg8Q5VgnZa1WWWbxBxG6pCoJoggA",
+          "pre_raw": 0,
+          "post_raw": 106219456559665,
+          "delta_raw": 106219456559665,
+          "decimals": 6,
+          "delta_ui": 106219456.559665
+        }
+      ]
+    },
+    {
+      "signature": "27nuvneckCXmuim1rMTrukG1nej476BLr4ioXnE8uC6PSPyScm5cra1TFWeKFmoDVpdZwBsziAX4vZe63hJZHzJC",
+      "slot": 462183717,
+      "err": null,
+      "log_index": 89,
+      "decoded_trade_event": {
+        "len": 390,
+        "mint": "DohAAwuiNSs873xKNgnrZdqz9FfXZWHjaSEaKKF9pump",
+        "sol_amount": 0,
+        "token_amount": 38384237210323,
+        "is_buy": true,
+        "user": "AFgTmqHzZJmbqqT4qTFKGnfR3dwKrSBmEN7GCjqgmhHs",
+        "timestamp": 1793128175,
+        "v_sol": 0,
+        "v_tok": 993924586951524,
+        "r_sol": 0,
+        "r_tok": 714024586951524,
+        "quote_mint": "2BJDwUdMbnJhRRfhacFDjrDNhxUWdzE9H6LEND89pump",
+        "quote_amount": 256747861708,
+        "virtual_quote_reserves": 6904998053580,
+        "real_quote_reserves": 508868194955,
+        "quote_fee_bps": 30,
+        "quote_fee": 770243586,
+        "quote_creator_fee": 0,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 1,
+          "owner": "AksiZc1UKFSfd9NZxfx78mh7GjhRU2WZdjiB5qfN6meL",
+          "pre_raw": 756361000,
+          "post_raw": 1526604586,
+          "delta_raw": 770243586,
+          "decimals": 6,
+          "delta_ui": 770.243586
+        },
+        {
+          "accountIndex": 9,
+          "owner": "AFgTmqHzZJmbqqT4qTFKGnfR3dwKrSBmEN7GCjqgmhHs",
+          "pre_raw": 279018214703,
+          "post_raw": 19061004722,
+          "delta_raw": -259957209981,
+          "decimals": 6,
+          "delta_ui": -259957.209981
+        },
+        {
+          "accountIndex": 11,
+          "owner": "5cjcW9wExnJJiqgLjq7DEG75Pm6JBgE1hNv4B2vHXUW6",
+          "pre_raw": 0,
+          "post_raw": 1219552343,
+          "delta_raw": 1219552343,
+          "decimals": 6,
+          "delta_ui": 1219.552343
+        },
+        {
+          "accountIndex": 12,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 252120333247,
+          "post_raw": 508868194955,
+          "delta_raw": 256747861708,
+          "decimals": 6,
+          "delta_ui": 256747.861708
+        },
+        {
+          "accountIndex": 13,
+          "owner": "62qc2CNXwrYqQScmEdiZFFAnJR262PxWEuNQtxfafNgV",
+          "pre_raw": 7554410192,
+          "post_raw": 8773962536,
+          "delta_raw": 1219552344,
+          "decimals": 6,
+          "delta_ui": 1219.552344
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 4,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 959308824161847,
+          "post_raw": 920924586951524,
+          "delta_raw": -38384237210323,
+          "decimals": 6,
+          "delta_ui": -38384237.210323
+        },
+        {
+          "accountIndex": 8,
+          "owner": "AFgTmqHzZJmbqqT4qTFKGnfR3dwKrSBmEN7GCjqgmhHs",
+          "pre_raw": 0,
+          "post_raw": 38384237210323,
+          "delta_raw": 38384237210323,
+          "decimals": 6,
+          "delta_ui": 38384237.210323
+        }
+      ]
+    },
+    {
+      "signature": "5Cm5Ze41U2EGmTZ8jTCf48VaG87W9wyNzGsPHU5CZTB8djeA1CDJb3zLb2AiaCuz99wADAiRm9Ap3deCc9wCYrZW",
+      "slot": 462183722,
+      "err": null,
+      "log_index": 64,
+      "decoded_trade_event": {
+        "len": 401,
+        "mint": "DohAAwuiNSs873xKNgnrZdqz9FfXZWHjaSEaKKF9pump",
+        "sol_amount": 0,
+        "token_amount": 2603387010207,
+        "is_buy": true,
+        "user": "FJ4bnrsb3vCa8NsgozMCvomu9GnRJ9d6rYeD6xr2LWaE",
+        "timestamp": 1793128176,
+        "v_sol": 0,
+        "v_tok": 805637530495793,
+        "r_sol": 0,
+        "r_tok": 525737530495793,
+        "quote_mint": "2BJDwUdMbnJhRRfhacFDjrDNhxUWdzE9H6LEND89pump",
+        "quote_amount": 27439437582,
+        "virtual_quote_reserves": 8518778083844,
+        "real_quote_reserves": 2122648225219,
+        "quote_fee_bps": 30,
+        "quote_fee": 82318313,
+        "quote_creator_fee": 4841340093,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 6,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 2099967809417,
+          "post_raw": 2127489565312,
+          "delta_raw": 27521755895,
+          "decimals": 6,
+          "delta_ui": 27521.755895
+        },
+        {
+          "accountIndex": 8,
+          "owner": "Deb7ybe2LHf242BxqWD4hBQXKgfAoLSWFWXpgeHeNseq",
+          "pre_raw": 72482654411418,
+          "post_raw": 72455132655523,
+          "delta_raw": -27521755895,
+          "decimals": 6,
+          "delta_ui": -27521.755895
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 1,
+          "owner": "FJ4bnrsb3vCa8NsgozMCvomu9GnRJ9d6rYeD6xr2LWaE",
+          "pre_raw": 0,
+          "post_raw": 2603387010207,
+          "delta_raw": 2603387010207,
+          "decimals": 6,
+          "delta_ui": 2603387.010207
+        },
+        {
+          "accountIndex": 2,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 735240917506000,
+          "post_raw": 732637530495793,
+          "delta_raw": -2603387010207,
+          "decimals": 6,
+          "delta_ui": -2603387.010207
+        }
+      ]
+    },
+    {
+      "signature": "5Qfxraet5wfVYo6AwDeBpc7Y79JtdeRzWdw7eZ9jdQ1XtQiwyYmVg6iunjPkdDRcqkVnDtnsy1ZX9jWwHqC7UBUH",
+      "slot": 462183722,
+      "err": null,
+      "log_index": 57,
+      "decoded_trade_event": {
+        "len": 401,
+        "mint": "DohAAwuiNSs873xKNgnrZdqz9FfXZWHjaSEaKKF9pump",
+        "sol_amount": 0,
+        "token_amount": 16651561998145,
+        "is_buy": true,
+        "user": "Gn5S3eosHp8z3KCERPqmTXqhnsJN7vimfQSgGNvkLm5z",
+        "timestamp": 1793128176,
+        "v_sol": 0,
+        "v_tok": 808240917506000,
+        "r_sol": 0,
+        "r_tok": 528340917506000,
+        "quote_mint": "2BJDwUdMbnJhRRfhacFDjrDNhxUWdzE9H6LEND89pump",
+        "quote_amount": 171409068975,
+        "virtual_quote_reserves": 8491338646262,
+        "real_quote_reserves": 2095208787637,
+        "quote_fee_bps": 30,
+        "quote_fee": 514227207,
+        "quote_creator_fee": 4759021780,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 10,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 1928044513235,
+          "post_raw": 2099967809417,
+          "delta_raw": 171923296182,
+          "decimals": 6,
+          "delta_ui": 171923.296182
+        },
+        {
+          "accountIndex": 12,
+          "owner": "Deb7ybe2LHf242BxqWD4hBQXKgfAoLSWFWXpgeHeNseq",
+          "pre_raw": 72654577707600,
+          "post_raw": 72482654411418,
+          "delta_raw": -171923296182,
+          "decimals": 6,
+          "delta_ui": -171923.296182
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 2,
+          "owner": "Gn5S3eosHp8z3KCERPqmTXqhnsJN7vimfQSgGNvkLm5z",
+          "pre_raw": 0,
+          "post_raw": 16651561998145,
+          "delta_raw": 16651561998145,
+          "decimals": 6,
+          "delta_ui": 16651561.998145
+        },
+        {
+          "accountIndex": 4,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 751892479504145,
+          "post_raw": 735240917506000,
+          "delta_raw": -16651561998145,
+          "decimals": 6,
+          "delta_ui": -16651561.998145
+        }
+      ]
+    },
+    {
+      "signature": "THXEusKPhwfRtyN1MeV21eU3oUp7jcGEeex8ugKSwojpNcH3VSHQxDtmzL2yxN94VurZZRYytH7dXxec2TeHMFz",
+      "slot": 462183722,
+      "err": null,
+      "log_index": 57,
+      "decoded_trade_event": {
+        "len": 401,
+        "mint": "DohAAwuiNSs873xKNgnrZdqz9FfXZWHjaSEaKKF9pump",
+        "sol_amount": 0,
+        "token_amount": 17308239226968,
+        "is_buy": true,
+        "user": "9pjfWz4qS3cUiKxf1yBi7WnA5CkbndDbpn4Z5r7f7azR",
+        "timestamp": 1793128176,
+        "v_sol": 0,
+        "v_tok": 824892479504145,
+        "r_sol": 0,
+        "r_tok": 544992479504145,
+        "quote_mint": "2BJDwUdMbnJhRRfhacFDjrDNhxUWdzE9H6LEND89pump",
+        "quote_amount": 170984574429,
+        "virtual_quote_reserves": 8319929577287,
+        "real_quote_reserves": 1923799718662,
+        "quote_fee_bps": 30,
+        "quote_fee": 512953724,
+        "quote_creator_fee": 4244794573,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 8,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 1756546985082,
+          "post_raw": 1928044513235,
+          "delta_raw": 171497528153,
+          "decimals": 6,
+          "delta_ui": 171497.528153
+        },
+        {
+          "accountIndex": 11,
+          "owner": "Deb7ybe2LHf242BxqWD4hBQXKgfAoLSWFWXpgeHeNseq",
+          "pre_raw": 72826075235753,
+          "post_raw": 72654577707600,
+          "delta_raw": -171497528153,
+          "decimals": 6,
+          "delta_ui": -171497.528153
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 2,
+          "owner": "9pjfWz4qS3cUiKxf1yBi7WnA5CkbndDbpn4Z5r7f7azR",
+          "pre_raw": 0,
+          "post_raw": 17308239226968,
+          "delta_raw": 17308239226968,
+          "decimals": 6,
+          "delta_ui": 17308239.226968
+        },
+        {
+          "accountIndex": 4,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 769200718731113,
+          "post_raw": 751892479504145,
+          "delta_raw": -17308239226968,
+          "decimals": 6,
+          "delta_ui": -17308239.226968
+        }
+      ]
+    },
+    {
+      "signature": "3tzBLQqaNNUBvtWyK1NED49MaHbqLSicBK1sWGxbtzXG2TorR4zuYiF7MXrattVQVy3FErRDfzYbr1ft4SAVNvhV",
+      "slot": 462183728,
+      "err": null,
+      "log_index": 22,
+      "decoded_trade_event": {
+        "len": 401,
+        "mint": "DohAAwuiNSs873xKNgnrZdqz9FfXZWHjaSEaKKF9pump",
+        "sol_amount": 0,
+        "token_amount": 106219456559665,
+        "is_buy": false,
+        "user": "Fhbh1DTUDKt6qu9zVg8Q5VgnZa1WWWbxBxG6pCoJoggA",
+        "timestamp": 1793128177,
+        "v_sol": 0,
+        "v_tok": 911856987055458,
+        "r_sol": 0,
+        "r_tok": 631956987055458,
+        "quote_mint": "2BJDwUdMbnJhRRfhacFDjrDNhxUWdzE9H6LEND89pump",
+        "quote_amount": 992326638347,
+        "virtual_quote_reserves": 7526451445497,
+        "real_quote_reserves": 1130321586872,
+        "quote_fee_bps": 30,
+        "quote_fee": 2976979916,
+        "quote_creator_fee": 7818320009,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 4,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 2127489565312,
+          "post_raw": 1138139906881,
+          "delta_raw": -989349658431,
+          "decimals": 6,
+          "delta_ui": -989349.658431
+        },
+        {
+          "accountIndex": 6,
+          "owner": "Deb7ybe2LHf242BxqWD4hBQXKgfAoLSWFWXpgeHeNseq",
+          "pre_raw": 72697846520614,
+          "post_raw": 73687196179045,
+          "delta_raw": 989349658431,
+          "decimals": 6,
+          "delta_ui": 989349.658431
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 1,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 732637530495793,
+          "post_raw": 838856987055458,
+          "delta_raw": 106219456559665,
+          "decimals": 6,
+          "delta_ui": 106219456.559665
+        },
+        {
+          "accountIndex": 9,
+          "owner": "Fhbh1DTUDKt6qu9zVg8Q5VgnZa1WWWbxBxG6pCoJoggA",
+          "pre_raw": 106219456559665,
+          "post_raw": 0,
+          "delta_raw": -106219456559665,
+          "decimals": 6,
+          "delta_ui": -106219456.559665
+        }
+      ]
+    },
+    {
+      "signature": "pxkstZnyjCDSFL1i5tKvXhDVj5ChUyZUPT1Q3TY5jZrdYABS3KdPgpn6nqgcZgxrynmXZVqPtVPC7vtfJoKgZFY",
+      "slot": 462183728,
+      "err": null,
+      "log_index": 57,
+      "decoded_trade_event": {
+        "len": 401,
+        "mint": "DohAAwuiNSs873xKNgnrZdqz9FfXZWHjaSEaKKF9pump",
+        "sol_amount": 0,
+        "token_amount": 16670009542143,
+        "is_buy": true,
+        "user": "7jUYqmHkMcU8TTVQ2xYYPFdTehdJbqQhHf7rAJ99FNUu",
+        "timestamp": 1793128177,
+        "v_sol": 0,
+        "v_tok": 895186977513315,
+        "r_sol": 0,
+        "r_tok": 615286977513315,
+        "quote_mint": "2BJDwUdMbnJhRRfhacFDjrDNhxUWdzE9H6LEND89pump",
+        "quote_amount": 140156213805,
+        "virtual_quote_reserves": 7666607659302,
+        "real_quote_reserves": 1270477800677,
+        "quote_fee_bps": 30,
+        "quote_fee": 420468642,
+        "quote_creator_fee": 8238788651,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 10,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 1138139906881,
+          "post_raw": 1278716589328,
+          "delta_raw": 140576682447,
+          "decimals": 6,
+          "delta_ui": 140576.682447
+        },
+        {
+          "accountIndex": 12,
+          "owner": "Deb7ybe2LHf242BxqWD4hBQXKgfAoLSWFWXpgeHeNseq",
+          "pre_raw": 73687196179045,
+          "post_raw": 73546619496598,
+          "delta_raw": -140576682447,
+          "decimals": 6,
+          "delta_ui": -140576.682447
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 4,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 838856987055458,
+          "post_raw": 822186977513315,
+          "delta_raw": -16670009542143,
+          "decimals": 6,
+          "delta_ui": -16670009.542143
+        },
+        {
+          "accountIndex": 8,
+          "owner": "7jUYqmHkMcU8TTVQ2xYYPFdTehdJbqQhHf7rAJ99FNUu",
+          "pre_raw": 0,
+          "post_raw": 16670009542143,
+          "delta_raw": 16670009542143,
+          "decimals": 6,
+          "delta_ui": 16670009.542143
+        }
+      ]
+    },
+    {
+      "signature": "125CHB9KoY2fNTYvajo8mcQBCpVE3A1VHGsVcRaVJuaMqFMNwxAgxU56NN1AtW6LbLEsBcMcEQLsAw7ZY3K9D1sM",
+      "slot": 462183729,
+      "err": null,
+      "log_index": 70,
+      "decoded_trade_event": {
+        "len": 401,
+        "mint": "DohAAwuiNSs873xKNgnrZdqz9FfXZWHjaSEaKKF9pump",
+        "sol_amount": 0,
+        "token_amount": 3080249175911,
+        "is_buy": true,
+        "user": "9iYpKAGTuW1hNrf9A9CYvNYPWz21aV2cwq8jFHhrZ1Gz",
+        "timestamp": 1793128177,
+        "v_sol": 0,
+        "v_tok": 883876332333685,
+        "r_sol": 0,
+        "r_tok": 603976332333685,
+        "quote_mint": "2BJDwUdMbnJhRRfhacFDjrDNhxUWdzE9H6LEND89pump",
+        "quote_amount": 26965531138,
+        "virtual_quote_reserves": 7764714459762,
+        "real_quote_reserves": 1368584601137,
+        "quote_fee_bps": 30,
+        "quote_fee": 80896594,
+        "quote_creator_fee": 8533109053,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 5,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 1350071282458,
+          "post_raw": 1377117710190,
+          "delta_raw": 27046427732,
+          "decimals": 6,
+          "delta_ui": 27046.427732
+        },
+        {
+          "accountIndex": 16,
+          "owner": "Deb7ybe2LHf242BxqWD4hBQXKgfAoLSWFWXpgeHeNseq",
+          "pre_raw": 71859601971288,
+          "post_raw": 71832555543556,
+          "delta_raw": -27046427732,
+          "decimals": 6,
+          "delta_ui": -27046.427732
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 3,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 813956581509596,
+          "post_raw": 810876332333685,
+          "delta_raw": -3080249175911,
+          "decimals": 6,
+          "delta_ui": -3080249.175911
+        },
+        {
+          "accountIndex": 8,
+          "owner": "9iYpKAGTuW1hNrf9A9CYvNYPWz21aV2cwq8jFHhrZ1Gz",
+          "pre_raw": 0,
+          "post_raw": 3080249175911,
+          "delta_raw": 3080249175911,
+          "decimals": 6,
+          "delta_ui": 3080249.175911
+        }
+      ]
+    },
+    {
+      "signature": "5yDDonRQuSDyVLdKXsRbp4WfG5KzhHCWDD59Yno9NQB1Zyd6sKrnGwmvPdmN4zgjwAM5kEB4TQsMa9VNupoNd6Nb",
+      "slot": 462183729,
+      "err": null,
+      "log_index": 68,
+      "decoded_trade_event": {
+        "len": 401,
+        "mint": "DohAAwuiNSs873xKNgnrZdqz9FfXZWHjaSEaKKF9pump",
+        "sol_amount": 0,
+        "token_amount": 8230396003719,
+        "is_buy": true,
+        "user": "35caaJFwzSNaFwFmP1f33wDP9cUFEXTLDsFnjna7kAjs",
+        "timestamp": 1793128177,
+        "v_sol": 0,
+        "v_tok": 886956581509596,
+        "r_sol": 0,
+        "r_tok": 607056581509596,
+        "quote_mint": "2BJDwUdMbnJhRRfhacFDjrDNhxUWdzE9H6LEND89pump",
+        "quote_amount": 71141269322,
+        "virtual_quote_reserves": 7737748928624,
+        "real_quote_reserves": 1341619069999,
+        "quote_fee_bps": 30,
+        "quote_fee": 213423808,
+        "quote_creator_fee": 8452212459,
+        "quote_extra": 0
+      },
+      "quote_mint_balance_deltas": [
+        {
+          "accountIndex": 8,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 1278716589328,
+          "post_raw": 1350071282458,
+          "delta_raw": 71354693130,
+          "decimals": 6,
+          "delta_ui": 71354.69313
+        },
+        {
+          "accountIndex": 10,
+          "owner": "Deb7ybe2LHf242BxqWD4hBQXKgfAoLSWFWXpgeHeNseq",
+          "pre_raw": 73837397828284,
+          "post_raw": 73766043135154,
+          "delta_raw": -71354693130,
+          "decimals": 6,
+          "delta_ui": -71354.69313
+        }
+      ],
+      "base_mint_balance_deltas": [
+        {
+          "accountIndex": 2,
+          "owner": "7yGTrQiBT4G3hd1CyN873it6obgSP6sJBKzSap63ymhB",
+          "pre_raw": 822186977513315,
+          "post_raw": 813956581509596,
+          "delta_raw": -8230396003719,
+          "decimals": 6,
+          "delta_ui": -8230396.003719
+        },
+        {
+          "accountIndex": 6,
+          "owner": "35caaJFwzSNaFwFmP1f33wDP9cUFEXTLDsFnjna7kAjs",
+          "pre_raw": 0,
+          "post_raw": 8230396003719,
+          "delta_raw": 8230396003719,
+          "decimals": 6,
+          "delta_ui": 8230396.003719
+        }
+      ]
+    }
+  ]
 }
