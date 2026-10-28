@@ -1,0 +1,107 @@
+{
+  "spec_id": "route_a_preregistered_spec_2026_10_28",
+  "date": "2026-10-28",
+  "status": "PRE_REGISTERED_BEFORE_OUTCOME_EVALUATION",
+  "dataset": {
+    "db_path": "data/curve_trades.db",
+    "quote_asset_filter": "So11111111111111111111111111111111111111112",
+    "exclude_gap_boundary_creations": true,
+    "train_split": "First 4 hours of 6-hour run: created_block_time in [min_bt, min_bt + 14400)",
+    "test_split": "Last 2 hours of 6-hour run (with full 30m maturity window): created_block_time in [min_bt + 14400, max_bt - 1800]"
+  },
+  "entry_gates": {
+    "distinct_non_bot_buyers_min_N": "Variant-defined N at evaluation time t (excluding wallets active in >=50 mints and wallets that round-trip buy+sell the same mint within 60s up to time t)",
+    "creator_share_max_pct_of_1b_supply": 3.0,
+    "top10_holder_share_max_pct_of_1b_supply": 18.0,
+    "market_cap_max_usd": 16000.0,
+    "sol_price_usd_reference": 150.0,
+    "market_cap_max_sol_equivalent": 106.6667
+  },
+  "execution_and_fill_model": {
+    "latency_slots": [2, 3],
+    "primary_latency_slots": 2,
+    "sensitivity_latency_slots": 3,
+    "position_size_sol": 0.5,
+    "position_size_usd_at_150_sol": 75.0,
+    "curve_fee_bps_each_way": 125,
+    "curve_fee_pct_each_way": 1.25,
+    "constant_product_formula": "On entry at trigger_slot + latency_slots: take the bonding curve virtual reserves (v_sol, v_tok) immediately after the last trade at or before trigger_slot + latency_slots. Net SOL into curve = sol_in * (1 - 0.0125); tokens_out = floor(v_tok * net_sol_in / (v_sol + net_sol_in)). On exit at exit_slot: take (v_sol_exit, v_tok_exit) at or before exit target (or at stop-loss breach trade); gross_sol_out = v_sol_exit * tokens_out / (v_tok_exit + tokens_out); net_sol_out = gross_sol_out * (1 - 0.0125) - network_fee_sol.",
+    "failed_landing_rate_model": {
+      "source": "Empirical S+0 and window failure audit (reports/route_b_failure_taxonomy.json & reports/s0_cluster_audit.json)",
+      "s0_failure_rate": 0.592105,
+      "s0_failed_count": 45,
+      "s0_total_count": 76,
+      "pamm_window_failure_rate": 0.267373,
+      "pamm_failed_count": 227,
+      "pamm_total_count": 849,
+      "failed_attempt_fee_cost_sol": 0.000005,
+      "application": "Each triggered entry faces the empirical failed-landing probability p_fail = 45/76 = 59.21% (S+0) and sensitivity p_fail = 227/849 = 26.74% (window), paying failed tx fee on non-landed attempts and realizing both conditional-on-landing return and expected return across landing outcomes."
+    }
+  },
+  "exit_rules": {
+    "fixed_horizons_seconds": [60, 120, 300, 600, 1800],
+    "fixed_horizons_labels": ["1m", "2m", "5m", "10m", "30m"],
+    "stop_loss_pct": -30.0,
+    "stop_loss_rule": " Evaluated both as (a) pure fixed-horizon exit at {1m, 2m, 5m, 10m, 30m} after entry, and (b) fixed-horizon exit paired with a -30% stop-loss triggered on the first subsequent trade (+2 slot execution delay) where mark-to-market net exit value drops <= -30.0% below entry SOL."
+  },
+  "pre_listed_variants_max_5": [
+    {
+      "variant_id": "V1_t60s_N8",
+      "eval_time_sec": 60,
+      "min_clean_buyers_N": 8,
+      "creator_max_pct": 3.0,
+      "top10_max_pct": 18.0,
+      "mc_max_usd": 16000.0,
+      "description": "Evaluate at t = +60s (+1m): distinct non-bot buyers >= 8, creator <= 3%, top-10 <= 18%, MC <= $16,000"
+    },
+    {
+      "variant_id": "V2_t60s_N12",
+      "eval_time_sec": 60,
+      "min_clean_buyers_N": 12,
+      "creator_max_pct": 3.0,
+      "top10_max_pct": 18.0,
+      "mc_max_usd": 16000.0,
+      "description": "Evaluate at t = +60s (+1m): distinct non-bot buyers >= 12, creator <= 3%, top-10 <= 18%, MC <= $16,000"
+    },
+    {
+      "variant_id": "V3_t120s_N10",
+      "eval_time_sec": 120,
+      "min_clean_buyers_N": 10,
+      "creator_max_pct": 3.0,
+      "top10_max_pct": 18.0,
+      "mc_max_usd": 16000.0,
+      "description": "Evaluate at t = +120s (+2m): distinct non-bot buyers >= 10, creator <= 3%, top-10 <= 18%, MC <= $16,000"
+    },
+    {
+      "variant_id": "V4_t120s_N15",
+      "eval_time_sec": 120,
+      "min_clean_buyers_N": 15,
+      "creator_max_pct": 3.0,
+      "top10_max_pct": 18.0,
+      "mc_max_usd": 16000.0,
+      "description": "Evaluate at t = +120s (+2m): distinct non-bot buyers >= 15, creator <= 3%, top-10 <= 18%, MC <= $16,000"
+    },
+    {
+      "variant_id": "V5_t300s_N15",
+      "eval_time_sec": 300,
+      "min_clean_buyers_N": 15,
+      "creator_max_pct": 3.0,
+      "top10_max_pct": 18.0,
+      "mc_max_usd": 16000.0,
+      "description": "Evaluate at t = +300s (+5m): distinct non-bot buyers >= 15, creator <= 3%, top-10 <= 18%, MC <= $16,000"
+    }
+  ],
+  "selection_and_reporting_protocol": {
+    "max_variants_tried": 5,
+    "train_selection_criterion": "Highest mean net return excluding top trade (at 5m fixed horizon with -30% stop-loss, 2-slot latency) on the 4-hour train split among variants with >= 10 train trades (or highest sample size if <10).",
+    "required_metrics_on_test": [
+      "trade_count",
+      "median_return_pct",
+      "mean_return_pct",
+      "mean_excluding_top_trade_pct",
+      "share_below_minus_50pct",
+      "bootstrap_95pct_ci_mean_and_median_10000_resamples",
+      "variants_tried_count"
+    ]
+  }
+}
