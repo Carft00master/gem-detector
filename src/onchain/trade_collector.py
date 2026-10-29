@@ -47,6 +47,8 @@ USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 
 CREATE_EVENT_DISCRIMINATOR = hashlib.sha256(b"event:CreateEvent").digest()[:8]  # 1b72a94ddeeb6376
 TRADE_EVENT_DISCRIMINATOR = hashlib.sha256(b"event:TradeEvent").digest()[:8]    # bddb7fd34ee661ee
+COMPLETE_EVENT_DISCRIMINATOR = hashlib.sha256(b"event:CompleteEvent").digest()[:8]  # 5f72619cd42e9808
+COMPLETE_MIGRATION_DISCRIMINATOR = hashlib.sha256(b"event:CompletePumpAmmMigrationEvent").digest()[:8]  # bde95db95c94e07c
 
 MAX_MINT_AGE_SECONDS = 1800  # 30 minutes
 
@@ -99,6 +101,8 @@ class CurveTradeCollector:
         backoff_multiplier: float = 2.0,
         reset_db: bool = False,
         subscription_mode: str = "full",
+        fallback_providers: Optional[List[str]] = None,
+        exclude_providers: Optional[List[str]] = None,
     ):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -111,10 +115,13 @@ class CurveTradeCollector:
         self.initial_backoff = initial_backoff
         self.max_backoff = max_backoff
         self.backoff_multiplier = backoff_multiplier
+        self.fallback_providers = [p.lower() for p in (fallback_providers or ["alchemy", "helius"])]
+        self.exclude_providers = [p.lower() for p in (exclude_providers if exclude_providers is not None else ["quicknode"])]
 
         # Runtime counters
         self.skipped_err_count = 0
         self.creations_recorded = 0
+        self.completions_recorded = 0
         self.total_trades_collected = 0
         self.dropped_untracked_mint_count = 0
         self.dropped_expired_mint_count = 0
@@ -127,6 +134,12 @@ class CurveTradeCollector:
         self._mint_bonding_curves: Dict[str, str] = {}
         self._subscribed_curves: Set[str] = set()
         self._next_rpc_id = 10
+
+        # Slot & gap tracking
+        self._last_seen_slot: Optional[int] = None
+        self._last_seen_block_time: Optional[int] = None
+        self._last_seen_utc: Optional[str] = None
+        self._in_disconnect_gap: bool = False
 
         self._conn: Optional[sqlite3.Connection] = None
         self._init_db(reset_db=reset_db)
@@ -161,7 +174,10 @@ class CurveTradeCollector:
         ):
             cur.execute("DROP TABLE IF EXISTS curve_trades")
             cur.execute("DROP TABLE IF EXISTS curve_creations")
+            cur.execute("DROP TABLE IF EXISTS curve_completions")
+            cur.execute("DROP TABLE IF EXISTS collector_gaps")
             cur.execute("DROP TABLE IF EXISTS collector_state")
+            cols = set()
 
         cur.execute("""
             CREATE TABLE IF NOT EXISTS curve_creations (
@@ -174,9 +190,14 @@ class CurveTradeCollector:
                 created_block_time INTEGER NOT NULL,
                 name TEXT,
                 symbol TEXT,
-                created_at_utc TEXT NOT NULL
+                created_at_utc TEXT NOT NULL,
+                excluded_gap INTEGER NOT NULL DEFAULT 0
             )
         """)
+        cur.execute("PRAGMA table_info(curve_creations)")
+        creation_cols = {r[1] for r in cur.fetchall()}
+        if "excluded_gap" not in creation_cols:
+            cur.execute("ALTER TABLE curve_creations ADD COLUMN excluded_gap INTEGER NOT NULL DEFAULT 0")
 
         cur.execute("""
             CREATE TABLE IF NOT EXISTS curve_trades (
@@ -185,6 +206,7 @@ class CurveTradeCollector:
                 log_index INTEGER NOT NULL,
                 mint TEXT NOT NULL,
                 tx_type TEXT NOT NULL,
+                ix_name TEXT,
                 wallet TEXT NOT NULL,
                 quote_mint TEXT NOT NULL,
                 quote_amount INTEGER NOT NULL,
@@ -192,16 +214,63 @@ class CurveTradeCollector:
                 token_base_units INTEGER NOT NULL,
                 sol_amount REAL,
                 token_amount REAL NOT NULL,
+                virtual_sol_reserves INTEGER,
+                virtual_token_reserves INTEGER,
+                real_sol_reserves INTEGER,
+                real_token_reserves INTEGER,
                 slot INTEGER NOT NULL,
                 block_time INTEGER NOT NULL,
                 created_at_utc TEXT NOT NULL,
                 UNIQUE(signature, log_index)
             )
         """)
+        cur.execute("PRAGMA table_info(curve_trades)")
+        trade_cols = {r[1] for r in cur.fetchall()}
+        for col_name, col_type in [
+            ("ix_name", "TEXT"),
+            ("virtual_sol_reserves", "INTEGER"),
+            ("virtual_token_reserves", "INTEGER"),
+            ("real_sol_reserves", "INTEGER"),
+            ("real_token_reserves", "INTEGER"),
+        ]:
+            if col_name not in trade_cols:
+                cur.execute(f"ALTER TABLE curve_trades ADD COLUMN {col_name} {col_type}")
+
         cur.execute("CREATE INDEX IF NOT EXISTS idx_curve_trades_mint ON curve_trades(mint)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_curve_trades_quote_mint ON curve_trades(quote_mint)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_curve_trades_slot ON curve_trades(slot)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_curve_trades_time ON curve_trades(block_time)")
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS curve_completions (
+                mint TEXT PRIMARY KEY,
+                signature TEXT NOT NULL,
+                log_index INTEGER NOT NULL,
+                user TEXT,
+                bonding_curve TEXT,
+                pool TEXT,
+                slot INTEGER NOT NULL,
+                block_time INTEGER NOT NULL,
+                event_type TEXT NOT NULL,
+                created_at_utc TEXT NOT NULL
+            )
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS collector_gaps (
+                gap_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                provider TEXT NOT NULL,
+                start_slot INTEGER NOT NULL,
+                end_slot INTEGER NOT NULL,
+                slot_span INTEGER NOT NULL,
+                duration_seconds REAL NOT NULL,
+                last_event_utc TEXT NOT NULL,
+                first_event_after_utc TEXT NOT NULL,
+                onchain_mints_created_during_gap INTEGER NOT NULL DEFAULT 0,
+                db_boundary_mints_in_gap INTEGER NOT NULL DEFAULT 0,
+                db_active_30m_mints_overlapping_gap INTEGER NOT NULL DEFAULT 0
+            )
+        """)
 
         cur.execute("""
             CREATE TABLE IF NOT EXISTS collector_state (
@@ -244,6 +313,7 @@ class CurveTradeCollector:
         created_block_time: int,
         name: str = "",
         symbol: str = "",
+        excluded_gap: int = 0,
     ) -> None:
         """Persist CreateEvent into curve_creations and register active mint."""
         now_utc = datetime.now(timezone.utc).isoformat()
@@ -251,17 +321,45 @@ class CurveTradeCollector:
         cur.execute("""
             INSERT OR IGNORE INTO curve_creations (
                 mint, signature, log_index, bonding_curve, creator,
-                slot, created_block_time, name, symbol, created_at_utc
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                slot, created_block_time, name, symbol, created_at_utc, excluded_gap
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             mint, signature, log_index, bonding_curve, creator,
-            slot, created_block_time, name, symbol, now_utc
+            slot, created_block_time, name, symbol, now_utc, excluded_gap
         ))
         if cur.rowcount > 0:
             self.creations_recorded += 1
         self._conn.commit()
         self._mint_creation_times[mint] = created_block_time
         self._mint_bonding_curves[mint] = bonding_curve
+
+    def record_completion(
+        self,
+        mint: str,
+        signature: str,
+        log_index: int,
+        user: str,
+        bonding_curve: str,
+        pool: str,
+        slot: int,
+        block_time: int,
+        event_type: str,
+    ) -> None:
+        """Persist CompleteEvent / CompletePumpAmmMigrationEvent into curve_completions."""
+        now_utc = datetime.now(timezone.utc).isoformat()
+        cur = self._conn.cursor()
+        cur.execute("""
+            INSERT OR REPLACE INTO curve_completions (
+                mint, signature, log_index, user, bonding_curve,
+                pool, slot, block_time, event_type, created_at_utc
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            mint, signature, log_index, user, bonding_curve,
+            pool, slot, block_time, event_type, now_utc
+        ))
+        if cur.rowcount > 0:
+            self.completions_recorded += 1
+        self._conn.commit()
 
     def record_trade(
         self,
@@ -276,6 +374,11 @@ class CurveTradeCollector:
         token_base_units: int,
         slot: int,
         block_time: int,
+        ix_name: Optional[str] = None,
+        virtual_sol_reserves: Optional[int] = None,
+        virtual_token_reserves: Optional[int] = None,
+        real_sol_reserves: Optional[int] = None,
+        real_token_reserves: Optional[int] = None,
     ) -> bool:
         """
         Insert trade event into curve_trades.db with UNIQUE(signature, log_index).
@@ -287,14 +390,20 @@ class CurveTradeCollector:
         cur = self._conn.cursor()
         cur.execute("""
             INSERT OR IGNORE INTO curve_trades (
-                signature, log_index, mint, tx_type, wallet,
+                signature, log_index, mint, tx_type, ix_name, wallet,
                 quote_mint, quote_amount, sol_lamports, token_base_units,
-                sol_amount, token_amount, slot, block_time, created_at_utc
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                sol_amount, token_amount,
+                virtual_sol_reserves, virtual_token_reserves,
+                real_sol_reserves, real_token_reserves,
+                slot, block_time, created_at_utc
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            signature, log_index, mint, tx_type.lower(), wallet,
+            signature, log_index, mint, tx_type.lower(), ix_name, wallet,
             quote_mint, quote_amount, sol_lamports, token_base_units,
-            sol_amount, token_amount, slot, block_time, now_utc
+            sol_amount, token_amount,
+            virtual_sol_reserves, virtual_token_reserves,
+            real_sol_reserves, real_token_reserves,
+            slot, block_time, now_utc
         ))
         inserted = cur.rowcount > 0
         self._conn.commit()
@@ -350,7 +459,63 @@ class CurveTradeCollector:
             return None
 
     @staticmethod
-    def _decode_trade_event(raw: bytes) -> Optional[Dict[str, Any]]:
+    def _decode_complete_event(raw: bytes) -> Optional[Dict[str, Any]]:
+        """
+        Decode Pump.fun CompleteEvent (5f72619cd42e9808) or CompletePumpAmmMigrationEvent (bde95db95c94e07c).
+        CompleteEvent layout:
+          [0..8]   discriminator
+          [8..40]  user (Pubkey)
+          [40..72] mint (Pubkey)
+          [72..104] bonding_curve (Pubkey)
+          [104..112] timestamp (i64)
+        CompletePumpAmmMigrationEvent layout:
+          [0..8]   discriminator
+          [8..40]  user (Pubkey)
+          [40..72] mint (Pubkey)
+          [72..80] mint_amount (u64)
+          [80..88] sol_amount (u64)
+          [88..96] pool_migration_fee (u64)
+          [96..128] bonding_curve (Pubkey)
+          [128..136] timestamp (i64)
+          [136..168] pool (Pubkey)
+        """
+        if len(raw) < 112:
+            return None
+        disc = raw[:8]
+        try:
+            if disc == COMPLETE_EVENT_DISCRIMINATOR:
+                user = b58encode(raw[8:40])
+                mint = b58encode(raw[40:72])
+                bonding_curve = b58encode(raw[72:104])
+                ts = struct.unpack("<q", raw[104:112])[0]
+                return {
+                    "event_type": "CompleteEvent",
+                    "user": user,
+                    "mint": mint,
+                    "bonding_curve": bonding_curve,
+                    "pool": "",
+                    "timestamp": ts,
+                }
+            elif disc == COMPLETE_MIGRATION_DISCRIMINATOR and len(raw) >= 168:
+                user = b58encode(raw[8:40])
+                mint = b58encode(raw[40:72])
+                bonding_curve = b58encode(raw[96:128])
+                ts = struct.unpack("<q", raw[128:136])[0]
+                pool = b58encode(raw[136:168])
+                return {
+                    "event_type": "CompletePumpAmmMigrationEvent",
+                    "user": user,
+                    "mint": mint,
+                    "bonding_curve": bonding_curve,
+                    "pool": pool,
+                    "timestamp": ts,
+                }
+        except Exception:
+            pass
+        return None
+
+    @staticmethod
+    def _decode_trade_event(raw: bytes, log_ix_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Decode Anchor TradeEvent binary payload (V1 and V2 BuyV2/SellV2).
         Layout:
@@ -361,16 +526,17 @@ class CurveTradeCollector:
           [56]       is_buy (bool, u8)
           [57..89]   user (Pubkey)
           [89..97]   timestamp (i64)
+          [97..105]  virtual_sol_reserves (u64)
+          [105..113] virtual_token_reserves (u64)
+          [113..121] real_sol_reserves (u64)
+          [121..129] real_token_reserves (u64)
           ...
+          [258..262] ix_name_len (u32) + ix_name UTF-8 string
           For V2 events (len(raw) >= 350, last 88 bytes raw[-88:]):
           [-88..-56] quote_mint (Pubkey, 32B)
           [-56..-48] quote_amount (u64, raw base units of quote_mint)
           [-48..-40] virtual_quote_reserves (u64)
           [-40..-32] real_quote_reserves (u64)
-          [-32..-24] quote_fee_basis_points (u64)
-          [-24..-16] quote_fee (u64)
-          [-16..-8]  quote_creator_fee (u64)
-          [-8..0]    quote_extra (u64)
         """
         if len(raw) < 97 or raw[:8] != TRADE_EVENT_DISCRIMINATOR:
             return None
@@ -382,6 +548,22 @@ class CurveTradeCollector:
             user = b58encode(raw[57:89])
             ts = struct.unpack("<q", raw[89:97])[0]
 
+            v_sol: Optional[int] = None
+            v_tok: Optional[int] = None
+            r_sol: Optional[int] = None
+            r_tok: Optional[int] = None
+            if len(raw) >= 129:
+                v_sol = struct.unpack("<Q", raw[97:105])[0]
+                v_tok = struct.unpack("<Q", raw[105:113])[0]
+                r_sol = struct.unpack("<Q", raw[113:121])[0]
+                r_tok = struct.unpack("<Q", raw[121:129])[0]
+
+            embedded_ix_name: Optional[str] = None
+            if len(raw) >= 262:
+                ix_len = struct.unpack("<I", raw[258:262])[0]
+                if 1 <= ix_len <= 64 and 262 + ix_len <= len(raw):
+                    embedded_ix_name = raw[262:262 + ix_len].decode("utf-8", errors="replace")
+
             if raw_sol_amount > 0:
                 quote_mint = WSOL_MINT
                 quote_amount = raw_sol_amount
@@ -389,9 +571,14 @@ class CurveTradeCollector:
             elif len(raw) >= 350:
                 v2_quote_mint = b58encode(raw[-88:-56])
                 v2_quote_amount = struct.unpack("<Q", raw[-56:-48])[0]
+                v2_v_quote = struct.unpack("<Q", raw[-48:-40])[0]
+                v2_r_quote = struct.unpack("<Q", raw[-40:-32])[0]
                 if v2_quote_mint and v2_quote_mint != "11111111111111111111111111111111":
                     quote_mint = v2_quote_mint
                     quote_amount = v2_quote_amount
+                    if v_sol == 0 and v2_v_quote > 0:
+                        v_sol = v2_v_quote
+                        r_sol = v2_r_quote
                 else:
                     quote_mint = WSOL_MINT
                     quote_amount = 0
@@ -401,6 +588,8 @@ class CurveTradeCollector:
                 quote_amount = 0
                 sol_lamports = 0
 
+            ix_name = embedded_ix_name or log_ix_name or ("Buy" if is_buy else "Sell")
+
             return {
                 "mint": mint,
                 "quote_mint": quote_mint,
@@ -408,18 +597,62 @@ class CurveTradeCollector:
                 "sol_lamports": sol_lamports,
                 "token_base_units": token_base_units,
                 "is_buy": is_buy,
+                "ix_name": ix_name,
+                "embedded_ix_name": embedded_ix_name,
+                "virtual_sol_reserves": v_sol,
+                "virtual_token_reserves": v_tok,
+                "real_sol_reserves": r_sol,
+                "real_token_reserves": r_tok,
                 "wallet": user,
                 "timestamp": ts,
             }
         except Exception:
             return None
 
+    def _record_gap_if_needed(self, current_slot: int, current_block_time: int) -> None:
+        """Record a disconnect/slot gap (>15 slots) into collector_gaps and mark boundary mints as excluded_gap=1."""
+        now_utc = datetime.now(timezone.utc).isoformat()
+        if (
+            self._last_seen_slot is not None
+            and self._last_seen_block_time is not None
+            and (self._in_disconnect_gap or (current_slot - self._last_seen_slot > 15))
+        ):
+            s_start = self._last_seen_slot
+            s_end = current_slot
+            if s_end > s_start:
+                slot_span = s_end - s_start
+                dur_sec = max(0.0, float(current_block_time - self._last_seen_block_time))
+                last_utc = self._last_seen_utc or now_utc
+                cur = self._conn.cursor()
+                cur.execute(
+                    "UPDATE curve_creations SET excluded_gap = 1 WHERE slot >= ? AND slot <= ?",
+                    (s_start, s_end),
+                )
+                boundary_cnt = cur.rowcount
+                cur.execute("""
+                    INSERT INTO collector_gaps (
+                        provider, start_slot, end_slot, slot_span, duration_seconds,
+                        last_event_utc, first_event_after_utc,
+                        onchain_mints_created_during_gap, db_boundary_mints_in_gap, db_active_30m_mints_overlapping_gap
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, 0)
+                """, (
+                    self.active_provider_name, s_start, s_end, slot_span, dur_sec,
+                    last_utc, now_utc, boundary_cnt
+                ))
+                self._conn.commit()
+            self._in_disconnect_gap = False
+
+        if self._last_seen_slot is None or current_slot >= self._last_seen_slot:
+            self._last_seen_slot = current_slot
+            self._last_seen_block_time = current_block_time
+            self._last_seen_utc = now_utc
+
     def _parse_and_store_notification(self, raw_msg: Dict[str, Any]) -> Tuple[bool, List[str]]:
         """
         Process a logsNotification message:
         1. Skip if value.err is not None (increment skipped_err_count).
         2. Read slot strictly from context.slot.
-        3. Decode CreateEvent and TradeEvent logs with their log_index.
+        3. Decode CreateEvent, TradeEvent, CompleteEvent, and CompletePumpAmmMigrationEvent logs with their log_index.
         4. Keep only TradeEvents for mints created since start and younger than 30 minutes.
         Returns (stored_any_trade, newly_created_bonding_curves).
         """
@@ -445,8 +678,18 @@ class CurveTradeCollector:
         logs = val.get("logs") or []
         stored_any = False
         new_curves: List[str] = []
+        current_ix_name: Optional[str] = None
+        _ignored_cpi_ixs = {
+            "Transfer", "TransferChecked", "MintTo", "Burn", "InitializeAccount3",
+            "InitializeImmutableOwner", "GetAccountDataSize", "Create", "CreateIdempotent",
+        }
 
         for log_idx, l in enumerate(logs):
+            if "Program log: Instruction: " in l:
+                cand_ix = l.split("Program log: Instruction: ", 1)[1].strip()
+                if cand_ix not in _ignored_cpi_ixs:
+                    current_ix_name = cand_ix
+                continue
             if "Program data: " not in l:
                 continue
             b64_str = l.split("Program data: ", 1)[1].strip()
@@ -462,6 +705,7 @@ class CurveTradeCollector:
             if disc == CREATE_EVENT_DISCRIMINATOR:
                 cev = self._decode_create_event(raw)
                 if cev:
+                    self._record_gap_if_needed(slot, cev["timestamp"])
                     self.record_creation(
                         mint=cev["mint"],
                         signature=sig,
@@ -474,13 +718,29 @@ class CurveTradeCollector:
                         symbol=cev["symbol"],
                     )
                     new_curves.append(cev["bonding_curve"])
+            elif disc in (COMPLETE_EVENT_DISCRIMINATOR, COMPLETE_MIGRATION_DISCRIMINATOR):
+                cmev = self._decode_complete_event(raw)
+                if cmev:
+                    self._record_gap_if_needed(slot, cmev["timestamp"])
+                    self.record_completion(
+                        mint=cmev["mint"],
+                        signature=sig,
+                        log_index=log_idx,
+                        user=cmev["user"],
+                        bonding_curve=cmev["bonding_curve"],
+                        pool=cmev["pool"],
+                        slot=slot,
+                        block_time=cmev["timestamp"],
+                        event_type=cmev["event_type"],
+                    )
             elif disc == TRADE_EVENT_DISCRIMINATOR:
-                tev = self._decode_trade_event(raw)
+                tev = self._decode_trade_event(raw, log_ix_name=current_ix_name)
                 if not tev:
                     continue
 
                 mint = tev["mint"]
                 trade_ts = tev["timestamp"]
+                self._record_gap_if_needed(slot, trade_ts)
 
                 # Check if mint was created since collector start
                 created_ts = self._mint_creation_times.get(mint)
@@ -508,6 +768,11 @@ class CurveTradeCollector:
                     token_base_units=tev["token_base_units"],
                     slot=slot,
                     block_time=trade_ts,
+                    ix_name=tev["ix_name"],
+                    virtual_sol_reserves=tev["virtual_sol_reserves"],
+                    virtual_token_reserves=tev["virtual_token_reserves"],
+                    real_sol_reserves=tev["real_sol_reserves"],
+                    real_token_reserves=tev["real_token_reserves"],
                 )
                 if inserted:
                     stored_any = True
@@ -520,12 +785,17 @@ class CurveTradeCollector:
                             "mint": mint,
                             "wallet": tev["wallet"],
                             "tx_type": tx_type,
+                            "ix_name": tev["ix_name"],
                             "quote_mint": tev["quote_mint"],
                             "quote_amount": tev["quote_amount"],
                             "sol_lamports": sol_lamports,
                             "token_base_units": tev["token_base_units"],
                             "sol_amount": (sol_lamports / 1e9) if sol_lamports is not None else None,
                             "token_amount": tev["token_base_units"] / 1e6,
+                            "virtual_sol_reserves": tev["virtual_sol_reserves"],
+                            "virtual_token_reserves": tev["virtual_token_reserves"],
+                            "real_sol_reserves": tev["real_sol_reserves"],
+                            "real_token_reserves": tev["real_token_reserves"],
                             "mint_age_seconds": age_sec,
                             "raw_log": l,
                         })
@@ -551,12 +821,11 @@ class CurveTradeCollector:
         if self._ws:
             asyncio.create_task(self._ws.close(code=1000, reason="Forced test disconnect"))
 
-    @staticmethod
-    def _get_candidate_ws_urls() -> List[str]:
+    def _get_candidate_ws_urls(self) -> List[str]:
         """
         Build ordered list of Solana WebSocket endpoints supporting logsSubscribe.
-        Prioritizes Helius (from SOLANA_RPC_URLS) and QuickNode (from SOLANA_WS_URL / SOLANA_RPC_URLS),
-        excluding Alchemy (which does not support logsSubscribe).
+        Excludes QuickNode by default (trial request limit reached: -32003),
+        prioritizes primary (Helius), and orders configured fallbacks (Alchemy first).
         """
         candidates: List[str] = []
         raw_rpc_urls = [u.strip() for u in os.environ.get("SOLANA_RPC_URLS", "").split(",") if u.strip()]
@@ -567,14 +836,21 @@ class CurveTradeCollector:
             ws_u = u.replace("https://", "wss://").replace("http://", "ws://")
             if not ws_u.startswith("wss://") and not ws_u.startswith("ws://"):
                 continue
-            if "alchemy.com" in ws_u.lower():
+            pname = identify_ws_provider_name(ws_u).lower()
+            if pname in self.exclude_providers and os.environ.get("SOLANA_ENABLE_QUICKNODE", "").strip() != "1":
                 continue
             if ws_u not in candidates:
                 candidates.append(ws_u)
 
-        # Put Helius first if available, then QuickNode, so a QuickNode trial request-limit cap
-        # (-32003 "request limit reached") never blocks collection.
-        candidates.sort(key=lambda u: 0 if "helius" in u.lower() else (1 if "quiknode" in u.lower() or "quicknode" in u.lower() else 2))
+        def _order_key(u: str) -> int:
+            pname = identify_ws_provider_name(u).lower()
+            if pname == "helius":
+                return 0
+            if pname in self.fallback_providers:
+                return 1 + self.fallback_providers.index(pname)
+            return 99
+
+        candidates.sort(key=_order_key)
         return candidates
 
     async def _subscribe_bonding_curve(self, ws: Any, bonding_curve: str) -> None:
@@ -599,7 +875,7 @@ class CurveTradeCollector:
         target_trade_count: Optional[int] = None,
         force_disconnect_after_trades: Optional[int] = None,
     ) -> Dict[str, Any]:
-        """Main trade collection loop with confirmed commitment, multi-provider WS failover, and exponential backoff."""
+        """Main trade collection loop with confirmed commitment, same-provider exponential backoff, and configurable fallback."""
         self._running = True
         ssl_ctx = get_verified_ssl_context()
         start_time = time.time()
@@ -614,6 +890,7 @@ class CurveTradeCollector:
         self.active_provider_name = provider_name
         logger.info(
             f"CurveTradeCollector starting | Providers: {provider_names} | Active: {provider_name} | "
+            f"Fallback order: {self.fallback_providers} | Excluded: {self.exclude_providers} | "
             f"Mode: {self.subscription_mode} | Commitment: confirmed | DB: {self.db_path}"
         )
 
@@ -717,18 +994,22 @@ class CurveTradeCollector:
             except Exception as e:
                 if max_duration_seconds and (time.time() - start_time) >= max_duration_seconds:
                     break
-                ws_idx += 1
-                next_provider = identify_ws_provider_name(ws_urls[ws_idx % len(ws_urls)])
+                self._in_disconnect_gap = True
                 self._reconnect_attempts += 1
+                # Reconnect to the SAME provider (Helius) with exponential backoff unless logsSubscribe is unsupported
+                err_str = str(e).lower()
+                if ("method not found" in err_str or "-32601" in err_str or "-32003" in err_str) and len(ws_urls) > 1:
+                    ws_idx = (ws_idx + 1) % len(ws_urls)
+                next_provider = identify_ws_provider_name(ws_urls[ws_idx % len(ws_urls)])
                 delay = min(
                     self.max_backoff,
-                    self.initial_backoff * (self.backoff_multiplier ** (max(0, (self._reconnect_attempts - 1) // len(ws_urls)))),
+                    self.initial_backoff * (self.backoff_multiplier ** max(0, self._reconnect_attempts - 1)),
                 )
-                jitter = random.uniform(0, 0.5 * delay)
-                sleep_time = 0.25 if self._reconnect_attempts < len(ws_urls) else (delay + jitter)
+                jitter = random.uniform(0, 0.25 * delay)
+                sleep_time = delay + jitter
                 logger.warning(
                     f"WebSocket disconnected on {provider_name} ({type(e).__name__}: {e}). "
-                    f"Failing over to {next_provider} in {sleep_time:.2f}s (attempt {self._reconnect_attempts})..."
+                    f"Reconnecting to {next_provider} in {sleep_time:.2f}s (attempt {self._reconnect_attempts}, base={delay:.2f}s)..."
                 )
                 await asyncio.sleep(sleep_time)
 
@@ -751,6 +1032,7 @@ class CurveTradeCollector:
                 100.0 * self.skipped_err_count / max(1, self.total_ws_messages_received - 1), 2
             ),
             "creations_recorded": self.creations_recorded,
+            "completions_recorded": self.completions_recorded,
             "trades_stored": self.total_trades_collected,
             "dropped_untracked_mint_count": self.dropped_untracked_mint_count,
             "dropped_expired_mint_count": self.dropped_expired_mint_count,
@@ -770,3 +1052,4 @@ class CurveTradeCollector:
 
     def stop(self) -> None:
         self._running = False
+

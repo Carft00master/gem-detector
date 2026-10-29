@@ -56,6 +56,11 @@ provider:
   credit_hard_stop_threshold_pct: 0.95 # Hard stop at 95% of monthly budget
   pool_poll_interval_sec: 3.0          # Batched polling interval for open positions + watchlist (2-5s)
   enable_live_route_b_in_free_tier: false # Live Route B disabled in FREE tier
+  fallback_providers:                  # Ordered fallback providers (Alchemy first, reconnect to primary with backoff)
+    - alchemy
+    - helius
+  exclude_providers:                   # Excluded providers (QuickNode trial limit reached: -32003 / HTTP 429)
+    - quicknode
 
 # ==============================================================================
 # PAPER TRADING & EXECUTION ENGINE

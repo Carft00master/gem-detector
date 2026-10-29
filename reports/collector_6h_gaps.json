@@ -1,0 +1,190 @@
+{
+  "total_gaps": 11,
+  "total_gap_slots": 1924,
+  "total_gap_seconds": 409.0,
+  "gap_share_of_6h_run_pct": 1.893,
+  "total_onchain_mints_created_during_gaps": 233,
+  "db_boundary_mints_excluded_count": 8,
+  "db_boundary_mints_excluded": [
+    "2vehKPtAxGnLwZBvU2UVmo5QhVuhpwhAsoW8nrd49Qfh",
+    "3aRoXgrjeYdboBhh3Ld1wmJ4HnY9MMd5qwE5U6tppump",
+    "8NTD1hDAocCqTb886cBT6JWDUG6hp4w2zSWPHeRtWerT",
+    "9HntiKuxEQWtRZJUhLnZoqEV5hAMj3MLMyCGJuFRpump",
+    "CobPj8iwVdanYQmPGNtsYisvzLQwdDBytXwyHm1zD3ia",
+    "D2kfCfjB6geHeouoRzXvin3x421hFh6gsgSAxxscJ7TC",
+    "Em4f2eMRMLYyDG3kLqDarhbSzRbPB96UHA6uG5mWpump",
+    "HMyjPeavt4MvmaqoDvRgTqyJQvScRcmwG9gJJQtZpump"
+  ],
+  "db_30m_window_overlap_mints_excluded_count": 4192,
+  "gaps": [
+    {
+      "gap_id": 1,
+      "provider": "Helius",
+      "start_slot": 462439911,
+      "end_slot": 462440148,
+      "slot_span": 237,
+      "seconds": 52.0,
+      "last_event_utc": "2026-10-28T10:19:29.838886+00:00",
+      "first_event_after_utc": "2026-10-28T10:19:50.794888+00:00",
+      "mints_created_during_gap_onchain": 36,
+      "db_boundary_mints_in_gap": 0,
+      "db_boundary_mint_list": [],
+      "db_active_30m_mints_overlapping_gap": 917
+    },
+    {
+      "gap_id": 2,
+      "provider": "Helius",
+      "start_slot": 462441183,
+      "end_slot": 462441331,
+      "slot_span": 148,
+      "seconds": 31.0,
+      "last_event_utc": "2026-10-28T10:23:50.629439+00:00",
+      "first_event_after_utc": "2026-10-28T10:24:00.840771+00:00",
+      "mints_created_during_gap_onchain": 19,
+      "db_boundary_mints_in_gap": 0,
+      "db_boundary_mint_list": [],
+      "db_active_30m_mints_overlapping_gap": 946
+    },
+    {
+      "gap_id": 3,
+      "provider": "Helius",
+      "start_slot": 462441696,
+      "end_slot": 462441867,
+      "slot_span": 171,
+      "seconds": 36.0,
+      "last_event_utc": "2026-10-28T10:25:39.665090+00:00",
+      "first_event_after_utc": "2026-10-28T10:25:54.176862+00:00",
+      "mints_created_during_gap_onchain": 40,
+      "db_boundary_mints_in_gap": 1,
+      "db_boundary_mint_list": [
+        "8NTD1hDAocCqTb886cBT6JWDUG6hp4w2zSWPHeRtWerT"
+      ],
+      "db_active_30m_mints_overlapping_gap": 964
+    },
+    {
+      "gap_id": 4,
+      "provider": "Helius",
+      "start_slot": 462459959,
+      "end_slot": 462460060,
+      "slot_span": 101,
+      "seconds": 21.0,
+      "last_event_utc": "2026-10-28T11:30:15.381974+00:00",
+      "first_event_after_utc": "2026-10-28T11:30:22.312372+00:00",
+      "mints_created_during_gap_onchain": 6,
+      "db_boundary_mints_in_gap": 0,
+      "db_boundary_mint_list": [],
+      "db_active_30m_mints_overlapping_gap": 819
+    },
+    {
+      "gap_id": 5,
+      "provider": "Helius",
+      "start_slot": 462478600,
+      "end_slot": 462478748,
+      "slot_span": 148,
+      "seconds": 31.0,
+      "last_event_utc": "2026-10-28T12:36:23.229606+00:00",
+      "first_event_after_utc": "2026-10-28T12:36:36.593964+00:00",
+      "mints_created_during_gap_onchain": 11,
+      "db_boundary_mints_in_gap": 1,
+      "db_boundary_mint_list": [
+        "D2kfCfjB6geHeouoRzXvin3x421hFh6gsgSAxxscJ7TC"
+      ],
+      "db_active_30m_mints_overlapping_gap": 755
+    },
+    {
+      "gap_id": 6,
+      "provider": "Helius",
+      "start_slot": 462478894,
+      "end_slot": 462479097,
+      "slot_span": 203,
+      "seconds": 43.0,
+      "last_event_utc": "2026-10-28T12:37:35.878075+00:00",
+      "first_event_after_utc": "2026-10-28T12:37:51.886940+00:00",
+      "mints_created_during_gap_onchain": 12,
+      "db_boundary_mints_in_gap": 2,
+      "db_boundary_mint_list": [
+        "HMyjPeavt4MvmaqoDvRgTqyJQvScRcmwG9gJJQtZpump",
+        "Em4f2eMRMLYyDG3kLqDarhbSzRbPB96UHA6uG5mWpump"
+      ],
+      "db_active_30m_mints_overlapping_gap": 747
+    },
+    {
+      "gap_id": 7,
+      "provider": "Helius",
+      "start_slot": 462480900,
+      "end_slot": 462481005,
+      "slot_span": 105,
+      "seconds": 23.0,
+      "last_event_utc": "2026-10-28T12:44:30.008134+00:00",
+      "first_event_after_utc": "2026-10-28T12:44:35.416603+00:00",
+      "mints_created_during_gap_onchain": 7,
+      "db_boundary_mints_in_gap": 0,
+      "db_boundary_mint_list": [],
+      "db_active_30m_mints_overlapping_gap": 696
+    },
+    {
+      "gap_id": 8,
+      "provider": "Helius",
+      "start_slot": 462481042,
+      "end_slot": 462481255,
+      "slot_span": 213,
+      "seconds": 44.0,
+      "last_event_utc": "2026-10-28T12:45:13.251831+00:00",
+      "first_event_after_utc": "2026-10-28T12:45:28.296126+00:00",
+      "mints_created_during_gap_onchain": 27,
+      "db_boundary_mints_in_gap": 1,
+      "db_boundary_mint_list": [
+        "9HntiKuxEQWtRZJUhLnZoqEV5hAMj3MLMyCGJuFRpump"
+      ],
+      "db_active_30m_mints_overlapping_gap": 690
+    },
+    {
+      "gap_id": 9,
+      "provider": "Helius",
+      "start_slot": 462488829,
+      "end_slot": 462489005,
+      "slot_span": 176,
+      "seconds": 38.0,
+      "last_event_utc": "2026-10-28T13:12:48.072588+00:00",
+      "first_event_after_utc": "2026-10-28T13:13:02.646257+00:00",
+      "mints_created_during_gap_onchain": 24,
+      "db_boundary_mints_in_gap": 1,
+      "db_boundary_mint_list": [
+        "3aRoXgrjeYdboBhh3Ld1wmJ4HnY9MMd5qwE5U6tppump"
+      ],
+      "db_active_30m_mints_overlapping_gap": 756
+    },
+    {
+      "gap_id": 10,
+      "provider": "Helius",
+      "start_slot": 462489155,
+      "end_slot": 462489379,
+      "slot_span": 224,
+      "seconds": 47.0,
+      "last_event_utc": "2026-10-28T13:14:01.194815+00:00",
+      "first_event_after_utc": "2026-10-28T13:14:21.446681+00:00",
+      "mints_created_during_gap_onchain": 32,
+      "db_boundary_mints_in_gap": 1,
+      "db_boundary_mint_list": [
+        "CobPj8iwVdanYQmPGNtsYisvzLQwdDBytXwyHm1zD3ia"
+      ],
+      "db_active_30m_mints_overlapping_gap": 747
+    },
+    {
+      "gap_id": 11,
+      "provider": "Helius",
+      "start_slot": 462494953,
+      "end_slot": 462495151,
+      "slot_span": 198,
+      "seconds": 43.0,
+      "last_event_utc": "2026-10-28T13:34:40.224500+00:00",
+      "first_event_after_utc": "2026-10-28T13:34:54.537638+00:00",
+      "mints_created_during_gap_onchain": 19,
+      "db_boundary_mints_in_gap": 1,
+      "db_boundary_mint_list": [
+        "2vehKPtAxGnLwZBvU2UVmo5QhVuhpwhAsoW8nrd49Qfh"
+      ],
+      "db_active_30m_mints_overlapping_gap": 860
+    }
+  ]
+}

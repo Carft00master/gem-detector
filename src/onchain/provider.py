@@ -136,6 +136,8 @@ class ProviderConfig:
     confirmation_commitment: CommitmentLevel = CommitmentLevel.CONFIRMED
     enable_live_route_b: bool = False  # Disabled by default in FREE tier
     endpoint_budgets: Dict[str, int] = field(default_factory=dict)
+    fallback_providers: list[str] = field(default_factory=list)
+    exclude_providers: list[str] = field(default_factory=list)
 
     def __post_init__(self):
         # Determine tier: if not explicitly specified by caller, check PROVIDER_TIER env var
@@ -151,29 +153,55 @@ class ProviderConfig:
             else:
                 self.tier = ProviderTier.FREE
 
-        # Support multiple comma-separated RPC URLs from SOLANA_RPC_URLS if not explicitly passed
-        if not self.rpc_urls:
-            env_multi = os.environ.get("SOLANA_RPC_URLS", "").strip()
-            if env_multi:
-                self.rpc_urls = [u.strip() for u in env_multi.split(",") if u.strip()]
-            elif self.rpc_url:
-                self.rpc_urls = [self.rpc_url]
-            else:
-                single = os.environ.get("SOLANA_RPC_URL", "").strip()
-                if single:
-                    self.rpc_urls = [single]
+        explicit_urls_passed = bool(self.rpc_urls)
 
-        # Load explicit per-endpoint budgets from settings.yaml if not provided directly
-        if not self.endpoint_budgets:
+        # Load explicit per-endpoint budgets and fallback/exclude provider config from settings.yaml if not provided
+        if not self.endpoint_budgets or not self.fallback_providers or not self.exclude_providers:
             try:
                 import yaml
                 from src.utils.paths import get_project_root
                 cfg_path = get_project_root() / "config" / "settings.yaml"
                 if cfg_path.exists():
                     raw_cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
-                    self.endpoint_budgets = raw_cfg.get("provider", {}).get("endpoint_budgets", {})
+                    prov_cfg = raw_cfg.get("provider", {}) or {}
+                    if not self.endpoint_budgets:
+                        self.endpoint_budgets = prov_cfg.get("endpoint_budgets", {})
+                    if not self.fallback_providers:
+                        self.fallback_providers = [p.lower() for p in (prov_cfg.get("fallback_providers") or ["alchemy", "helius"])]
+                    if not self.exclude_providers and not explicit_urls_passed:
+                        if os.environ.get("SOLANA_ENABLE_QUICKNODE", "").strip() != "1":
+                            self.exclude_providers = [p.lower() for p in (prov_cfg.get("exclude_providers") or ["quicknode"])]
             except Exception:
                 pass
+
+        # Support multiple comma-separated RPC URLs from SOLANA_RPC_URLS if not explicitly passed
+        if not self.rpc_urls:
+            env_multi = os.environ.get("SOLANA_RPC_URLS", "").strip()
+            if env_multi:
+                raw_urls = [u.strip() for u in env_multi.split(",") if u.strip()]
+                if self.exclude_providers:
+                    filtered = [
+                        u for u in raw_urls
+                        if get_provider_name_from_url(u, 0).lower() not in self.exclude_providers
+                    ]
+                    if filtered:
+                        raw_urls = filtered
+                # Order primary (helius) first, then configured fallback_providers (alchemy first)
+                def _order_key(u: str) -> int:
+                    pname = get_provider_name_from_url(u, 0).lower()
+                    if pname == "helius":
+                        return 0
+                    if pname in self.fallback_providers:
+                        return 1 + self.fallback_providers.index(pname)
+                    return 99
+                raw_urls.sort(key=_order_key)
+                self.rpc_urls = raw_urls
+            elif self.rpc_url:
+                self.rpc_urls = [self.rpc_url]
+            else:
+                single = os.environ.get("SOLANA_RPC_URL", "").strip()
+                if single:
+                    self.rpc_urls = [single]
 
         # Strict validation: Every configured endpoint MUST have an explicit budget > 0 (by name or index)
         urls = self.rpc_urls or ([self.rpc_url] if self.rpc_url else ["https://api.mainnet-beta.solana.com"])
@@ -205,7 +233,8 @@ class ProviderConfig:
         if self.grpc_endpoint:
             return ProviderType.GRPC, self.grpc_endpoint
         if self.ws_url:
-            return ProviderType.WEBSOCKET, self.ws_url
+            if not self.exclude_providers or get_provider_name_from_url(self.ws_url, 0).lower() not in self.exclude_providers:
+                return ProviderType.WEBSOCKET, self.ws_url
         if self.rpc_urls:
             return ProviderType.RPC, self.rpc_urls[0]
         if self.rpc_url:
@@ -313,21 +342,38 @@ class SolanaProvider:
         Synchronous wrapped RPC client method.
         Selects next available endpoint respecting credit budget limits, performs request,
         and automatically logs credit consumption in the CreditBudgetTracker.
+        Retries with fallback (Alchemy first) and exponential backoff on HTTP 429/5xx/ConnectionError.
         Never exposes secrets in logs or exceptions.
         """
         import requests
-        endpoint_id, alias, url = self.get_next_rpc_endpoint()
-        payload = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": method,
-            "params": params or [],
-        }
-        headers = {"Content-Type": "application/json"}
-        resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
-        resp.raise_for_status()
-        self.credit_tracker.record_call(endpoint_id, method=method, masked_alias=alias)
-        return resp.json()
+        import time as _time
+        max_attempts = max(6, len(self.config.rpc_urls or [1]) * 4)
+        last_err: Optional[Exception] = None
+        for attempt in range(max_attempts):
+            endpoint_id, alias, url = self.get_next_rpc_endpoint()
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": method,
+                "params": params or [],
+            }
+            headers = {"Content-Type": "application/json"}
+            try:
+                resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
+                resp.raise_for_status()
+                self.credit_tracker.record_call(endpoint_id, method=method, masked_alias=alias)
+                return resp.json()
+            except Exception as e:
+                last_err = e
+                if attempt + 1 < max_attempts:
+                    backoff = min(5.0, 0.25 * (2 ** min(attempt, 5)))
+                    logger.warning(
+                        f"RPC error on {alias} ({type(e).__name__}). Retrying on fallback in {backoff:.2f}s..."
+                    )
+                    _time.sleep(backoff)
+        if last_err is not None:
+            raise RuntimeError(redact_secrets(str(last_err))) from None
+        raise RuntimeError("RPC execution failed")
 
     async def execute_rpc_async(
         self,
@@ -342,19 +388,30 @@ class SolanaProvider:
         and automatically logs credit consumption in the CreditBudgetTracker.
         """
         import aiohttp
-        endpoint_id, alias, url = self.get_next_rpc_endpoint()
-        payload = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": method,
-            "params": params or [],
-        }
-        headers = {"Content-Type": "application/json"}
-        async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
-            resp.raise_for_status()
-            res_json = await resp.json()
-            self.credit_tracker.record_call(endpoint_id, method=method, masked_alias=alias)
-            return res_json
+        import asyncio as _asyncio
+        max_attempts = max(2, len(self.config.rpc_urls or [1]) * 2)
+        last_err: Optional[Exception] = None
+        for attempt in range(max_attempts):
+            endpoint_id, alias, url = self.get_next_rpc_endpoint()
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": method,
+                "params": params or [],
+            }
+            headers = {"Content-Type": "application/json"}
+            try:
+                async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
+                    resp.raise_for_status()
+                    res_json = await resp.json()
+                    self.credit_tracker.record_call(endpoint_id, method=method, masked_alias=alias)
+                    return res_json
+            except Exception as e:
+                last_err = e
+                if attempt + 1 < max_attempts:
+                    backoff = min(4.0, 0.25 * (2 ** attempt))
+                    await _asyncio.sleep(backoff)
+        raise last_err  # type: ignore[misc]
 
     def create_async_session(self, timeout: float = 10.0) -> Any:
         """Create managed aiohttp.ClientSession within provider boundary."""
